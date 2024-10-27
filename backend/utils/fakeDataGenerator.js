@@ -66,10 +66,10 @@ exports.generatePodMetrics = () => {
   });
 
   const metrics = {
-    pod1: generatePodMetric(),
-    pod2: generatePodMetric(),
-    pod3: generatePodMetric(),
-    // 添加更多 Pod
+    'web-pod-1': generatePodMetric(),
+    'db-pod-1': generatePodMetric(),
+    'monitoring-pod-1': generatePodMetric(),
+    'cache-pod-1': generatePodMetric(),
   };
   console.log('Pod metrics generated');
   return metrics;
@@ -78,11 +78,274 @@ exports.generatePodMetrics = () => {
 exports.generatePods = () => {
   console.log('Generating pods list');
   const pods = [
-    { id: '1', metadata: { uid: '1', name: 'pod1', namespace: 'default' }, type: 'deployment' },
-    { id: '2', metadata: { uid: '2', name: 'pod2', namespace: 'kube-system' }, type: 'statefulset' },
-    { id: '3', metadata: { uid: '3', name: 'pod3', namespace: 'default' }, type: 'daemonset' },
-    // 添加更多 Pod
+    // OpenSearch Pods (StatefulSet)
+    {
+      metadata: {
+        uid: '1',
+        name: 'opensearch-master-0',
+        namespace: 'opensearch'
+      },
+      type: 'statefulset',
+      status: 'Running',
+      image: 'opensearchproject/opensearch:2.11.0',
+      cpu: '2000m',
+      memory: '4Gi',
+      replicas: 1
+    },
+    {
+      metadata: {
+        uid: '2',
+        name: 'opensearch-master-1',
+        namespace: 'opensearch'
+      },
+      type: 'statefulset',
+      status: 'Running',
+      image: 'opensearchproject/opensearch:2.11.0',
+      cpu: '2000m',
+      memory: '4Gi',
+      replicas: 1
+    },
+    {
+      metadata: {
+        uid: '3',
+        name: 'opensearch-master-2',
+        namespace: 'opensearch'
+      },
+      type: 'statefulset',
+      status: 'Running',
+      image: 'opensearchproject/opensearch:2.11.0',
+      cpu: '2000m',
+      memory: '4Gi',
+      replicas: 1
+    },
+    {
+      metadata: {
+        uid: '4',
+        name: 'opensearch-data-0',
+        namespace: 'opensearch'
+      },
+      type: 'statefulset',
+      status: 'Running',
+      image: 'opensearchproject/opensearch:2.11.0',
+      cpu: '4000m',
+      memory: '8Gi',
+      replicas: 1
+    },
+    {
+      metadata: {
+        uid: '5',
+        name: 'opensearch-data-1',
+        namespace: 'opensearch'
+      },
+      type: 'statefulset',
+      status: 'Running',
+      image: 'opensearchproject/opensearch:2.11.0',
+      cpu: '4000m',
+      memory: '8Gi',
+      replicas: 1
+    },
+
+    // Kafka Pods (StatefulSet)
+    {
+      metadata: {
+        uid: '6',
+        name: 'kafka-broker-0',
+        namespace: 'kafka'
+      },
+      type: 'statefulset',
+      status: 'Running',
+      image: 'confluentinc/cp-kafka:7.4.0',
+      cpu: '2000m',
+      memory: '4Gi',
+      replicas: 1
+    },
+    {
+      metadata: {
+        uid: '7',
+        name: 'kafka-broker-1',
+        namespace: 'kafka'
+      },
+      type: 'statefulset',
+      status: 'Running',
+      image: 'confluentinc/cp-kafka:7.4.0',
+      cpu: '2000m',
+      memory: '4Gi',
+      replicas: 1
+    },
+    {
+      metadata: {
+        uid: '8',
+        name: 'kafka-broker-2',
+        namespace: 'kafka'
+      },
+      type: 'statefulset',
+      status: 'Running',
+      image: 'confluentinc/cp-kafka:7.4.0',
+      cpu: '2000m',
+      memory: '4Gi',
+      replicas: 1
+    },
+    {
+      metadata: {
+        uid: '9',
+        name: 'zookeeper-0',
+        namespace: 'kafka'
+      },
+      type: 'statefulset',
+      status: 'Running',
+      image: 'confluentinc/cp-zookeeper:7.4.0',
+      cpu: '1000m',
+      memory: '2Gi',
+      replicas: 1
+    },
+    {
+      metadata: {
+        uid: '10',
+        name: 'zookeeper-1',
+        namespace: 'kafka'
+      },
+      type: 'statefulset',
+      status: 'Running',
+      image: 'confluentinc/cp-zookeeper:7.4.0',
+      cpu: '1000m',
+      memory: '2Gi',
+      replicas: 1
+    },
+
+    // Metricbeat Pods (DaemonSet)
+    {
+      metadata: {
+        uid: '11',
+        name: 'metricbeat-node1',
+        namespace: 'monitoring'
+      },
+      type: 'daemonset',
+      status: 'Running',
+      image: 'elastic/metricbeat:8.11.0',
+      cpu: '200m',
+      memory: '256Mi',
+      replicas: 1
+    },
+    {
+      metadata: {
+        uid: '12',
+        name: 'metricbeat-node2',
+        namespace: 'monitoring'
+      },
+      type: 'daemonset',
+      status: 'Running',
+      image: 'elastic/metricbeat:8.11.0',
+      cpu: '200m',
+      memory: '256Mi',
+      replicas: 1
+    },
+    {
+      metadata: {
+        uid: '13',
+        name: 'metricbeat-node3',
+        namespace: 'monitoring'
+      },
+      type: 'daemonset',
+      status: 'Running',
+      image: 'elastic/metricbeat:8.11.0',
+      cpu: '200m',
+      memory: '256Mi',
+      replicas: 1
+    },
+
+    // Decoder Pods (Deployment)
+    {
+      metadata: {
+        uid: '14',
+        name: 'decoder-deployment-1',
+        namespace: 'decoder'
+      },
+      type: 'deployment',
+      status: 'Running',
+      image: 'dataisec/decoder:1.0.0',
+      cpu: '1000m',
+      memory: '2Gi',
+      replicas: 3
+    },
+    {
+      metadata: {
+        uid: '15',
+        name: 'decoder-deployment-2',
+        namespace: 'decoder'
+      },
+      type: 'deployment',
+      status: 'Running',
+      image: 'dataisec/decoder:1.0.0',
+      cpu: '1000m',
+      memory: '2Gi',
+      replicas: 3
+    },
+    {
+      metadata: {
+        uid: '16',
+        name: 'decoder-deployment-3',
+        namespace: 'decoder'
+      },
+      type: 'deployment',
+      status: 'Running',
+      image: 'dataisec/decoder:1.0.0',
+      cpu: '1000m',
+      memory: '2Gi',
+      replicas: 3
+    },
+    {
+      metadata: {
+        uid: '17',
+        name: 'decoder-deployment-4',
+        namespace: 'decoder'
+      },
+      type: 'deployment',
+      status: 'Running',
+      image: 'dataisec/decoder:1.0.0',
+      cpu: '1000m',
+      memory: '2Gi',
+      replicas: 3
+    },
+    {
+      metadata: {
+        uid: '18',
+        name: 'decoder-deployment-5',
+        namespace: 'decoder'
+      },
+      type: 'deployment',
+      status: 'Running',
+      image: 'dataisec/decoder:1.0.0',
+      cpu: '1000m',
+      memory: '2Gi',
+      replicas: 3
+    },
+    {
+      metadata: {
+        uid: '19',
+        name: 'decoder-config',
+        namespace: 'decoder'
+      },
+      type: 'deployment',
+      status: 'Running',
+      image: 'dataisec/decoder-config:1.0.0',
+      cpu: '500m',
+      memory: '1Gi',
+      replicas: 1
+    },
+    {
+      metadata: {
+        uid: '20',
+        name: 'decoder-api',
+        namespace: 'decoder'
+      },
+      type: 'deployment',
+      status: 'Running',
+      image: 'dataisec/decoder-api:1.0.0',
+      cpu: '500m',
+      memory: '1Gi',
+      replicas: 2
+    }
   ];
-  console.log('Pods list generated');
+  console.log('Generated pods list:', pods);
   return pods;
 };

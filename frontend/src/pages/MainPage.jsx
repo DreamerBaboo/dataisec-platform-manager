@@ -6,6 +6,8 @@ import SideMenu from '../components/Layout/SideMenu';
 import SystemDashboard from '../components/Dashboard/SystemDashboard';
 import PodDashboard from '../components/Dashboard/PodDashboard';
 import PodManagement from '../components/PodManagement/PodManagement';
+import CreatePod from '../components/PodManagement/CreatePod';
+import EditPod from '../components/PodManagement/EditPod';
 import LogViewer from '../components/SystemLogs/LogViewer';
 import UserProfile from '../components/UserProfile/UserProfile';
 
@@ -40,6 +42,8 @@ function MainPage() {
           <Route path="/" element={<SystemDashboard />} />
           <Route path="/pod-dashboard" element={<PodDashboard />} />
           <Route path="/pods" element={<PodManagement />} />
+          <Route path="/pods/create" element={<CreatePod />} />
+          <Route path="/pods/edit/:id" element={<EditPod />} />
           <Route path="/logs" element={<LogViewer />} />
           <Route path="/profile" element={<UserProfile />} />
         </Routes>
