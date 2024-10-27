@@ -15,12 +15,15 @@ const SystemDashboard = () => {
   const [clusterMetrics, setClusterMetrics] = useState({});
   const [nodeMetrics, setNodeMetrics] = useState({});
   const [selectedTab, setSelectedTab] = useState(0);
-  const [layout, setLayout] = useState([
-    { i: 'cpu', x: 0, y: 0, w: 6, h: 8 },
-    { i: 'memory', x: 6, y: 0, w: 6, h: 8 },
-    { i: 'network', x: 0, y: 8, w: 6, h: 8 },
-    { i: 'storage', x: 6, y: 8, w: 6, h: 8 },
-  ]);
+  const [layout, setLayout] = useState(() => {
+    const savedLayout = localStorage.getItem('systemDashboardLayout');
+    return savedLayout ? JSON.parse(savedLayout) : [
+      { i: 'cpu', x: 0, y: 0, w: 6, h: 8 },
+      { i: 'memory', x: 6, y: 0, w: 6, h: 8 },
+      { i: 'network', x: 0, y: 8, w: 6, h: 8 },
+      { i: 'storage', x: 6, y: 8, w: 6, h: 8 },
+    ];
+  });
 
   const theme = useTheme();
   const chartRefs = useRef({});
@@ -50,6 +53,10 @@ const SystemDashboard = () => {
     const intervalId = setInterval(fetchMetrics, 5000);
     return () => clearInterval(intervalId);
   }, [fetchMetrics]);
+
+  const saveLayout = (newLayout) => {
+    localStorage.setItem('systemDashboardLayout', JSON.stringify(newLayout));
+  };
 
   const chartStyle = {
     height: '100%',
@@ -184,6 +191,7 @@ const SystemDashboard = () => {
         width={1200}
         onLayoutChange={(newLayout) => {
           setLayout(newLayout);
+          saveLayout(newLayout);
           setTimeout(() => {
             Object.values(chartRefs.current).forEach(chart => {
               if (chart) {

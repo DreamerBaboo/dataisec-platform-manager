@@ -21,12 +21,15 @@ const PodDashboard = () => {
   const [selectedPodType, setSelectedPodType] = useState('');
   const [orderBy, setOrderBy] = useState('name');
   const [order, setOrder] = useState('asc');
-  const [layout, setLayout] = useState([
-    { i: 'cpu', x: 0, y: 0, w: 6, h: 8 },
-    { i: 'memory', x: 6, y: 0, w: 6, h: 8 },
-    { i: 'network', x: 0, y: 8, w: 6, h: 8 },
-    { i: 'storage', x: 6, y: 8, w: 6, h: 8 },
-  ]);
+  const [layout, setLayout] = useState(() => {
+    const savedLayout = localStorage.getItem('podDashboardLayout');
+    return savedLayout ? JSON.parse(savedLayout) : [
+      { i: 'cpu', x: 0, y: 0, w: 6, h: 8 },
+      { i: 'memory', x: 6, y: 0, w: 6, h: 8 },
+      { i: 'network', x: 0, y: 8, w: 6, h: 8 },
+      { i: 'storage', x: 6, y: 8, w: 6, h: 8 },
+    ];
+  });
 
   const theme = useTheme();
   const chartRefs = useRef({});
@@ -227,6 +230,10 @@ const PodDashboard = () => {
     </Paper>
   );
 
+  const saveLayout = (newLayout) => {
+    localStorage.setItem('podDashboardLayout', JSON.stringify(newLayout));
+  };
+
   return (
     <Box sx={{ flexGrow: 1, color: theme.palette.text.primary }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -256,6 +263,7 @@ const PodDashboard = () => {
           width={1200}
           onLayoutChange={(newLayout) => {
             setLayout(newLayout);
+            saveLayout(newLayout);
             setTimeout(() => {
               Object.values(chartRefs.current).forEach(chart => {
                 if (chart) {
