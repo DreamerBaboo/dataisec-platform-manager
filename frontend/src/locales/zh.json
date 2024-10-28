@@ -58,5 +58,7 @@
   "podStorageUsage": "Pod 存儲使用率",
   "podNetworkUsage": "Pod 網絡使用率",
   "noPodData": "沒有可用的 Pod 數據",
-  "podList": "Pod 列表"
+  "podList": "Pod 列表",
+  "rowsPerPage": "每頁行數",
+  "of": "共"
 }

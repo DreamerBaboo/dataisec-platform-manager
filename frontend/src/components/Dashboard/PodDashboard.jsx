@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Paper, Typography, Box, CircularProgress, FormControl, InputLabel, Select, MenuItem, useTheme, Button, TextField, Grid, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel } from '@mui/material';
+import { Paper, Typography, Box, CircularProgress, FormControl, InputLabel, Select, MenuItem, useTheme, Button, TextField, Grid, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel, TablePagination } from '@mui/material';
 import ReactECharts from 'echarts-for-react';
 import { useTranslation } from 'react-i18next';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -30,6 +30,8 @@ const PodDashboard = () => {
       { i: 'storage', x: 6, y: 8, w: 6, h: 8 },
     ];
   });
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   const theme = useTheme();
   const chartRefs = useRef({});
@@ -251,6 +253,15 @@ const PodDashboard = () => {
     localStorage.setItem('podDashboardLayout', JSON.stringify(newLayout));
   };
 
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
   return (
     <Box sx={{ flexGrow: 1, color: theme.palette.text.primary }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -356,62 +367,105 @@ const PodDashboard = () => {
         {loading ? (
           <CircularProgress />
         ) : (
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>
-                    <TableSortLabel
-                      active={orderBy === 'name'}
-                      direction={orderBy === 'name' ? order : 'asc'}
-                      onClick={() => handleRequestSort('name')}
+          <Box>
+            <TableContainer 
+              component={Paper} 
+              sx={{ 
+                maxHeight: 440,
+                overflow: 'auto',
+                '& .MuiTableContainer-root': {
+                  overflow: 'auto'
+                }
+              }}
+            >
+              <Table stickyHeader>
+                <TableHead>
+                  <TableRow>
+                    <TableCell
+                      sx={{
+                        backgroundColor: theme.palette.background.paper,
+                        fontWeight: 'bold'
+                      }}
                     >
-                      {t('podName')}
-                    </TableSortLabel>
-                  </TableCell>
-                  <TableCell>
-                    <TableSortLabel
-                      active={orderBy === 'type'}
-                      direction={orderBy === 'type' ? order : 'asc'}
-                      onClick={() => handleRequestSort('type')}
+                      <TableSortLabel
+                        active={orderBy === 'name'}
+                        direction={orderBy === 'name' ? order : 'asc'}
+                        onClick={() => handleRequestSort('name')}
+                      >
+                        {t('podName')}
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        backgroundColor: theme.palette.background.paper,
+                        fontWeight: 'bold'
+                      }}
                     >
-                      {t('podType')}
-                    </TableSortLabel>
-                  </TableCell>
-                  <TableCell>
-                    <TableSortLabel
-                      active={orderBy === 'namespace'}
-                      direction={orderBy === 'namespace' ? order : 'asc'}
-                      onClick={() => handleRequestSort('namespace')}
+                      <TableSortLabel
+                        active={orderBy === 'type'}
+                        direction={orderBy === 'type' ? order : 'asc'}
+                        onClick={() => handleRequestSort('type')}
+                      >
+                        {t('podType')}
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        backgroundColor: theme.palette.background.paper,
+                        fontWeight: 'bold'
+                      }}
                     >
-                      {t('namespace')}
-                    </TableSortLabel>
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {sortedPods.map((pod) => (
-                  <TableRow
-                    key={pod.metadata.uid || pod.id} // Use a unique identifier for the key
-                    onClick={() => handlePodSelection(pod)}
-                    sx={{
-                      cursor: 'pointer',
-                      '&:hover': {
-                        backgroundColor: theme.palette.action.hover,
-                      },
-                      ...(selectedPod && selectedPod.metadata.uid === pod.metadata.uid
-                        ? { backgroundColor: theme.palette.action.selected }
-                        : {}),
-                    }}
-                  >
-                    <TableCell>{pod.metadata.name}</TableCell>
-                    <TableCell>{pod.type}</TableCell>
-                    <TableCell>{pod.metadata.namespace}</TableCell>
+                      <TableSortLabel
+                        active={orderBy === 'namespace'}
+                        direction={orderBy === 'namespace' ? order : 'asc'}
+                        onClick={() => handleRequestSort('namespace')}
+                      >
+                        {t('namespace')}
+                      </TableSortLabel>
+                    </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                </TableHead>
+                <TableBody>
+                  {sortedPods
+                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                    .map((pod) => (
+                      <TableRow
+                        key={pod.metadata.uid || pod.id}
+                        onClick={() => handlePodSelection(pod)}
+                        sx={{
+                          cursor: 'pointer',
+                          '&:hover': {
+                            backgroundColor: theme.palette.action.hover,
+                          },
+                          ...(selectedPod && selectedPod.metadata.uid === pod.metadata.uid
+                            ? { backgroundColor: theme.palette.action.selected }
+                            : {}),
+                        }}
+                      >
+                        <TableCell>{pod.metadata.name}</TableCell>
+                        <TableCell>{pod.type}</TableCell>
+                        <TableCell>{pod.metadata.namespace}</TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', pt: 2 }}>
+              <TablePagination
+                rowsPerPageOptions={[5, 10, 25]}
+                component="div"
+                count={sortedPods.length}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                onPageChange={handleChangePage}
+                onRowsPerPageChange={handleChangeRowsPerPage}
+                labelRowsPerPage={t('rowsPerPage')}
+                labelDisplayedRows={({ from, to, count }) => 
+                  `${from}-${to} ${t('of')} ${count}`
+                }
+              />
+            </Box>
+          </Box>
         )}
         {sortedPods.length === 0 && !loading && (
           <Typography>{t('noPodData')}</Typography>
