@@ -53,9 +53,10 @@ exports.generateSystemMetrics = () => {
   return metrics;
 };
 
-exports.generatePodMetrics = () => {
-  console.log('Generating pod metrics');
-  const generatePodMetric = () => ({
+exports.generatePodMetrics = (podName) => {
+  console.log('Generating pod metrics for:', podName);
+  
+  return {
     cpu: generateTimeSeries(60, 100),
     memory: generateTimeSeries(60, 100),
     storage: { used: Math.random() * 500, free: Math.random() * 500 },
@@ -63,16 +64,7 @@ exports.generatePodMetrics = () => {
       tx: generateTimeSeries(60, 1000),
       rx: generateTimeSeries(60, 1000)
     }
-  });
-
-  const metrics = {
-    'web-pod-1': generatePodMetric(),
-    'db-pod-1': generatePodMetric(),
-    'monitoring-pod-1': generatePodMetric(),
-    'cache-pod-1': generatePodMetric(),
   };
-  console.log('Pod metrics generated');
-  return metrics;
 };
 
 exports.generatePods = () => {

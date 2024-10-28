@@ -29,8 +29,11 @@ const EditPod = () => {
     type: '',
     image: '',
     replicas: 1,
-    cpu: '',
-    memory: '',
+    cpuRequest: '',
+    cpuLimit: '',
+    memoryRequest: '',
+    memoryLimit: '',
+    affinity: '',
   });
 
   useEffect(() => {
@@ -42,8 +45,11 @@ const EditPod = () => {
         type: pod.type,
         image: pod.image || '',
         replicas: pod.replicas || 1,
-        cpu: pod.cpu || '100m',
-        memory: pod.memory || '128Mi',
+        cpuRequest: pod.cpuRequest || '100m',
+        cpuLimit: pod.cpuLimit || '200m',
+        memoryRequest: pod.memoryRequest || '128Mi',
+        memoryLimit: pod.memoryLimit || '256Mi',
+        affinity: pod.affinity || '',
       });
       setLoading(false);
     } else {
@@ -68,8 +74,11 @@ const EditPod = () => {
         type: pod.type,
         image: pod.image || '',
         replicas: pod.replicas || 1,
-        cpu: pod.cpu || '100m',
-        memory: pod.memory || '128Mi',
+        cpuRequest: pod.cpuRequest || '100m',
+        cpuLimit: pod.cpuLimit || '200m',
+        memoryRequest: pod.memoryRequest || '128Mi',
+        memoryLimit: pod.memoryLimit || '256Mi',
+        affinity: pod.affinity || '',
       });
     } catch (error) {
       setError(error.message);
@@ -107,6 +116,17 @@ const EditPod = () => {
       setError(error.message);
     }
   };
+
+  // 定義所有可用的命名空間
+  const availableNamespaces = [
+    'default',
+    'kube-system',
+    'monitoring',
+    'database',
+    'opensearch',  // 添加新的命名空間
+    'kafka',       // 添加新的命名空間
+    'decoder'      // 添加新的命名空間
+  ];
 
   if (loading) {
     return (
@@ -146,10 +166,11 @@ const EditPod = () => {
                   onChange={handleChange}
                   disabled
                 >
-                  <MenuItem value="default">default</MenuItem>
-                  <MenuItem value="kube-system">kube-system</MenuItem>
-                  <MenuItem value="monitoring">monitoring</MenuItem>
-                  <MenuItem value="database">database</MenuItem>
+                  {availableNamespaces.map(namespace => (
+                    <MenuItem key={namespace} value={namespace}>
+                      {namespace}
+                    </MenuItem>
+                  ))}
                 </Select>
               </FormControl>
             </Grid>
@@ -177,6 +198,7 @@ const EditPod = () => {
                 label={t('containerImage')}
                 value={formData.image}
                 onChange={handleChange}
+                disabled
               />
             </Grid>
             <Grid item xs={12} sm={4}>
@@ -195,9 +217,9 @@ const EditPod = () => {
               <TextField
                 required
                 fullWidth
-                name="cpu"
-                label={t('cpuLimit')}
-                value={formData.cpu}
+                name="cpuRequest"
+                label={t('cpuRequest')}
+                value={formData.cpuRequest}
                 onChange={handleChange}
               />
             </Grid>
@@ -205,10 +227,40 @@ const EditPod = () => {
               <TextField
                 required
                 fullWidth
-                name="memory"
-                label={t('memoryLimit')}
-                value={formData.memory}
+                name="cpuLimit"
+                label={t('cpuLimit')}
+                value={formData.cpuLimit}
                 onChange={handleChange}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <TextField
+                required
+                fullWidth
+                name="memoryRequest"
+                label={t('memoryRequest')}
+                value={formData.memoryRequest}
+                onChange={handleChange}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <TextField
+                required
+                fullWidth
+                name="memoryLimit"
+                label={t('memoryLimit')}
+                value={formData.memoryLimit}
+                onChange={handleChange}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                name="affinity"
+                label={t('affinity')}
+                value={formData.affinity}
+                onChange={handleChange}
+                helperText="K8s 親和性條件"
               />
             </Grid>
             <Grid item xs={12}>

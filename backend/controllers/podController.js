@@ -107,3 +107,16 @@ exports.uploadImage = async (req, res) => {
     res.status(500).json({ message: 'Upload failed', error: error.message });
   }
 };
+
+exports.getPodMetrics = (req, res) => {
+  const { podName } = req.query;
+  console.log('Received request for pod metrics:', podName);
+  
+  if (!podName) {
+    return res.status(400).json({ message: 'Pod name is required' });
+  }
+
+  const metrics = fakeDataGenerator.generatePodMetrics(podName);
+  console.log('Generated pod metrics:', metrics);
+  res.json(metrics);
+};

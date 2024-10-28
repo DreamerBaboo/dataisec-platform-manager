@@ -8,12 +8,36 @@ const PodForm = ({ onSubmit }) => {
     image: '',
     replicas: 1,
     namespace: 'default',
-    cpu: '100m',
-    memory: '128Mi',
+    cpuRequest: '100m',
+    cpuLimit: '200m',
+    memoryRequest: '128Mi',
+    memoryLimit: '256Mi',
+    affinity: '',
+    imageTag: '',
   });
 
   const handleChange = (e) => {
     setPodConfig({ ...podConfig, [e.target.name]: e.target.value });
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (file && file.type === 'application/x-tar') {
+      // 假設有一個 API 來處理文件上傳
+      const formData = new FormData();
+      formData.append('image', file);
+
+      try {
+        const response = await axios.post('http://localhost:3001/pods/upload-image', formData, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        setPodConfig({ ...podConfig, imageTag: response.data.tag });
+      } catch (error) {
+        console.error('上傳鏡像失敗:', error);
+      }
+    } else {
+      console.error('請上傳 tar 格式的文件');
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -29,8 +53,12 @@ const PodForm = ({ onSubmit }) => {
         image: '',
         replicas: 1,
         namespace: 'default',
-        cpu: '100m',
-        memory: '128Mi',
+        cpuRequest: '100m',
+        cpuLimit: '200m',
+        memoryRequest: '128Mi',
+        memoryLimit: '256Mi',
+        affinity: '',
+        imageTag: '',
       });
     } catch (error) {
       console.error('創建 Pod 失敗:', error);
@@ -85,21 +113,66 @@ const PodForm = ({ onSubmit }) => {
       <TextField
         fullWidth
         label="CPU 請求"
-        name="cpu"
-        value={podConfig.cpu}
+        name="cpuRequest"
+        value={podConfig.cpuRequest}
         onChange={handleChange}
         margin="normal"
         helperText="例如: 100m, 0.1"
       />
       <TextField
         fullWidth
+        label="CPU 限制"
+        name="cpuLimit"
+        value={podConfig.cpuLimit}
+        onChange={handleChange}
+        margin="normal"
+        helperText="例如: 200m, 0.2"
+      />
+      <TextField
+        fullWidth
         label="內存請求"
-        name="memory"
-        value={podConfig.memory}
+        name="memoryRequest"
+        value={podConfig.memoryRequest}
         onChange={handleChange}
         margin="normal"
         helperText="例如: 128Mi, 1Gi"
       />
+      <TextField
+        fullWidth
+        label="內存限制"
+        name="memoryLimit"
+        value={podConfig.memoryLimit}
+        onChange={handleChange}
+        margin="normal"
+        helperText="例如: 256Mi, 2Gi"
+      />
+      <TextField
+        fullWidth
+        label="親和性條件"
+        name="affinity"
+        value={podConfig.affinity}
+        onChange={handleChange}
+        margin="normal"
+        helperText="K8s 親和性條件"
+      />
+      <Button
+        variant="contained"
+        component="label"
+        sx={{ mt: 2 }}
+      >
+        上傳鏡像
+        <input
+          type="file"
+          hidden
+          accept=".tar"
+          onChange={handleFileUpload}
+        />
+      </Button>
+      {podConfig.imageTag && (
+        <Typography variant="body2" sx={{ mt: 1 }}>
+          鏡像標籤: {podConfig.imageTag}
+        </Typography>
+      )}
       <Button type="submit" variant="contained" color="primary" sx={{ mt: 2 }}>
         創建 Pod
       </Button>

@@ -10,10 +10,18 @@ exports.getSystemMetrics = (req, res) => {
 
 exports.getPodMetrics = (req, res) => {
   console.log('Received request for pod metrics');
-  const fakeData = fakeDataGenerator.generatePodMetrics();
-  console.log('Generated pod metrics:', JSON.stringify(fakeData, null, 2));
-  console.log('Sending response for pod metrics');
-  res.json(fakeData);
+  const allPodsMetrics = {};
+  
+  // 獲取所有 Pod 的列表
+  const pods = fakeDataGenerator.generatePods();
+  
+  // 為每個 Pod 生成指標
+  pods.forEach(pod => {
+    allPodsMetrics[pod.metadata.name] = fakeDataGenerator.generatePodMetrics(pod.metadata.name);
+  });
+
+  console.log('Generated metrics for all pods');
+  res.json(allPodsMetrics);
 };
 
 exports.getPods = (req, res) => {

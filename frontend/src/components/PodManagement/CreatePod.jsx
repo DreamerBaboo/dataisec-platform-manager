@@ -11,9 +11,12 @@ import {
   InputLabel, 
   Select, 
   MenuItem,
-  Alert
+  Alert,
+  IconButton,
+  Tooltip
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 
 const CreatePod = () => {
   const { t } = useTranslation();
@@ -23,18 +26,85 @@ const CreatePod = () => {
     namespace: 'default',
     type: 'deployment',
     image: '',
+    imageTag: '',
     replicas: 1,
-    cpu: '100m',
-    memory: '128Mi',
+    cpuRequest: '100m',
+    cpuLimit: '200m',
+    memoryRequest: '128Mi',
+    memoryLimit: '256Mi',
+    affinity: {
+      nodeAffinity: '',
+      podAffinity: '',
+      podAntiAffinity: ''
+    }
   });
   const [error, setError] = useState('');
+  const [uploadedImage, setUploadedImage] = useState(null);
+
+  // 定義所有可用的命名空間
+  const availableNamespaces = [
+    'default',
+    'kube-system',
+    'monitoring',
+    'database',
+    'opensearch',  // 添加新的命名空間
+    'kafka',       // 添加新的命名空間
+    'decoder'      // 添加新的命名空間
+  ];
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    if (name.startsWith('affinity.')) {
+      const affinityType = name.split('.')[1];
+      setFormData(prev => ({
+        ...prev,
+        affinity: {
+          ...prev.affinity,
+          [affinityType]: value
+        }
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+  };
+
+  const handleImageUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.tar')) {
+      setError('只支持 .tar 格式的文件');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const response = await fetch('http://localhost:3001/api/pods/upload-image', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error('上傳失敗');
+      }
+
+      const data = await response.json();
+      setUploadedImage(file.name);
+      setFormData(prev => ({
+        ...prev,
+        imageTag: data.tag
+      }));
+    } catch (error) {
+      setError('上傳文件失敗: ' + error.message);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -68,6 +138,7 @@ const CreatePod = () => {
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         <form onSubmit={handleSubmit}>
           <Grid container spacing={3}>
+            {/* 基本信息 */}
             <Grid item xs={12} sm={6}>
               <TextField
                 required
@@ -87,13 +158,16 @@ const CreatePod = () => {
                   label={t('namespace')}
                   onChange={handleChange}
                 >
-                  <MenuItem value="default">default</MenuItem>
-                  <MenuItem value="kube-system">kube-system</MenuItem>
-                  <MenuItem value="monitoring">monitoring</MenuItem>
-                  <MenuItem value="database">database</MenuItem>
+                  {availableNamespaces.map(namespace => (
+                    <MenuItem key={namespace} value={namespace}>
+                      {namespace}
+                    </MenuItem>
+                  ))}
                 </Select>
               </FormControl>
             </Grid>
+
+            {/* Pod 類型和副本數 */}
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
                 <InputLabel>{t('podType')}</InputLabel>
@@ -113,16 +187,6 @@ const CreatePod = () => {
               <TextField
                 required
                 fullWidth
-                name="image"
-                label={t('containerImage')}
-                value={formData.image}
-                onChange={handleChange}
-              />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <TextField
-                required
-                fullWidth
                 type="number"
                 name="replicas"
                 label={t('replicas')}
@@ -131,26 +195,125 @@ const CreatePod = () => {
                 inputProps={{ min: 1 }}
               />
             </Grid>
-            <Grid item xs={12} sm={4}>
+
+            {/* 鏡像上傳和標籤 */}
+            <Grid item xs={12}>
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                <Button
+                  variant="contained"
+                  component="label"
+                  startIcon={<CloudUploadIcon />}
+                >
+                  {t('uploadImage')}
+                  <input
+                    type="file"
+                    hidden
+                    accept=".tar"
+                    onChange={handleImageUpload}
+                  />
+                </Button>
+                {uploadedImage && (
+                  <Typography variant="body2">
+                    {uploadedImage}
+                  </Typography>
+                )}
+              </Box>
+              {formData.imageTag && (
+                <TextField
+                  fullWidth
+                  margin="normal"
+                  label={t('imageTag')}
+                  value={formData.imageTag}
+                  disabled
+                />
+              )}
+            </Grid>
+
+            {/* 資源請求和限制 */}
+            <Grid item xs={12} sm={6}>
               <TextField
                 required
                 fullWidth
-                name="cpu"
+                name="cpuRequest"
+                label={t('cpuRequest')}
+                value={formData.cpuRequest}
+                onChange={handleChange}
+                helperText={t('cpuRequestHelp')}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                required
+                fullWidth
+                name="cpuLimit"
                 label={t('cpuLimit')}
-                value={formData.cpu}
+                value={formData.cpuLimit}
                 onChange={handleChange}
+                helperText={t('cpuLimitHelp')}
               />
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 required
                 fullWidth
-                name="memory"
-                label={t('memoryLimit')}
-                value={formData.memory}
+                name="memoryRequest"
+                label={t('memoryRequest')}
+                value={formData.memoryRequest}
                 onChange={handleChange}
+                helperText={t('memoryRequestHelp')}
               />
             </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                required
+                fullWidth
+                name="memoryLimit"
+                label={t('memoryLimit')}
+                value={formData.memoryLimit}
+                onChange={handleChange}
+                helperText={t('memoryLimitHelp')}
+              />
+            </Grid>
+
+            {/* 親和性設置 */}
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                multiline
+                rows={4}
+                name="affinity.nodeAffinity"
+                label={t('nodeAffinity')}
+                value={formData.affinity.nodeAffinity}
+                onChange={handleChange}
+                helperText={t('nodeAffinityHelp')}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                multiline
+                rows={4}
+                name="affinity.podAffinity"
+                label={t('podAffinity')}
+                value={formData.affinity.podAffinity}
+                onChange={handleChange}
+                helperText={t('podAffinityHelp')}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                multiline
+                rows={4}
+                name="affinity.podAntiAffinity"
+                label={t('podAntiAffinity')}
+                value={formData.affinity.podAntiAffinity}
+                onChange={handleChange}
+                helperText={t('podAntiAffinityHelp')}
+              />
+            </Grid>
+
+            {/* 按鈕 */}
             <Grid item xs={12}>
               <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
                 <Button 

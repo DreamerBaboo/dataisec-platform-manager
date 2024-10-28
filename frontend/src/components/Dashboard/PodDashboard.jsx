@@ -34,39 +34,56 @@ const PodDashboard = () => {
   const theme = useTheme();
   const chartRefs = useRef({});
 
+  // 分離指標數據和列表數據的刷新邏輯
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      await Promise.all([fetchPodMetrics(), fetchPods()]);
+      await fetchPods();
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    fetchData();
-    const intervalId = setInterval(fetchData, 5000);
-    return () => clearInterval(intervalId);
-  }, [fetchData]);
-
-  useEffect(() => {
-    filterPods();
-  }, [pods, searchTerm, selectedNamespace, selectedPodType]);
-
-  const fetchPodMetrics = async () => {
+  // 當選擇 Pod 時獲取指標數據
+  const fetchPodMetrics = async (podName) => {
+    if (!podName) return;
+    
     try {
-      const response = await fetch('http://localhost:3001/api/metrics/pods', {
+      console.log('Fetching metrics for pod:', podName);
+      // 修改 API 路徑
+      const response = await fetch(`http://localhost:3001/api/metrics/pods`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
+      console.log('Received metrics for pod:', podName, data);
       setPodMetrics(data);
     } catch (error) {
       console.error(t('fetchPodMetricsError'), error);
     }
   };
+
+  // 只在組件加載時獲取一次 Pod 列表
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // 當選擇的 Pod 改變時，獲取新的指標數據並開始定時刷新
+  useEffect(() => {
+    if (selectedPod) {
+      fetchPodMetrics(selectedPod.metadata.name);
+      const intervalId = setInterval(() => {
+        fetchPodMetrics(selectedPod.metadata.name);
+      }, 5000);
+      return () => clearInterval(intervalId);
+    }
+  }, [selectedPod]);
+
+  useEffect(() => {
+    filterPods();
+  }, [pods, searchTerm, selectedNamespace, selectedPodType]);
 
   const fetchPods = async () => {
     try {
