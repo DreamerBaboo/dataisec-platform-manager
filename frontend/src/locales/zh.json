@@ -60,5 +60,12 @@
   "noPodData": "沒有可用的 Pod 數據",
   "podList": "Pod 列表",
   "rowsPerPage": "每頁行數",
-  "of": "共"
+  "of": "共",
+  "affinitySettings": "親和性設置",
+  "nodeAffinity": "節點親和性",
+  "podAffinity": "Pod 親和性",
+  "podAntiAffinity": "Pod 反親和性",
+  "nodeAffinityHelp": "設置 Pod 與節點的親和性規則",
+  "podAffinityHelp": "設置 Pod 與其他 Pod 的親和性規則",
+  "podAntiAffinityHelp": "設置 Pod 與其他 Pod 的反親和性規則"
 }

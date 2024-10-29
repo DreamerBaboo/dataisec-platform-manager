@@ -275,36 +275,37 @@ const CreatePod = () => {
               />
             </Grid>
 
-            {/* 親和性設置 */}
+            {/* 親和性設置 - 更新後的版本 */}
             <Grid item xs={12}>
+              <Typography variant="subtitle1" gutterBottom>
+                {t('affinitySettings')}
+              </Typography>
               <TextField
                 fullWidth
                 multiline
-                rows={4}
+                rows={3}
                 name="affinity.nodeAffinity"
                 label={t('nodeAffinity')}
                 value={formData.affinity.nodeAffinity}
                 onChange={handleChange}
                 helperText={t('nodeAffinityHelp')}
+                sx={{ mb: 2 }}
               />
-            </Grid>
-            <Grid item xs={12}>
               <TextField
                 fullWidth
                 multiline
-                rows={4}
+                rows={3}
                 name="affinity.podAffinity"
                 label={t('podAffinity')}
                 value={formData.affinity.podAffinity}
                 onChange={handleChange}
                 helperText={t('podAffinityHelp')}
+                sx={{ mb: 2 }}
               />
-            </Grid>
-            <Grid item xs={12}>
               <TextField
                 fullWidth
                 multiline
-                rows={4}
+                rows={3}
                 name="affinity.podAntiAffinity"
                 label={t('podAntiAffinity')}
                 value={formData.affinity.podAntiAffinity}
@@ -313,7 +314,7 @@ const CreatePod = () => {
               />
             </Grid>
 
-            {/* 按鈕 */}
+            {/* 按鈕部分 */}
             <Grid item xs={12}>
               <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
                 <Button 
