@@ -118,12 +118,6 @@ const getPods = async (req, res) => {
         namespace: source.kubernetes?.namespace,
         status: source.kubernetes?.pod?.status?.phase || 'Unknown',
         startTime: source.kubernetes?.pod?.start_time,
-        metrics: {
-          cpu: source.kubernetes?.pod?.cpu?.usage?.nanocores 
-            ? (source.kubernetes.pod.cpu.usage.nanocores / 1000000000) 
-            : 0,
-          memory: source.kubernetes?.pod?.memory?.usage?.bytes || 0
-        },
         restarts: source.kubernetes?.pod?.status?.container_statuses?.[0]?.restart_count || 0
       };
     });
@@ -139,14 +133,15 @@ const getPods = async (req, res) => {
 // 獲取特定 Pod 的詳細指標
 const getPodMetrics = async (req, res) => {
   try {
-    const { podName, timeRange = '15m' } = req.query;
+    const { podName } = req.params;
+    const timeRange = req.query.timeRange || '15m';
 
     if (!podName) {
       return res.status(400).json({ message: 'Pod name is required' });
     }
 
     const response = await client.search({
-      index: process.env.OPENSEARCH_POD_METRICS_INDEX,
+      index: process.env.OPENSEARCH_SYSTEM_METRICS_INDEX,
       body: {
         size: 0,
         query: {
@@ -162,48 +157,39 @@ const getPodMetrics = async (req, res) => {
               },
               {
                 term: {
-                  'kubernetes.pod.name': podName
+                  'kubernetes.pod.name.keyword': podName  // Use .keyword for exact match
                 }
               }
             ]
           }
         },
         aggs: {
-          time_buckets: {
-            date_histogram: {
-              field: '@timestamp',
-              fixed_interval: '30s',
-              time_zone: 'Asia/Taipei'
-            },
-            aggs: {
-              cpu_usage: {
-                avg: {
-                  field: 'kubernetes.pod.cpu.usage.nanocores'
-                }
+          latest_metrics: {
+            top_metrics: {
+              metrics: [
+                { field: 'kubernetes.pod.memory.usage.bytes' },
+                { field: 'kubernetes.pod.memory.available.bytes' },
+                { field: 'kubernetes.pod.cpu.usage.nanocores' }
+              ],
+              sort: {
+                '@timestamp': 'desc'
               },
-              memory_usage: {
-                avg: {
-                  field: 'kubernetes.pod.memory.usage.bytes'
-                }
-              }
+              size: 1
             }
           }
         }
       }
     });
 
-    const buckets = response.body.aggregations.time_buckets.buckets;
+    const latestMetrics = response.body.aggregations.latest_metrics.top[0]?.metrics || {};
     const metrics = {
-      cpu: buckets.map(bucket => ({
-        timestamp: bucket.key_as_string,
-        value: (bucket.cpu_usage.value || 0) / 1000000000,
-        display: `${((bucket.cpu_usage.value || 0) / 1000000000).toFixed(2)} cores`
-      })),
-      memory: buckets.map(bucket => ({
-        timestamp: bucket.key_as_string,
-        value: bucket.memory_usage.value || 0,
-        display: formatBytes(bucket.memory_usage.value || 0)
-      }))
+      memory: {
+        used: latestMetrics['kubernetes.pod.memory.usage.bytes'] || 0,
+        available: latestMetrics['kubernetes.pod.memory.available.bytes'] || 0
+      },
+      cpu: {
+        cores: (latestMetrics['kubernetes.pod.cpu.usage.nanocores'] || 0) / 1000000000
+      }
     };
 
     res.json(metrics);
@@ -222,8 +208,71 @@ const formatBytes = (bytes) => {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
 };
 
+// Add new endpoint for calculating selected pods' resources
+const calculateSelectedPodsResources = async (req, res) => {
+  try {
+    const { podNames } = req.body;
+    if (!Array.isArray(podNames) || podNames.length === 0) {
+      return res.status(400).json({ message: 'Pod names array is required' });
+    }
+
+    const response = await client.search({
+      index: process.env.OPENSEARCH_SYSTEM_METRICS_INDEX,
+      body: {
+        size: 0,
+        query: {
+          bool: {
+            must: [
+              {
+                range: {
+                  '@timestamp': {
+                    gte: 'now-1m'
+                  }
+                }
+              },
+              {
+                terms: {
+                  'kubernetes.pod.name': podNames
+                }
+              }
+            ]
+          }
+        },
+        aggs: {
+          total_cpu: {
+            sum: {
+              field: 'kubernetes.pod.cpu.usage.nanocores'
+            }
+          },
+          total_memory: {
+            sum: {
+              field: 'kubernetes.pod.memory.usage.bytes'
+            }
+          }
+        }
+      }
+    });
+
+    const totalResources = {
+      memory: {
+        used: response.body.aggregations.total_memory.value || 0,
+        usedGB: (response.body.aggregations.total_memory.value || 0) / (1024 * 1024 * 1024)
+      },
+      cpu: {
+        cores: (response.body.aggregations.total_cpu.value || 0) / 1000000000
+      }
+    };
+
+    res.json(totalResources);
+  } catch (error) {
+    console.error('Error calculating resources:', error);
+    res.status(500).json({ message: 'Failed to calculate resources', error: error.message });
+  }
+};
+
 module.exports = {
   getNamespaces,
   getPods,
-  getPodMetrics
+  getPodMetrics,
+  calculateSelectedPodsResources
 };

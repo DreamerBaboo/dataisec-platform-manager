@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Paper,
@@ -18,12 +18,12 @@ import {
   MenuItem,
   TextField,
   InputAdornment,
-  CircularProgress,
-  Card,
-  CardContent
+  Checkbox,
+  Button
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import SearchIcon from '@mui/icons-material/Search';
+import CalculateIcon from '@mui/icons-material/Calculate';
 import ReactECharts from 'echarts-for-react';
 import RGL, { WidthProvider } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
@@ -31,35 +31,37 @@ import "react-resizable/css/styles.css";
 
 const ReactGridLayout = WidthProvider(RGL);
 
+const DEFAULT_LAYOUT = [
+  { i: 'metrics', x: 0, y: 0, w: 12, h: 4, minW: 6, minH: 4 },
+  { i: 'statusChart', x: 0, y: 4, w: 6, h: 8, minW: 4, minH: 6 },
+  { i: 'namespaceChart', x: 6, y: 4, w: 6, h: 8, minW: 4, minH: 6 }
+];
+
+const LAYOUT_STORAGE_KEY = 'pod-dashboard-layout';
+
 const PodDashboard = () => {
   const { t } = useTranslation();
-  const [orderBy, setOrderBy] = useState('name');
-  const [order, setOrder] = useState('asc');
   const [pods, setPods] = useState([]);
+  const [selectedPods, setSelectedPods] = useState([]);
+  const [podMetrics, setPodMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
     namespace: 'all',
     search: ''
   });
   const [namespaces, setNamespaces] = useState([]);
-  const [metrics, setMetrics] = useState({
-    totalPods: 0,
-    runningPods: 0,
-    totalCPU: 0,
-    totalMemory: 0
+  const [layout, setLayout] = useState(() => {
+    const savedLayout = localStorage.getItem(LAYOUT_STORAGE_KEY);
+    return savedLayout ? JSON.parse(savedLayout) : DEFAULT_LAYOUT;
   });
 
-  // Dashboard layout state
-  const [layout, setLayout] = useState([
-    { i: 'totalPods', x: 0, y: 0, w: 3, h: 4, minW: 2, minH: 3 },
-    { i: 'runningPods', x: 3, y: 0, w: 3, h: 4, minW: 2, minH: 3 },
-    { i: 'cpuUsage', x: 6, y: 0, w: 3, h: 4, minW: 2, minH: 3 },
-    { i: 'memoryUsage', x: 9, y: 0, w: 3, h: 4, minW: 2, minH: 3 },
-    { i: 'statusDistribution', x: 0, y: 4, w: 6, h: 8, minW: 4, minH: 6 },
-    { i: 'namespaceDistribution', x: 6, y: 4, w: 6, h: 8, minW: 4, minH: 6 }
-  ]);
+  // Save layout changes
+  const handleLayoutChange = useCallback((newLayout) => {
+    setLayout(newLayout);
+    localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(newLayout));
+  }, []);
 
-  // 獲取命名空間列表
+  // Fetch namespaces
   useEffect(() => {
     const fetchNamespaces = async () => {
       try {
@@ -77,7 +79,7 @@ const PodDashboard = () => {
     fetchNamespaces();
   }, []);
 
-  // 獲取 Pod 列表和指標
+  // Fetch pods
   useEffect(() => {
     const fetchPods = async () => {
       try {
@@ -93,18 +95,6 @@ const PodDashboard = () => {
         if (response.ok) {
           const data = await response.json();
           setPods(data);
-          
-          // 計算總體指標
-          const runningPods = data.filter(pod => pod.status === 'Running').length;
-          const totalCPU = data.reduce((sum, pod) => sum + (pod.metrics?.cpu || 0), 0);
-          const totalMemory = data.reduce((sum, pod) => sum + (pod.metrics?.memory || 0), 0);
-          
-          setMetrics({
-            totalPods: data.length,
-            runningPods,
-            totalCPU,
-            totalMemory
-          });
         }
       } catch (error) {
         console.error('Error fetching pods:', error);
@@ -114,28 +104,65 @@ const PodDashboard = () => {
     };
 
     fetchPods();
-    const interval = setInterval(fetchPods, 30000); // 每30秒更新一次
+    const interval = setInterval(fetchPods, 30000);
     return () => clearInterval(interval);
   }, [filters]);
 
-  // 指標卡片配置
-  const MetricCard = ({ title, value, unit, color }) => (
-    <Card sx={{ height: '100%' }}>
-      <CardContent>
-        <Typography color="textSecondary" gutterBottom>
-          {title}
-        </Typography>
-        <Typography variant="h4" component="div" color={color}>
-          {typeof value === 'number' ? value.toFixed(2) : value} {unit}
-        </Typography>
-      </CardContent>
-    </Card>
-  );
+  // Fetch metrics for selected pods
+  const fetchSelectedPodsMetrics = useCallback(async () => {
+    if (selectedPods.length === 0) {
+      setPodMetrics(null);
+      return;
+    }
 
-  // Pod 狀態分佈圖表配置
+    try {
+      const response = await fetch('http://localhost:3001/api/pods/calculate-resources', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ podNames: selectedPods })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setPodMetrics(data);
+      }
+    } catch (error) {
+      console.error('Error fetching pod metrics:', error);
+    }
+  }, [selectedPods]);
+
+  useEffect(() => {
+    fetchSelectedPodsMetrics();
+  }, [selectedPods, fetchSelectedPodsMetrics]);
+
+  // Selection handlers
+  const handleSelectAllClick = (event) => {
+    if (event.target.checked) {
+      setSelectedPods(pods.map(pod => pod.name));
+    } else {
+      setSelectedPods([]);
+    }
+  };
+
+  const handlePodSelect = (podName) => {
+    setSelectedPods(prev => {
+      if (prev.includes(podName)) {
+        return prev.filter(name => name !== podName);
+      } else {
+        return [...prev, podName];
+      }
+    });
+  };
+
+  // Chart configurations
   const getPodStatusChartOption = () => {
     const statusCount = pods.reduce((acc, pod) => {
-      acc[pod.status] = (acc[pod.status] || 0) + 1;
+      if (pod.status) {
+        acc[pod.status] = (acc[pod.status] || 0) + 1;
+      }
       return acc;
     }, {});
 
@@ -169,10 +196,11 @@ const PodDashboard = () => {
     };
   };
 
-  // 命名空間分佈圖表配置
-  const getNamespaceDistributionChartOption = () => {
+  const getNamespaceChartOption = () => {
     const namespaceCount = pods.reduce((acc, pod) => {
-      acc[pod.namespace] = (acc[pod.namespace] || 0) + 1;
+      if (pod.namespace) {
+        acc[pod.namespace] = (acc[pod.namespace] || 0) + 1;
+      }
       return acc;
     }, {});
 
@@ -218,65 +246,57 @@ const PodDashboard = () => {
     };
   };
 
-  const handleRequestSort = (property) => {
-    const isAsc = orderBy === property && order === 'asc';
-    setOrder(isAsc ? 'desc' : 'asc');
-    setOrderBy(property);
-  };
-
-  const getStatusColor = (status) => {
-    switch (status?.toLowerCase()) {
-      case 'running':
-        return 'success';
-      case 'pending':
-        return 'warning';
-      case 'failed':
-        return 'error';
-      default:
-        return 'default';
-    }
-  };
-
-  const formatBytes = (bytes) => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
-  };
-
-  const sortedPods = useMemo(() => {
-    if (!pods) return [];
-    
-    const comparator = (a, b) => {
-      let comparison = 0;
-      switch (orderBy) {
-        case 'name':
-          comparison = a.name.localeCompare(b.name);
-          break;
-        case 'namespace':
-          comparison = a.namespace.localeCompare(b.namespace);
-          break;
-        case 'status':
-          comparison = (a.status || '').localeCompare(b.status || '');
-          break;
-        case 'cpu':
-          comparison = (a.metrics?.cpu || 0) - (b.metrics?.cpu || 0);
-          break;
-        case 'memory':
-          comparison = (a.metrics?.memory || 0) - (b.metrics?.memory || 0);
-          break;
-        case 'restarts':
-          comparison = (a.restarts || 0) - (b.restarts || 0);
-          break;
-        default:
-          comparison = 0;
-      }
-      return order === 'desc' ? -comparison : comparison;
-    };
-
-    return [...pods].sort(comparator);
-  }, [pods, order, orderBy]);
+  // Render metrics cards
+  const MetricsCards = () => (
+    <Grid container spacing={3}>
+      <Grid item xs={12} md={6}>
+        <Paper sx={{ p: 2, height: '100%' }}>
+          <Box className="drag-handle" sx={{ 
+            cursor: 'move',
+            mb: 1,
+            p: 1,
+            bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.100'
+          }}>
+            <Typography variant="subtitle1" fontWeight="medium">
+              {selectedPods.length > 1 ? 
+                `${t('cpuUsage')} (${selectedPods.length} ${t('podsSelected')})` : 
+                t('cpuUsage')}
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Typography variant="h4" color="primary">
+              {podMetrics ? 
+                `${podMetrics.cpu.cores.toFixed(2)} cores` : 
+                '0 cores'}
+            </Typography>
+          </Box>
+        </Paper>
+      </Grid>
+      <Grid item xs={12} md={6}>
+        <Paper sx={{ p: 2, height: '100%' }}>
+          <Box className="drag-handle" sx={{ 
+            cursor: 'move',
+            mb: 1,
+            p: 1,
+            bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.100'
+          }}>
+            <Typography variant="subtitle1" fontWeight="medium">
+              {selectedPods.length > 1 ? 
+                `${t('memoryUsage')} (${selectedPods.length} ${t('podsSelected')})` : 
+                t('memoryUsage')}
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Typography variant="h4" color="secondary">
+              {podMetrics ? 
+                `${podMetrics.memory.usedGB.toFixed(2)} GB` : 
+                '0 GB'}
+            </Typography>
+          </Box>
+        </Paper>
+      </Grid>
+    </Grid>
+  );
 
   return (
     <Box sx={{ p: 3 }}>
@@ -285,101 +305,22 @@ const PodDashboard = () => {
         <ReactGridLayout
           className="layout"
           layout={layout}
-          cols={12}
-          rowHeight={30}
-          onLayoutChange={setLayout}
+          cols={30}
+          rowHeight={20}
+          onLayoutChange={handleLayoutChange}
           draggableHandle=".drag-handle"
           margin={[16, 16]}
           containerPadding={[0, 0]}
           isResizable={true}
           isDraggable={true}
         >
-          {/* Total Pods Card */}
-          <div key="totalPods">
-            <Paper sx={{ height: '100%', p: 2 }}>
-              <Box className="drag-handle" sx={{ 
-                cursor: 'move',
-                mb: 1,
-                p: 1,
-                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.100'
-              }}>
-                <Typography variant="subtitle1" fontWeight="medium">
-                  {t('totalPods')}
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 'calc(100% - 48px)' }}>
-                <Typography variant="h3" color="primary">
-                  {metrics.totalPods}
-                </Typography>
-              </Box>
-            </Paper>
-          </div>
-
-          {/* Running Pods Card */}
-          <div key="runningPods">
-            <Paper sx={{ height: '100%', p: 2 }}>
-              <Box className="drag-handle" sx={{ 
-                cursor: 'move',
-                mb: 1,
-                p: 1,
-                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.100'
-              }}>
-                <Typography variant="subtitle1" fontWeight="medium">
-                  {t('runningPods')}
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 'calc(100% - 48px)' }}>
-                <Typography variant="h3" color="success.main">
-                  {metrics.runningPods}
-                </Typography>
-              </Box>
-            </Paper>
-          </div>
-
-          {/* CPU Usage Chart */}
-          <div key="cpuUsage">
-            <Paper sx={{ height: '100%', p: 2 }}>
-              <Box className="drag-handle" sx={{ 
-                cursor: 'move',
-                mb: 1,
-                p: 1,
-                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.100'
-              }}>
-                <Typography variant="subtitle1" fontWeight="medium">
-                  {t('cpuUsage')}
-                </Typography>
-              </Box>
-              <Box sx={{ height: 'calc(100% - 48px)' }}>
-                <Typography variant="h3" color="info.main">
-                  {`${metrics.totalCPU.toFixed(2)} cores`}
-                </Typography>
-              </Box>
-            </Paper>
-          </div>
-
-          {/* Memory Usage Chart */}
-          <div key="memoryUsage">
-            <Paper sx={{ height: '100%', p: 2 }}>
-              <Box className="drag-handle" sx={{ 
-                cursor: 'move',
-                mb: 1,
-                p: 1,
-                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.100'
-              }}>
-                <Typography variant="subtitle1" fontWeight="medium">
-                  {t('memoryUsage')}
-                </Typography>
-              </Box>
-              <Box sx={{ height: 'calc(100% - 48px)' }}>
-                <Typography variant="h3" color="secondary.main">
-                  {formatBytes(metrics.totalMemory)}
-                </Typography>
-              </Box>
-            </Paper>
+          {/* Metrics Cards */}
+          <div key="metrics">
+            <MetricsCards />
           </div>
 
           {/* Status Distribution Chart */}
-          <div key="statusDistribution">
+          <div key="statusChart">
             <Paper sx={{ height: '100%', p: 2 }}>
               <Box className="drag-handle" sx={{ 
                 cursor: 'move',
@@ -395,13 +336,14 @@ const PodDashboard = () => {
                 <ReactECharts
                   option={getPodStatusChartOption()}
                   style={{ height: '100%' }}
+                  opts={{ renderer: 'canvas' }}
                 />
               </Box>
             </Paper>
           </div>
 
           {/* Namespace Distribution Chart */}
-          <div key="namespaceDistribution">
+          <div key="namespaceChart">
             <Paper sx={{ height: '100%', p: 2 }}>
               <Box className="drag-handle" sx={{ 
                 cursor: 'move',
@@ -415,8 +357,9 @@ const PodDashboard = () => {
               </Box>
               <Box sx={{ height: 'calc(100% - 48px)' }}>
                 <ReactECharts
-                  option={getNamespaceDistributionChartOption()}
+                  option={getNamespaceChartOption()}
                   style={{ height: '100%' }}
+                  opts={{ renderer: 'canvas' }}
                 />
               </Box>
             </Paper>
@@ -461,84 +404,69 @@ const PodDashboard = () => {
         </Grid>
       </Paper>
 
-      {/* Table Area */}
-      <TableContainer component={Paper}>
-        <Table>
+      {/* Pod List */}
+      <TableContainer 
+        component={Paper} 
+        sx={{ 
+          maxHeight: 1000,
+          overflow: 'auto'
+        }}
+      >
+        <Table stickyHeader>
           <TableHead>
             <TableRow>
-              <TableCell>
-                <TableSortLabel
-                  active={orderBy === 'name'}
-                  direction={orderBy === 'name' ? order : 'asc'}
-                  onClick={() => handleRequestSort('name')}
-                >
-                  {t('podName')}
-                </TableSortLabel>
+              <TableCell padding="checkbox" sx={{ bgcolor: 'background.paper' }}>
+                <Checkbox
+                  indeterminate={selectedPods.length > 0 && selectedPods.length < pods.length}
+                  checked={pods.length > 0 && selectedPods.length === pods.length}
+                  onChange={handleSelectAllClick}
+                />
               </TableCell>
-              <TableCell>
-                <TableSortLabel
-                  active={orderBy === 'namespace'}
-                  direction={orderBy === 'namespace' ? order : 'asc'}
-                  onClick={() => handleRequestSort('namespace')}
-                >
-                  {t('namespace')}
-                </TableSortLabel>
+              <TableCell sx={{ bgcolor: 'background.paper' }}>
+                {t('podName')}
               </TableCell>
-              <TableCell>
-                <TableSortLabel
-                  active={orderBy === 'status'}
-                  direction={orderBy === 'status' ? order : 'asc'}
-                  onClick={() => handleRequestSort('status')}
-                >
-                  {t('status')}
-                </TableSortLabel>
+              <TableCell sx={{ bgcolor: 'background.paper' }}>
+                {t('namespace')}
               </TableCell>
-              <TableCell align="right">
-                <TableSortLabel
-                  active={orderBy === 'cpu'}
-                  direction={orderBy === 'cpu' ? order : 'asc'}
-                  onClick={() => handleRequestSort('cpu')}
-                >
-                  {t('cpu')}
-                </TableSortLabel>
+              <TableCell sx={{ bgcolor: 'background.paper' }}>
+                {t('status')}
               </TableCell>
-              <TableCell align="right">
-                <TableSortLabel
-                  active={orderBy === 'memory'}
-                  direction={orderBy === 'memory' ? order : 'asc'}
-                  onClick={() => handleRequestSort('memory')}
-                >
-                  {t('memory')}
-                </TableSortLabel>
+              <TableCell align="right" sx={{ bgcolor: 'background.paper' }}>
+                {t('restarts')}
               </TableCell>
-              <TableCell align="right">
-                <TableSortLabel
-                  active={orderBy === 'restarts'}
-                  direction={orderBy === 'restarts' ? order : 'asc'}
-                  onClick={() => handleRequestSort('restarts')}
-                >
-                  {t('restarts')}
-                </TableSortLabel>
+              <TableCell align="right" sx={{ bgcolor: 'background.paper' }}>
+                {t('age')}
               </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {sortedPods.map((pod) => (
-              <TableRow key={`${pod.namespace}-${pod.name}`}>
+            {pods.map((pod) => (
+              <TableRow 
+                key={`${pod.namespace}-${pod.name}`}
+                selected={selectedPods.includes(pod.name)}
+                hover
+                onClick={() => handlePodSelect(pod.name)}
+                sx={{ cursor: 'pointer' }}
+              >
+                <TableCell padding="checkbox">
+                  <Checkbox
+                    checked={selectedPods.includes(pod.name)}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      handlePodSelect(pod.name);
+                    }}
+                  />
+                </TableCell>
                 <TableCell>{pod.name}</TableCell>
                 <TableCell>{pod.namespace}</TableCell>
                 <TableCell>
                   <Chip
                     label={pod.status}
-                    color={getStatusColor(pod.status)}
+                    color={pod.status === 'Running' ? 'success' :
+                           pod.status === 'Pending' ? 'warning' :
+                           pod.status === 'Failed' ? 'error' : 'default'}
                     size="small"
                   />
-                </TableCell>
-                <TableCell align="right">
-                  {`${pod.metrics?.cpu?.toFixed(2) || '0.00'} cores`}
-                </TableCell>
-                <TableCell align="right">
-                  {formatBytes(pod.metrics?.memory || 0)}
                 </TableCell>
                 <TableCell align="right">
                   <Chip
@@ -547,6 +475,9 @@ const PodDashboard = () => {
                     size="small"
                   />
                 </TableCell>
+                <TableCell align="right">
+                  {formatAge(pod.startTime)}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -554,6 +485,19 @@ const PodDashboard = () => {
       </TableContainer>
     </Box>
   );
+};
+
+// Helper function to format age
+const formatAge = (startTime) => {
+  if (!startTime) return '-';
+  const start = new Date(startTime);
+  const now = new Date();
+  const diff = Math.floor((now - start) / 1000);
+
+  if (diff < 60) return `${diff}s`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+  return `${Math.floor(diff / 86400)}d`;
 };
 
 export default PodDashboard;
