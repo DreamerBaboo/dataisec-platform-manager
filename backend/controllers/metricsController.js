@@ -31,23 +31,19 @@ const getClusterMetrics = async (req, res) => {
               time_zone: 'Asia/Taipei'
             },
             aggs: {
-              // CPU 指標
-              system_cpu: {
-                avg: {
-                  field: 'system.cpu.total.pct'
+              // CPU 指標 - 計算所有節點的 CPU 使用量總和
+              total_cpu_usage: {
+                sum: {
+                  field: 'kubernetes.node.cpu.usage.nanocores'
                 }
               },
-              user_cpu: {
-                avg: {
-                  field: 'system.cpu.user.pct'
+              // 計算總核心數 (所有節點的核心數總和)
+              total_cpu_cores: {
+                sum: {
+                  field: 'kubernetes.node.cpu.capacity.cores'
                 }
               },
-              cpu_cores: {
-                max: {
-                  field: 'system.cpu.cores'
-                }
-              },
-              // 內存指標
+              // 其他指標保持不變
               memory_total: {
                 max: {
                   field: 'system.memory.total'
@@ -63,7 +59,6 @@ const getClusterMetrics = async (req, res) => {
                   field: 'system.memory.free'
                 }
               },
-              // 網絡指標
               network_in: {
                 sum: {
                   field: 'system.network.in.bytes'
@@ -74,7 +69,6 @@ const getClusterMetrics = async (req, res) => {
                   field: 'system.network.out.bytes'
                 }
               },
-              // 存儲指標
               fs_total: {
                 max: {
                   field: 'system.filesystem.total'
@@ -99,11 +93,17 @@ const getClusterMetrics = async (req, res) => {
     const buckets = response.body.aggregations.time_buckets.buckets;
     const metrics = {
       cluster: {
-        cpu: buckets.map(bucket => ({
-          timestamp: bucket.key_as_string,
-          value: ((bucket.system_cpu.value + bucket.user_cpu.value) * 100) || 0,
-          display: `${(((bucket.system_cpu.value + bucket.user_cpu.value) * 100) || 0).toFixed(2)}%`
-        })),
+        cpu: buckets.map(bucket => {
+          const usedCores = (bucket.total_cpu_usage.value || 0) / 1000000000; // 將 nanocores 轉換為 cores
+          const totalCores = bucket.total_cpu_cores.value || 1;
+          return {
+            timestamp: bucket.key_as_string,
+            value: usedCores,
+            display: `${usedCores.toFixed(2)} cores`,
+            total: usedCores + 40,
+            valueType: 'cores'
+          };
+        }),
         memory: buckets.map(bucket => {
           const total = bucket.memory_total.value || 1;
           const used = bucket.memory_used.value || 0;

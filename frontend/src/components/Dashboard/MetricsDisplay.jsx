@@ -155,10 +155,10 @@ const MetricsDisplay = ({ metrics, selectedNode }) => {
         }
       },
       grid: {
-        top: 35,
-        left: '3%',
-        right: '4%',
-        bottom: '3%',
+        top: 60,
+        left: '10%',
+        right: '10%',
+        bottom: 60,
         containLabel: true
       },
       xAxis: {
@@ -166,7 +166,10 @@ const MetricsDisplay = ({ metrics, selectedNode }) => {
         data: data.map(item => item.timestamp),
         axisLabel: {
           formatter: (value) => new Date(value).toLocaleTimeString(),
-          rotate: 45
+          rotate: 45,
+          margin: 15,
+          align: 'right',
+          fontSize: 11
         }
       },
       yAxis: {
@@ -183,6 +186,7 @@ const MetricsDisplay = ({ metrics, selectedNode }) => {
             return `${value.toFixed(0)}%`;
           }
         },
+        max: isCPU ? (data[0]?.total || undefined) : undefined,  // 設置 CPU 圖表的最大值為總核心數
         min: 0
       },
       series: [{
@@ -195,38 +199,78 @@ const MetricsDisplay = ({ metrics, selectedNode }) => {
         },
         markPoint: {
           symbol: 'pin',
-          symbolSize: 40,
+          symbolSize: 35,
+          emphasis: {
+            scale: 1.3,
+            itemStyle: {
+              shadowBlur: 10,
+              shadowColor: 'rgba(0,0,0,0.3)'
+            },
+            label: {
+              fontSize: 12
+            }
+          },
+          label: {
+            formatter: (params) => {
+              if (isNetwork) {
+                return `${(params.value / (1024 * 1024)).toFixed(2)} MB/s`;
+              } else if (isMemory) {
+                return `${(params.value / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+              } else if (isCPU) {
+                return `${params.value.toFixed(2)} cores`;
+              }
+              return `${params.value.toFixed(2)}%`;
+            }
+          },
           data: [
             { 
               type: 'max', 
               name: t('maximum'),
               label: {
-                formatter: (params) => {
-                  if (isNetwork) {
-                    return `${(params.value / (1024 * 1024)).toFixed(2)} MB/s`;
-                  } else if (isMemory) {
-                    return `${(params.value / (1024 * 1024 * 1024)).toFixed(2)} GB`;
-                  } else if (isCPU) {
-                    return `${params.value.toFixed(2)} cores`;
-                  }
-                  return `${params.value.toFixed(2)}%`;
-                }
+                position: 'insideTop',
+                distance: 5
               }
             },
             { 
               type: 'min', 
               name: t('minimum'),
               label: {
-                formatter: (params) => {
-                  if (isNetwork) {
-                    return `${(params.value / (1024 * 1024)).toFixed(2)} MB/s`;
-                  } else if (isMemory) {
-                    return `${(params.value / (1024 * 1024 * 1024)).toFixed(2)} GB`;
-                  } else if (isCPU) {
-                    return `${params.value.toFixed(2)} cores`;
-                  }
-                  return `${params.value.toFixed(2)}%`;
-                }
+                position: 'insideBottom',
+                distance: 5
+              }
+            }
+          ]
+        },
+        markLine: {
+          silent: true,
+          symbol: ['none', 'none'],
+          lineStyle: {
+            color: (theme) => theme.palette.mode === 'dark' 
+              ? 'rgba(255,255,255,0.3)' 
+              : 'rgba(0,0,0,0.2)',
+            type: 'dashed'
+          },
+          label: {
+            color: (theme) => theme.palette.mode === 'dark'
+              ? 'rgba(255,255,255,0.7)'
+              : 'rgba(0,0,0,0.7)',
+            formatter: (params) => {
+              if (isNetwork) {
+                return `${(params.value / (1024 * 1024)).toFixed(0)} MB/s`;
+              } else if (isMemory) {
+                return `${(params.value / (1024 * 1024 * 1024)).toFixed(0)} GB`;
+              } else if (isCPU) {
+                return `${params.value.toFixed(0)} cores`;
+              }
+              return `${params.value.toFixed(0)}%`;
+            }
+          },
+          data: [
+            { 
+              type: 'average', 
+              name: t('average'),
+              label: {
+                position: 'end'
               }
             }
           ]
@@ -247,10 +291,6 @@ const MetricsDisplay = ({ metrics, selectedNode }) => {
       containerPadding={[0, 0]}
       isResizable={true}
       isDraggable={true}
-      // 添加這些屬性以改進布局保存
-      measureBeforeMount={false}
-      useCSSTransforms={true}
-      preventCollision={false}
     >
       {['cpu', 'memory', 'network', 'storage'].map(metricType => (
         <div key={metricType}>
@@ -270,13 +310,20 @@ const MetricsDisplay = ({ metrics, selectedNode }) => {
               borderColor: 'divider',
               bgcolor: (theme) => theme.palette.mode === 'dark' 
                 ? 'grey.800' 
-                : 'grey.100'
+                : 'grey.100',
+              minHeight: '40px'
             }}>
               <Typography variant="subtitle1" fontWeight="medium">
                 {t(`${metricType}Usage`)}
               </Typography>
             </Box>
-            <Box sx={{ flex: 1, p: 2 }}>
+            <Box sx={{ 
+              flex: 1, 
+              p: 1,
+              minHeight: 0,
+              display: 'flex',
+              flexDirection: 'column'
+            }}>
               <ReactECharts
                 option={getChartOption(
                   metricType === 'network' ? nodeMetrics?.network?.rx : nodeMetrics?.[metricType],
@@ -289,14 +336,16 @@ const MetricsDisplay = ({ metrics, selectedNode }) => {
                     seriesName: metricType === 'network' ? t('networkReceive') : t(`${metricType}Usage`)
                   }
                 )}
-                style={{ height: '100%' }}
-                // 添加這些屬性以改進圖表更新
-                notMerge={false}
-                lazyUpdate={true}
-                onEvents={{
-                  finished: () => {
-                    window.dispatchEvent(new Event('resize'));
-                  }
+                style={{ 
+                  height: '100%',
+                  minHeight: '200px',
+                  width: '100%'
+                }}
+                opts={{ 
+                  renderer: 'canvas',
+                  devicePixelRatio: window.devicePixelRatio,
+                  width: 'auto',
+                  height: 'auto'
                 }}
               />
             </Box>
@@ -307,4 +356,8 @@ const MetricsDisplay = ({ metrics, selectedNode }) => {
   );
 };
 
-export default React.memo(MetricsDisplay);  // 使用 memo 以避免不必要的重渲染
+// 使用 memo 並添加自定義比較函數
+export default React.memo(MetricsDisplay, (prevProps, nextProps) => {
+  return JSON.stringify(prevProps.metrics) === JSON.stringify(nextProps.metrics) &&
+         prevProps.selectedNode === nextProps.selectedNode;
+});

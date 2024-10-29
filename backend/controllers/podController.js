@@ -1,122 +1,229 @@
-const fakeDataGenerator = require('../utils/fakeDataGenerator');
-const { exec } = require('child_process');
-const fs = require('fs').promises;
+const { client } = require('../utils/opensearchClient');
 
-exports.getPods = (req, res) => {
-  console.log('Received request for pods list');
-  const pods = fakeDataGenerator.generatePods();
-  console.log('Generated pods list:', pods);
-  res.json(pods);
-};
-
-exports.getPodById = (req, res) => {
-  console.log('Received request for pod details:', req.params.id);
-  const pods = fakeDataGenerator.generatePods();
-  const pod = pods.find(p => p.metadata.uid === req.params.id);
-  
-  if (!pod) {
-    console.log('Pod not found:', req.params.id);
-    return res.status(404).json({ message: 'Pod not found' });
-  }
-
-  console.log('Returning pod details:', pod);
-  res.json(pod);
-};
-
-exports.createPod = (req, res) => {
-  console.log('Received create pod request:', req.body);
-  // 在實際應用中，這裡會調用 Kubernetes API 來創建 Pod
-  const newPod = {
-    metadata: {
-      uid: Date.now().toString(),
-      name: req.body.name,
-      namespace: req.body.namespace
-    },
-    type: req.body.type,
-    image: req.body.image,
-    cpu: req.body.cpu,
-    memory: req.body.memory,
-    replicas: req.body.replicas,
-    status: 'Pending'
-  };
-  console.log('Created new pod:', newPod);
-  res.status(201).json(newPod);
-};
-
-exports.updatePod = (req, res) => {
-  console.log('Received update pod request:', req.params.id, req.body);
-  // 在實際應用中，這裡會調用 Kubernetes API 來更新 Pod
-  const updatedPod = {
-    metadata: {
-      uid: req.params.id,
-      name: req.body.name,
-      namespace: req.body.namespace
-    },
-    type: req.body.type,
-    image: req.body.image,
-    cpu: req.body.cpu,
-    memory: req.body.memory,
-    replicas: req.body.replicas,
-    status: 'Running'
-  };
-  console.log('Updated pod:', updatedPod);
-  res.json(updatedPod);
-};
-
-exports.deletePods = (req, res) => {
-  console.log('Received delete pods request:', req.body.podIds);
-  // 在實際應用中，這裡會調用 Kubernetes API 來刪除 Pod
-  console.log('Pods deleted:', req.body.podIds);
-  res.json({ message: 'Pods deleted successfully', deletedPods: req.body.podIds });
-};
-
-exports.uploadImage = async (req, res) => {
-  console.log('Received image upload request');
+// 獲取命名空間列表
+const getNamespaces = async (req, res) => {
+  console.log('getNamespaces process');
   try {
-    if (!req.file) {
-      throw new Error('No file uploaded');
-    }
-
-    const { path: filePath, originalname } = req.file;
-    console.log('File uploaded:', { filePath, originalname });
-
-    // 執行 Docker 命令
-    const dockerCommand = `docker load -i ${filePath}`;
-    exec(dockerCommand, async (error, stdout, stderr) => {
-      try {
-        // 刪除臨時文件
-        await fs.unlink(filePath);
-
-        if (error) {
-          console.error('Docker command error:', error);
-          return res.status(500).json({ message: 'Failed to load Docker image', error: error.message });
+    const response = await client.search({
+      index: process.env.OPENSEARCH_SYSTEM_METRICS_INDEX,
+      body: {
+        size: 0,
+        aggs: {
+          namespaces: {
+            terms: {
+              field: 'kubernetes.namespace',
+              size: 100
+            }
+          }
         }
-
-        console.log('Docker command output:', stdout);
-        res.json({ 
-          message: 'Image uploaded and loaded successfully',
-          output: stdout
-        });
-      } catch (unlinkError) {
-        console.error('Failed to delete temporary file:', unlinkError);
-        res.status(500).json({ message: 'Failed to clean up temporary file' });
       }
     });
+
+    const namespaces = response.body.aggregations.namespaces.buckets.map(bucket => bucket.key);
+    res.json({ namespaces });
   } catch (error) {
-    console.error('Upload error:', error);
-    res.status(500).json({ message: 'Upload failed', error: error.message });
+    console.error('Error fetching namespaces:', error);
+    res.status(500).json({ message: 'Failed to fetch namespaces', error: error.message });
   }
 };
 
-exports.getPodMetrics = (req, res) => {
-  const { podName } = req.query;
-  console.log('Received request for pod metrics:', podName);
-  
-  if (!podName) {
-    return res.status(400).json({ message: 'Pod name is required' });
-  }
+// 獲取 Pod 列表
+const getPods = async (req, res) => {
+  try {
+    const { namespace, search } = req.query;
+    const must = [
+      {
+        range: {
+          '@timestamp': {
+            gte: 'now-1m'
+          }
+        }
+      }
+    ];
 
-  const metrics = fakeDataGenerator.generatePodMetrics(podName);
-  console.log('Generated pod metrics:', metrics);
-  res.json(metrics);
+    if (namespace && namespace !== 'all') {
+      must.push({
+        term: {
+          'kubernetes.namespace': namespace
+        }
+      });
+    }
+
+    if (search) {
+      must.push({
+        wildcard: {
+          'kubernetes.pod.name': `*${search}*`
+        }
+      });
+    }
+
+    // First, get the latest timestamp for each pod
+    const latestTimestamps = await client.search({
+      index: process.env.OPENSEARCH_SYSTEM_METRICS_INDEX,
+      body: {
+        size: 0,
+        query: {
+          bool: { must }
+        },
+        aggs: {
+          pods: {
+            terms: {
+              field: 'kubernetes.pod.name',
+              size: 1000
+            },
+            aggs: {
+              latest_timestamp: {
+                max: {
+                  field: '@timestamp'
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // Get the actual pod data using the latest timestamps
+    const podPromises = latestTimestamps.body.aggregations.pods.buckets.map(async pod => {
+      const podResponse = await client.search({
+        index: process.env.OPENSEARCH_SYSTEM_METRICS_INDEX,
+        body: {
+          size: 1,
+          query: {
+            bool: {
+              must: [
+                {
+                  term: {
+                    'kubernetes.pod.name': pod.key
+                  }
+                },
+                {
+                  term: {
+                    '@timestamp': pod.latest_timestamp.value
+                  }
+                }
+              ]
+            }
+          }
+        }
+      });
+
+      if (podResponse.body.hits.hits.length === 0) {
+        return null;
+      }
+
+      const source = podResponse.body.hits.hits[0]._source;
+      return {
+        name: source.kubernetes?.pod?.name,
+        namespace: source.kubernetes?.namespace,
+        status: source.kubernetes?.pod?.status?.phase || 'Unknown',
+        startTime: source.kubernetes?.pod?.start_time,
+        metrics: {
+          cpu: source.kubernetes?.pod?.cpu?.usage?.nanocores 
+            ? (source.kubernetes.pod.cpu.usage.nanocores / 1000000000) 
+            : 0,
+          memory: source.kubernetes?.pod?.memory?.usage?.bytes || 0
+        },
+        restarts: source.kubernetes?.pod?.status?.container_statuses?.[0]?.restart_count || 0
+      };
+    });
+
+    const pods = (await Promise.all(podPromises)).filter(pod => pod !== null);
+    res.json(pods);
+  } catch (error) {
+    console.error('Error fetching pods:', error);
+    res.status(500).json({ message: 'Failed to fetch pods', error: error.message });
+  }
+};
+
+// 獲取特定 Pod 的詳細指標
+const getPodMetrics = async (req, res) => {
+  try {
+    const { podName, timeRange = '15m' } = req.query;
+
+    if (!podName) {
+      return res.status(400).json({ message: 'Pod name is required' });
+    }
+
+    const response = await client.search({
+      index: process.env.OPENSEARCH_POD_METRICS_INDEX,
+      body: {
+        size: 0,
+        query: {
+          bool: {
+            must: [
+              {
+                range: {
+                  '@timestamp': {
+                    gte: `now-${timeRange}`,
+                    lte: 'now'
+                  }
+                }
+              },
+              {
+                term: {
+                  'kubernetes.pod.name': podName
+                }
+              }
+            ]
+          }
+        },
+        aggs: {
+          time_buckets: {
+            date_histogram: {
+              field: '@timestamp',
+              fixed_interval: '30s',
+              time_zone: 'Asia/Taipei'
+            },
+            aggs: {
+              cpu_usage: {
+                avg: {
+                  field: 'kubernetes.pod.cpu.usage.nanocores'
+                }
+              },
+              memory_usage: {
+                avg: {
+                  field: 'kubernetes.pod.memory.usage.bytes'
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    const buckets = response.body.aggregations.time_buckets.buckets;
+    const metrics = {
+      cpu: buckets.map(bucket => ({
+        timestamp: bucket.key_as_string,
+        value: (bucket.cpu_usage.value || 0) / 1000000000,
+        display: `${((bucket.cpu_usage.value || 0) / 1000000000).toFixed(2)} cores`
+      })),
+      memory: buckets.map(bucket => ({
+        timestamp: bucket.key_as_string,
+        value: bucket.memory_usage.value || 0,
+        display: formatBytes(bucket.memory_usage.value || 0)
+      }))
+    };
+
+    res.json(metrics);
+  } catch (error) {
+    console.error('Error fetching pod metrics:', error);
+    res.status(500).json({ message: 'Failed to fetch pod metrics', error: error.message });
+  }
+};
+
+// 格式化字節大小
+const formatBytes = (bytes) => {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
+};
+
+module.exports = {
+  getNamespaces,
+  getPods,
+  getPodMetrics
 };
