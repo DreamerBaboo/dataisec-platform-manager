@@ -7,7 +7,8 @@ import {
   ListItemText,
   Box,
   Divider,
-  Collapse
+  Collapse,
+  IconButton
 } from '@mui/material';
 import {
   Dashboard as DashboardIcon,
@@ -17,16 +18,20 @@ import {
   ExpandLess,
   ExpandMore,
   Image as ImageIcon,
-  CloudUpload as UploadIcon
+  CloudUpload as UploadIcon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useTheme } from '@mui/material/styles';
 
 const SideMenu = ({ open, toggleDrawer }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const [imageMenuOpen, setImageMenuOpen] = React.useState(false);
+  const theme = useTheme();
 
   const menuItems = [
     {
@@ -103,7 +108,7 @@ const SideMenu = ({ open, toggleDrawer }) => {
           boxSizing: 'border-box',
           whiteSpace: 'nowrap',
           overflowX: 'hidden',
-          transition: theme => theme.transitions.create('width', {
+          transition: theme.transitions.create(['width'], {
             easing: theme.transitions.easing.sharp,
             duration: theme.transitions.duration.enteringScreen,
           }),
@@ -165,6 +170,35 @@ const SideMenu = ({ open, toggleDrawer }) => {
             </React.Fragment>
           ))}
         </List>
+      </Box>
+
+      <Box
+        sx={{
+          position: 'fixed',
+          bottom: 0,
+          left: open ? 240 : 56,
+          transform: 'translateX(-100%)',
+          transition: theme.transitions.create(['left'], {
+            easing: theme.transitions.easing.sharp,
+            duration: theme.transitions.duration.enteringScreen,
+          }),
+          borderTop: `1px solid ${theme.palette.divider}`,
+          borderRight: `1px solid ${theme.palette.divider}`,
+          borderBottom: `1px solid ${theme.palette.divider}`,
+          borderRadius: '0 4px 4px 0',
+          bgcolor: 'background.paper',
+          zIndex: theme.zIndex.drawer + 2,
+        }}
+      >
+        <IconButton
+          onClick={toggleDrawer}
+          sx={{
+            padding: '8px',
+            borderRadius: '0 4px 4px 0',
+          }}
+        >
+          {open ? <ChevronLeftIcon /> : <ChevronRightIcon />}
+        </IconButton>
       </Box>
     </Drawer>
   );

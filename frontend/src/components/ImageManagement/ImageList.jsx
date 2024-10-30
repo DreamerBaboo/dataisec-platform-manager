@@ -72,7 +72,10 @@ const ImageList = () => {
       try {
         setLoading(true);
         setError(null);
-        const response = await fetch('/api/images', {
+        const response = await fetch('http://localhost:3001/api/images', {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          },
           signal: abortController.signal
         });
         console.log('📥 Response received:', response.status, response.statusText);

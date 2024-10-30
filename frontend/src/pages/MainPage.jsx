@@ -29,8 +29,15 @@ function MainPage() {
   return (
     <Box sx={{ display: 'contents', width: '100%', height: '100vh', overflow: 'hidden' }}>
       <CssBaseline />
-      <TopBar open={open} handleDrawerToggle={toggleDrawer} />
-      <SideMenu open={open} toggleDrawer={toggleDrawer} />
+      <TopBar 
+        open={open} 
+        handleDrawerToggle={toggleDrawer}
+        drawerWidth={240}
+      />
+      <SideMenu 
+        open={open} 
+        toggleDrawer={toggleDrawer}
+      />
       <Box
         component="main"
         sx={{
