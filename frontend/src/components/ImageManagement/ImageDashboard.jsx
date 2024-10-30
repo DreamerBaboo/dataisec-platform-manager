@@ -7,26 +7,26 @@ import RegistryHealth from './RegistryHealth';
 const ImageDashboard = () => {
   return (
     <Box sx={{ p: 3 }}>
-      <Grid container spacing={3}>
+      <Grid2 container spacing={3}>
         {/* 統計信息 */}
-        <Grid item xs={12}>
+        <Grid2 item xs={12}>
           <Paper sx={{ p: 2 }}>
             <ImageStats />
           </Paper>
-        </Grid>
+        </Grid2>
 
         {/* 過濾器 */}
-        <Grid item xs={12} md={6}>
+        <Grid2 item xs={12} md={6}>
           <Paper sx={{ p: 2 }}>
             <ImageFilter />
           </Paper>
-        </Grid>
+        </Grid2>
 
         {/* Registry 狀態 */}
-        <Grid item xs={12} md={6}>
+        <Grid2 item xs={12} md={6}>
           <RegistryHealth />
-        </Grid>
-      </Grid>
+        </Grid2>
+      </Grid2>
     </Box>
   );
 };

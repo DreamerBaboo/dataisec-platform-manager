@@ -22,7 +22,11 @@ const translations = {
   installConfirmation: '確定要安裝 {name}:{tag} 嗎？',
   deleteWarning: '此操作無法復原。',
   deleteConfirmation: '確定要刪除 {name}:{tag} 嗎？',
-  close: '關閉'
+  close: '關閉',
+  packageSuccess: '鏡像打包成功',
+  packageError: '鏡像打包失敗',
+  packaging: '正在打包...',
+  package: '打包'
 };
 
 export default translations; 

@@ -33,32 +33,32 @@ const ImageStats = ({ images }) => {
   const uniqueImages = new Set(images.map(img => img.name)).size;
 
   return (
-    <Grid container spacing={3} sx={{ mb: 3 }}>
-      <Grid item xs={12} sm={6}>
+    <Grid2 container spacing={3} sx={{ mb: 3 }}>
+      <Grid2 item xs={12} sm={6}>
         <StatCard
           title="總鏡像數"
           value={images.length}
           icon={<StorageIcon color="primary" />}
           tooltip="包含所有標籤的鏡像總數"
         />
-      </Grid>
-      <Grid item xs={12} sm={6}>
+      </Grid2>
+      <Grid2 item xs={12} sm={6}>
         <StatCard
           title="唯一鏡像數"
           value={uniqueImages}
           icon={<LayersIcon color="primary" />}
           tooltip="不包含重複標籤的鏡像數"
         />
-      </Grid>
-      <Grid item xs={12}>
+      </Grid2>
+      <Grid2 item xs={12}>
         <StatCard
           title="總佔用空間"
           value={formatBytes(totalSize)}
           icon={<StorageIcon color="primary" />}
           tooltip="所有鏡像佔用的總磁盤空間"
         />
-      </Grid>
-    </Grid>
+      </Grid2>
+    </Grid2>
   );
 };
 

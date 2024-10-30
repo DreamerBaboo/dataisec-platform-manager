@@ -1,6 +1,7 @@
 const { exec } = require('child_process');
 const util = require('util');
-const fs = require('fs').promises;
+const fs = require('fs');
+const fsPromises = require('fs').promises;
 const path = require('path');
 const execPromise = util.promisify(exec);
 
@@ -154,7 +155,7 @@ const deleteImage = async (req, res) => {
       return res.status(400).json({ message: 'Image ID is required' });
     }
 
-    // 檢查鏡像是否存在
+    // 檢鏡像是否存在
     try {
       await execPromise(`docker inspect ${id}`);
     } catch (error) {
@@ -202,10 +203,77 @@ const installImage = async (req, res) => {
   }
 };
 
+const packageImages = async (req, res) => {
+  console.log('📦 Packaging images request received');
+  const { images } = req.body;
+  console.log('📦 Images to package:', images);
+  
+  if (!images || !Array.isArray(images) || images.length === 0) {
+    return res.status(400).json({ message: 'No images selected for packaging' });
+  }
+
+  const tempDir = path.join(__dirname, '../temp');
+  const outputFile = path.join(tempDir, `docker-images-${new Date().toISOString().split('T')[0]}.tar`);
+
+  try {
+    // 確保臨時目錄存在
+    await fsPromises.mkdir(tempDir, { recursive: true });
+    
+    // 使用完整的鏡像名稱構建命令
+    const imageList = images.map(img => img.fullName).join(' ');
+    const command = `docker save -o "${outputFile}" ${imageList}`;
+    
+    console.log('🚀 Executing command:', command);
+    await execPromise(command);
+
+    // 設置響應頭
+    res.setHeader('Content-Type', 'application/x-tar');
+    res.setHeader('Content-Disposition', 
+      `attachment; filename=docker-images-${images.map(img => img.name).join('-')}-${Date.now()}.tar`
+    );
+
+    // 使用標準 fs 模組的 createReadStream
+    const fileStream = fs.createReadStream(outputFile);
+    fileStream.pipe(res);
+
+    // 文件發送完成後清理
+    fileStream.on('end', async () => {
+      try {
+        await fsPromises.unlink(outputFile);
+        console.log('✅ Temporary file cleaned up:', outputFile);
+      } catch (cleanupError) {
+        console.error('❌ Error cleaning up temp file:', cleanupError);
+      }
+    });
+
+    // 錯誤處理
+    fileStream.on('error', (error) => {
+      console.error('❌ Error streaming file:', error);
+      res.status(500).json({ 
+        message: 'Error streaming file',
+        error: error.message 
+      });
+    });
+  } catch (error) {
+    console.error('❌ Error packaging images:', error);
+    // 清理臨時文件
+    try {
+      await fsPromises.unlink(outputFile);
+    } catch (cleanupError) {
+      console.error('❌ Error cleaning up temp file:', cleanupError);
+    }
+    res.status(500).json({ 
+      message: 'Failed to package images', 
+      error: error.message 
+    });
+  }
+};
+
 module.exports = {
   getImages,
   getImageDetails,
   uploadImage,
   deleteImage,
-  installImage
+  installImage,
+  packageImages
 }; 

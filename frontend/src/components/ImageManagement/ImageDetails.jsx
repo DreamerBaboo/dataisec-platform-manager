@@ -73,68 +73,68 @@ const ImageDetails = ({ image, open, onClose }) => {
         </Box>
 
         <TabPanel value={tabValue} index={0}>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
+          <Grid2 container spacing={2}>
+            <Grid2 item xs={12} sm={6}>
               <Typography variant="subtitle2" color="textSecondary">
                 {t('id')}
               </Typography>
               <Typography variant="body1" gutterBottom>
                 {image.id}
               </Typography>
-            </Grid>
-            <Grid item xs={12} sm={6}>
+            </Grid2>
+            <Grid2 item xs={12} sm={6}>
               <Typography variant="subtitle2" color="textSecondary">
                 {t('name')}
               </Typography>
               <Typography variant="body1" gutterBottom>
                 {image.name}
               </Typography>
-            </Grid>
-            <Grid item xs={12} sm={6}>
+            </Grid2>
+            <Grid2 item xs={12} sm={6}>
               <Typography variant="subtitle2" color="textSecondary">
                 {t('tag')}
               </Typography>
               <Typography variant="body1" gutterBottom>
                 {image.tag}
               </Typography>
-            </Grid>
-            <Grid item xs={12} sm={6}>
+            </Grid2>
+            <Grid2 item xs={12} sm={6}>
               <Typography variant="subtitle2" color="textSecondary">
                 {t('size')}
               </Typography>
               <Typography variant="body1" gutterBottom>
                 {formatSize(image.size)}
               </Typography>
-            </Grid>
-            <Grid item xs={12} sm={6}>
+            </Grid2>
+            <Grid2 item xs={12} sm={6}>
               <Typography variant="subtitle2" color="textSecondary">
                 {t('created')}
               </Typography>
               <Typography variant="body1" gutterBottom>
                 {formatDate(image.createdAt)}
               </Typography>
-            </Grid>
+            </Grid2>
             {image.details && (
               <>
-                <Grid item xs={12} sm={6}>
+                <Grid2 item xs={12} sm={6}>
                   <Typography variant="subtitle2" color="textSecondary">
                     {t('architecture')}
                   </Typography>
                   <Typography variant="body1" gutterBottom>
                     {image.details.architecture}
                   </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
+                </Grid2>
+                <Grid2 item xs={12} sm={6}>
                   <Typography variant="subtitle2" color="textSecondary">
                     {t('os')}
                   </Typography>
                   <Typography variant="body1" gutterBottom>
                     {image.details.os}
                   </Typography>
-                </Grid>
+                </Grid2>
               </>
             )}
-          </Grid>
+          </Grid2>
         </TabPanel>
 
         <TabPanel value={tabValue} index={1}>

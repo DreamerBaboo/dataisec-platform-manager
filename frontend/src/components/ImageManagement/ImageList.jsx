@@ -29,6 +29,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import ImageUpload from './ImageUpload';
 import ImageDetails from './ImageDetails';
+import { useSnackbar } from 'notistack';
 
 const ImageList = () => {
   const { t } = useTranslation();
@@ -40,6 +41,22 @@ const ImageList = () => {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [selected, setSelected] = useState([]);
+  const [packagingStatus, setPackagingStatus] = useState({
+    loading: false,
+    progress: 0
+  });
+  const { enqueueSnackbar } = useSnackbar();
+
+  const showNotification = (message, variant) => {
+    enqueueSnackbar(message, { 
+      variant,
+      autoHideDuration: 3000,
+      anchorOrigin: {
+        vertical: 'top',
+        horizontal: 'center'
+      }
+    });
+  };
 
   const fetchImages = async () => {
     console.log('🔄 Starting to fetch images...');
@@ -69,7 +86,7 @@ const ImageList = () => {
         name: image.name || image.Repository || '',
         tag: image.tag || image.Tag || 'latest',
         size: image.size || 0,
-        uploadDate: image.createdAt || image.Created || new Date().toISOString(),
+        uploadDate: image.createdAt,
         status: image.status || 'available'
       }));
       
@@ -100,9 +117,6 @@ const ImageList = () => {
     fetchImages();
   };
 
-  const formatDate = (date) => {
-    return new Date(date).toLocaleString();
-  };
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -119,11 +133,11 @@ const ImageList = () => {
 
   const handleSelectAllClick = (event) => {
     if (event.target.checked) {
-      const newSelected = filteredImages.map((image) => image.id);
+      const newSelected = filteredImages.map(image => image.id);
       setSelected(newSelected);
-      return;
+    } else {
+      setSelected([]);
     }
-    setSelected([]);
   };
 
   const handleClick = (event, id) => {
@@ -131,16 +145,9 @@ const ImageList = () => {
     let newSelected = [];
 
     if (selectedIndex === -1) {
-      newSelected = newSelected.concat(selected, id);
-    } else if (selectedIndex === 0) {
-      newSelected = newSelected.concat(selected.slice(1));
-    } else if (selectedIndex === selected.length - 1) {
-      newSelected = newSelected.concat(selected.slice(0, -1));
-    } else if (selectedIndex > 0) {
-      newSelected = newSelected.concat(
-        selected.slice(0, selectedIndex),
-        selected.slice(selectedIndex + 1),
-      );
+      newSelected = [...selected, id];
+    } else {
+      newSelected = selected.filter(item => item !== id);
     }
 
     setSelected(newSelected);
@@ -159,8 +166,62 @@ const ImageList = () => {
   };
 
   const handlePackage = async () => {
-    // 實現打包邏輯
-    console.log('Package images:', selected);
+    console.log('📦 Packaging images:', selected);
+    setPackagingStatus({ loading: true, progress: 0 });
+    
+    try {
+      const selectedImages = filteredImages
+        .filter(img => selected.includes(img.id))
+        .map(img => ({
+          id: img.id,
+          name: img.name,
+          tag: img.tag,
+          fullName: `${img.name}:${img.tag}`
+        }));
+
+      console.log('📦 Selected images for packaging:', selectedImages);
+
+      const response = await fetch(`http://localhost:3001/api/images/package`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ images: selectedImages })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to package images');
+      }
+
+      // 獲取文件名
+      const filename = response.headers.get('Content-Disposition')?.split('filename=')[1] || 'images.tar';
+      
+      // 將響應轉換為 blob
+      const blob = await response.blob();
+      
+      // 創建下載鏈接
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      
+      // 觸發下載
+      document.body.appendChild(a);
+      a.click();
+      
+      // 清理
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      showNotification(t('packageSuccess'), 'success');
+    } catch (error) {
+      console.error('❌ Error packaging images:', error);
+      setError(error.message);
+      showNotification(t('packageError'), 'error');
+    } finally {
+      setPackagingStatus({ loading: false, progress: 0 });
+    }
   };
 
   const handleViewDetails = async (imageId) => {
@@ -228,7 +289,7 @@ const ImageList = () => {
             </TableHead>
             <TableBody>
               {filteredImages.map((image) => {
-                const isItemSelected = isSelected(image.id);
+                const isItemSelected = selected.includes(image.id);
                 return (
                   <TableRow
                     hover
@@ -245,7 +306,7 @@ const ImageList = () => {
                     <TableCell>{image.name}</TableCell>
                     <TableCell>{image.tag}</TableCell>
                     <TableCell>{image.size}</TableCell>
-                    <TableCell>{formatDate(image.uploadDate)}</TableCell>
+                    <TableCell>{image.uploadDate}</TableCell>
                     <TableCell>
                       <Chip 
                         label={t(image.status)}
@@ -288,10 +349,11 @@ const ImageList = () => {
                 <Button
                   variant="contained"
                   color="primary"
-                  startIcon={<PackageIcon />}
+                  startIcon={packagingStatus.loading ? <CircularProgress size={20} /> : <PackageIcon />}
                   onClick={handlePackage}
+                  disabled={packagingStatus.loading}
                 >
-                  {t('package')} ({selected.length})
+                  {packagingStatus.loading ? t('packaging') : t('package')} ({selected.length})
                 </Button>
               </>
             )}

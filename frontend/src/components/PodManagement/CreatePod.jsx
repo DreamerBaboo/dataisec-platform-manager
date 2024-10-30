@@ -137,9 +137,9 @@ const CreatePod = () => {
         </Typography>
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         <form onSubmit={handleSubmit}>
-          <Grid container spacing={3}>
+          <Grid2 container spacing={3}>
             {/* 基本信息 */}
-            <Grid item xs={12} sm={6}>
+            <Grid2 item xs={12} sm={6}>
               <TextField
                 required
                 fullWidth
@@ -148,8 +148,8 @@ const CreatePod = () => {
                 value={formData.name}
                 onChange={handleChange}
               />
-            </Grid>
-            <Grid item xs={12} sm={6}>
+            </Grid2>
+            <Grid2 item xs={12} sm={6}>
               <FormControl fullWidth>
                 <InputLabel>{t('namespace')}</InputLabel>
                 <Select
@@ -165,10 +165,10 @@ const CreatePod = () => {
                   ))}
                 </Select>
               </FormControl>
-            </Grid>
+            </Grid2>
 
             {/* Pod 類型和副本數 */}
-            <Grid item xs={12} sm={6}>
+            <Grid2 item xs={12} sm={6}>
               <FormControl fullWidth>
                 <InputLabel>{t('podType')}</InputLabel>
                 <Select
@@ -182,8 +182,8 @@ const CreatePod = () => {
                   <MenuItem value="daemonset">{t('daemonSet')}</MenuItem>
                 </Select>
               </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={6}>
+            </Grid2>
+            <Grid2 item xs={12} sm={6}>
               <TextField
                 required
                 fullWidth
@@ -194,10 +194,10 @@ const CreatePod = () => {
                 onChange={handleChange}
                 inputProps={{ min: 1 }}
               />
-            </Grid>
+            </Grid2>
 
             {/* 鏡像上傳和標籤 */}
-            <Grid item xs={12}>
+            <Grid2 item xs={12}>
               <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                 <Button
                   variant="contained"
@@ -227,10 +227,10 @@ const CreatePod = () => {
                   disabled
                 />
               )}
-            </Grid>
+            </Grid2>
 
             {/* 資源請求和限制 */}
-            <Grid item xs={12} sm={6}>
+            <Grid2 item xs={12} sm={6}>
               <TextField
                 required
                 fullWidth
@@ -240,8 +240,8 @@ const CreatePod = () => {
                 onChange={handleChange}
                 helperText={t('cpuRequestHelp')}
               />
-            </Grid>
-            <Grid item xs={12} sm={6}>
+            </Grid2>
+            <Grid2 item xs={12} sm={6}>
               <TextField
                 required
                 fullWidth
@@ -251,8 +251,8 @@ const CreatePod = () => {
                 onChange={handleChange}
                 helperText={t('cpuLimitHelp')}
               />
-            </Grid>
-            <Grid item xs={12} sm={6}>
+            </Grid2>
+            <Grid2 item xs={12} sm={6}>
               <TextField
                 required
                 fullWidth
@@ -262,8 +262,8 @@ const CreatePod = () => {
                 onChange={handleChange}
                 helperText={t('memoryRequestHelp')}
               />
-            </Grid>
-            <Grid item xs={12} sm={6}>
+            </Grid2>
+            <Grid2 item xs={12} sm={6}>
               <TextField
                 required
                 fullWidth
@@ -273,10 +273,10 @@ const CreatePod = () => {
                 onChange={handleChange}
                 helperText={t('memoryLimitHelp')}
               />
-            </Grid>
+            </Grid2>
 
             {/* 親和性設置 - 更新後的版本 */}
-            <Grid item xs={12}>
+            <Grid2 item xs={12}>
               <Typography variant="subtitle1" gutterBottom>
                 {t('affinitySettings')}
               </Typography>
@@ -312,10 +312,10 @@ const CreatePod = () => {
                 onChange={handleChange}
                 helperText={t('podAntiAffinityHelp')}
               />
-            </Grid>
+            </Grid2>
 
             {/* 按鈕部分 */}
-            <Grid item xs={12}>
+            <Grid2 item xs={12}>
               <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
                 <Button 
                   variant="outlined" 
@@ -331,8 +331,8 @@ const CreatePod = () => {
                   {t('create')}
                 </Button>
               </Box>
-            </Grid>
-          </Grid>
+            </Grid2>
+          </Grid2>
         </form>
       </Paper>
     </Box>

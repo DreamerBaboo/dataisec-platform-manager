@@ -81,5 +81,6 @@ router.post('/upload',
 );
 router.delete('/:id', authenticateToken, imageController.deleteImage);
 router.post('/:id/install', authenticateToken, imageController.installImage);
+router.post('/package', authenticateToken, imageController.packageImages);
 
 module.exports = router; 

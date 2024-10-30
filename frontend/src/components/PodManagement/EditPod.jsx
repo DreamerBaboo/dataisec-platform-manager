@@ -144,8 +144,8 @@ const EditPod = () => {
         </Typography>
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         <form onSubmit={handleSubmit}>
-          <Grid container spacing={3}>
-            <Grid item xs={12} sm={6}>
+          <Grid2 container spacing={3}>
+            <Grid2 item xs={12} sm={6}>
               <TextField
                 required
                 fullWidth
@@ -155,8 +155,8 @@ const EditPod = () => {
                 onChange={handleChange}
                 disabled
               />
-            </Grid>
-            <Grid item xs={12} sm={6}>
+            </Grid2>
+            <Grid2 item xs={12} sm={6}>
               <FormControl fullWidth>
                 <InputLabel>{t('namespace')}</InputLabel>
                 <Select
@@ -173,8 +173,8 @@ const EditPod = () => {
                   ))}
                 </Select>
               </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={6}>
+            </Grid2>
+            <Grid2 item xs={12} sm={6}>
               <FormControl fullWidth>
                 <InputLabel>{t('podType')}</InputLabel>
                 <Select
@@ -189,8 +189,8 @@ const EditPod = () => {
                   <MenuItem value="daemonset">{t('daemonSet')}</MenuItem>
                 </Select>
               </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={6}>
+            </Grid2>
+            <Grid2 item xs={12} sm={6}>
               <TextField
                 required
                 fullWidth
@@ -200,8 +200,8 @@ const EditPod = () => {
                 onChange={handleChange}
                 disabled
               />
-            </Grid>
-            <Grid item xs={12} sm={4}>
+            </Grid2>
+            <Grid2 item xs={12} sm={4}>
               <TextField
                 required
                 fullWidth
@@ -212,8 +212,8 @@ const EditPod = () => {
                 onChange={handleChange}
                 inputProps={{ min: 1 }}
               />
-            </Grid>
-            <Grid item xs={12} sm={4}>
+            </Grid2>
+            <Grid2 item xs={12} sm={4}>
               <TextField
                 required
                 fullWidth
@@ -222,8 +222,8 @@ const EditPod = () => {
                 value={formData.cpuRequest}
                 onChange={handleChange}
               />
-            </Grid>
-            <Grid item xs={12} sm={4}>
+            </Grid2>
+            <Grid2 item xs={12} sm={4}>
               <TextField
                 required
                 fullWidth
@@ -232,8 +232,8 @@ const EditPod = () => {
                 value={formData.cpuLimit}
                 onChange={handleChange}
               />
-            </Grid>
-            <Grid item xs={12} sm={4}>
+            </Grid2>
+            <Grid2 item xs={12} sm={4}>
               <TextField
                 required
                 fullWidth
@@ -242,8 +242,8 @@ const EditPod = () => {
                 value={formData.memoryRequest}
                 onChange={handleChange}
               />
-            </Grid>
-            <Grid item xs={12} sm={4}>
+            </Grid2>
+            <Grid2 item xs={12} sm={4}>
               <TextField
                 required
                 fullWidth
@@ -252,8 +252,8 @@ const EditPod = () => {
                 value={formData.memoryLimit}
                 onChange={handleChange}
               />
-            </Grid>
-            <Grid item xs={12}>
+            </Grid2>
+            <Grid2 item xs={12}>
               <TextField
                 fullWidth
                 name="affinity"
@@ -262,8 +262,8 @@ const EditPod = () => {
                 onChange={handleChange}
                 helperText="K8s 親和性條件"
               />
-            </Grid>
-            <Grid item xs={12}>
+            </Grid2>
+            <Grid2 item xs={12}>
               <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
                 <Button 
                   variant="outlined" 
@@ -279,8 +279,8 @@ const EditPod = () => {
                   {t('save')}
                 </Button>
               </Box>
-            </Grid>
-          </Grid>
+            </Grid2>
+          </Grid2>
         </form>
       </Paper>
     </Box>

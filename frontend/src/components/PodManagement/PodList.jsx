@@ -260,8 +260,8 @@ const PodList = () => {
     <Box sx={{ width: '100%' }}>
       {/* 過濾器部分 */}
       <Paper sx={{ p: 2, mb: 2 }}>
-        <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} sm={6}>
+        <Grid2 container spacing={2} alignItems="center">
+          <Grid2 item xs={12} sm={6}>
             <FormControl fullWidth size="small">
               <InputLabel>{t('namespace')}</InputLabel>
               <Select
@@ -275,8 +275,8 @@ const PodList = () => {
                 ))}
               </Select>
             </FormControl>
-          </Grid>
-          <Grid item xs={12} sm={6}>
+          </Grid2>
+          <Grid2 item xs={12} sm={6}>
             <TextField
               fullWidth
               size="small"
@@ -291,8 +291,8 @@ const PodList = () => {
                 )
               }}
             />
-          </Grid>
-        </Grid>
+          </Grid2>
+        </Grid2>
       </Paper>
 
       {/* Pod 列表部分 */}
