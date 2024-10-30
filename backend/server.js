@@ -6,6 +6,7 @@ const { testConnection } = require('./utils/opensearchClient');
 const authRoutes = require('./routes/auth');
 const metricsRoutes = require('./routes/metrics');
 const podRoutes = require('./routes/pods');
+const imagesRouter = require('./routes/images');
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -31,11 +32,20 @@ const initializeOpenSearch = async () => {
 app.use('/api', authRoutes);
 app.use('/api/metrics', metricsRoutes);
 app.use('/api/pods', podRoutes);
+app.use('/api/images', imagesRouter);
 
 // 錯誤處理中間件
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).send('Something broke!');
+  console.error('🚨 Global Error:', {
+    path: req.path,
+    method: req.method,
+    error: err.message,
+    stack: err.stack
+  });
+  res.status(500).json({
+    message: 'Internal server error',
+    error: err.message
+  });
 });
 
 // 啟動服務器
@@ -49,6 +59,6 @@ const startServer = async () => {
     console.error('Server startup failed:', error);
     process.exit(1);
   }
-};
+}
 
 startServer();
