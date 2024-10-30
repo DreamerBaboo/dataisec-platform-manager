@@ -8,174 +8,96 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Typography,
-  IconButton,
-  Chip,
-  Tooltip,
-  CircularProgress,
   TextField,
-  TablePagination,
-  Toolbar,
+  IconButton,
   Button,
-  Alert,
-  Snackbar
+  Typography,
+  Checkbox,
+  Toolbar,
+  alpha,
+  Chip,
+  CircularProgress,
+  Alert
 } from '@mui/material';
-import { 
-  Delete as DeleteIcon,
-  Info as InfoIcon,
-  GetApp as InstallIcon,
+import {
   Refresh as RefreshIcon,
-  Search as SearchIcon 
+  Upload as UploadIcon,
+  Delete as DeleteIcon,
+  Archive as PackageIcon,
+  Info as InfoIcon
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
-import ImageDetails from './ImageDetails';
 import ImageUpload from './ImageUpload';
-import ImageInstall from './ImageInstall';
-import ImageDelete from './ImageDelete';
+import ImageDetails from './ImageDetails';
 
 const ImageList = () => {
   const { t } = useTranslation();
   const [images, setImages] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  
-  // 分頁
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  
-  // 搜索
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredImages, setFilteredImages] = useState([]);
-  
-  // 對話框控制
+  const [uploadOpen, setUploadOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
-  const [openDetails, setOpenDetails] = useState(false);
-  const [openUpload, setOpenUpload] = useState(false);
-  const [openInstall, setOpenInstall] = useState(false);
-  const [openDelete, setOpenDelete] = useState(false);
-
-  // 批量選擇
   const [selected, setSelected] = useState([]);
 
-  // 通知
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: '',
-    severity: 'success'
-  });
+  const fetchImages = async () => {
+    console.log('🔄 Starting to fetch images...');
+    try {
+      setLoading(true);
+      setError(null);
+      // 使用完整的 URL
+      const response = await fetch('http://localhost:3001/api/images', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`, // 添加認證
+          'Accept': 'application/json'
+        }
+      });
+      console.log('📥 Response received:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        console.error('❌ Response not OK:', response.status, response.statusText);
+        throw new Error('Failed to fetch images');
+      }
+      
+      const data = await response.json();
+      console.log('📦 Raw data received:', data);
+      
+      // 確保數據格式正確
+      const formattedData = data.map(image => ({
+        id: image.id || image.ID || '',  // 支持兩種可能的 ID 格式
+        name: image.name || image.Repository || '',
+        tag: image.tag || image.Tag || 'latest',
+        size: image.size || 0,
+        uploadDate: image.createdAt || image.Created || new Date().toISOString(),
+        status: image.status || 'available'
+      }));
+      
+      console.log('✨ Formatted data:', formattedData);
+      setImages(formattedData);
+      setFilteredImages(formattedData);
+    } catch (error) {
+      console.error('❌ Error fetching images:', error);
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const abortController = new AbortController();
-    
-    const fetchData = async () => {
-      console.log('🔄 Starting to fetch images...');
-      try {
-        setLoading(true);
-        setError(null);
-        const response = await fetch('http://localhost:3001/api/images', {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`
-          },
-          signal: abortController.signal
-        });
-        console.log('📥 Response received:', response.status, response.statusText);
-        
-        if (!response.ok) {
-          console.error('❌ Response not OK:', response.status, response.statusText);
-          throw new Error('Failed to fetch images');
-        }
-        
-        const data = await response.json();
-        console.log('📦 Raw data received:', data);
-        
-        // 確保數據格式正確
-        const formattedData = data.map(image => {
-          console.log('🔍 Processing image:', image);
-          return {
-            id: image.id || '',
-            name: image.name || '',
-            tag: image.tag || 'latest',
-            size: image.size || 0,
-            uploadDate: image.createdAt || new Date().toISOString(),
-            status: image.status || 'available'
-          };
-        });
-        
-        console.log('✅ Formatted data:', formattedData);
-        setImages(formattedData);
-      } catch (err) {
-        console.error('❌ Error fetching images:', err);
-        if (!abortController.signal.aborted) {
-          handleError(err);
-        }
-      } finally {
-        if (!abortController.signal.aborted) {
-          setLoading(false);
-          console.log('🏁 Fetch completed');
-        }
-      }
-    };
-
-    console.log('🚀 Initial fetch triggered');
-    fetchData();
-
-    return () => {
-      console.log('🛑 Cleanup: aborting fetch');
-      abortController.abort();
-    };
+    fetchImages();
   }, []);
 
   useEffect(() => {
-    console.log('🔍 Filtering images with term:', searchTerm);
-    filterImages();
-  }, [searchTerm, images]);
-
-  const filterImages = () => {
-    console.log('📊 Current images:', images);
     const filtered = images.filter(image => 
       image.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       image.tag.toLowerCase().includes(searchTerm.toLowerCase())
     );
-    console.log('🎯 Filtered results:', filtered);
     setFilteredImages(filtered);
-  };
+  }, [searchTerm, images]);
 
   const handleRefresh = () => {
-    console.log('🔄 Manual refresh triggered');
     fetchImages();
-  };
-
-  const handleChangePage = (event, newPage) => {
-    setPage(newPage);
-  };
-
-  const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
-
-  const showNotification = (message, severity = 'success') => {
-    console.log('📢 Showing notification:', {
-      message,
-      severity
-    });
-    setSnackbar({
-      open: true,
-      message,
-      severity
-    });
-  };
-
-  const handleCloseSnackbar = () => {
-    setSnackbar(prev => ({ ...prev, open: false }));
-  };
-
-  // 其他原有的功能保持不變...
-  const formatSize = (bytes) => {
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    if (bytes === 0) return '0 B';
-    const i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)), 10);
-    return `${Math.round(bytes / (1024 ** i), 2)} ${sizes[i]}`;
   };
 
   const formatDate = (date) => {
@@ -184,211 +106,222 @@ const ImageList = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'available': return 'success';
-      case 'installing': return 'warning';
-      case 'failed': return 'error';
-      default: return 'default';
+      case 'available':
+        return 'success';
+      case 'pending':
+        return 'warning';
+      case 'error':
+        return 'error';
+      default:
+        return 'default';
     }
   };
 
-  const handleError = (error) => {
-    console.error('🚨 ImageList Error:', {
-      message: error.message,
-      stack: error.stack,
-      type: error.name
-    });
-    setError(error.message || 'An unexpected error occurred');
-    showNotification(error.message || 'An unexpected error occurred', 'error');
+  const handleSelectAllClick = (event) => {
+    if (event.target.checked) {
+      const newSelected = filteredImages.map((image) => image.id);
+      setSelected(newSelected);
+      return;
+    }
+    setSelected([]);
   };
 
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
+  const handleClick = (event, id) => {
+    const selectedIndex = selected.indexOf(id);
+    let newSelected = [];
 
-  if (error) {
-    return (
-      <Box sx={{ p: 3 }}>
-        <Alert severity="error">{error}</Alert>
-      </Box>
-    );
-  }
+    if (selectedIndex === -1) {
+      newSelected = newSelected.concat(selected, id);
+    } else if (selectedIndex === 0) {
+      newSelected = newSelected.concat(selected.slice(1));
+    } else if (selectedIndex === selected.length - 1) {
+      newSelected = newSelected.concat(selected.slice(0, -1));
+    } else if (selectedIndex > 0) {
+      newSelected = newSelected.concat(
+        selected.slice(0, selectedIndex),
+        selected.slice(selectedIndex + 1),
+      );
+    }
+
+    setSelected(newSelected);
+  };
+
+  const isSelected = (id) => selected.indexOf(id) !== -1;
+
+  const handleBulkDelete = async () => {
+    try {
+      await Promise.all(selected.map(id => fetch(`/api/images/${id}`, { method: 'DELETE' })));
+      fetchImages();
+      setSelected([]);
+    } catch (error) {
+      setError(error.message);
+    }
+  };
+
+  const handlePackage = async () => {
+    // 實現打包邏輯
+    console.log('Package images:', selected);
+  };
+
+  const handleViewDetails = async (imageId) => {
+    console.log('🔍 Viewing details for image:', imageId);
+    try {
+      const response = await fetch(`http://localhost:3001/api/images/${imageId}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Accept': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch image details');
+      }
+      
+      const details = await response.json();
+      console.log('📦 Image details received:', details);
+      setSelectedImage(details);
+    } catch (error) {
+      console.error('❌ Error fetching image details:', error);
+      setError(error.message);
+    }
+  };
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Toolbar sx={{ pl: { sm: 2 }, pr: { xs: 1, sm: 1 } }}>
-        <Typography variant="h4" sx={{ flex: '1 1 100%' }}>
-          {t('dockerImages')}
-        </Typography>
-        <Box sx={{ display: 'flex', gap: 2 }}>
+    <Box sx={{ width: '100%' }}>
+      {/* 搜索和刷新工具欄 */}
+      <Paper sx={{ mb: 2, p: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <TextField
             size="small"
-            placeholder={t('search')}
+            variant="outlined"
+            placeholder={t('searchImages')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            InputProps={{
-              startAdornment: <SearchIcon sx={{ mr: 1 }} />
-            }}
+            sx={{ flexGrow: 1 }}
           />
-          <Button
-            variant="contained"
-            startIcon={<RefreshIcon />}
-            onClick={handleRefresh}
-          >
-            {t('refresh')}
-          </Button>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={() => setOpenUpload(true)}
-          >
-            {t('upload')}
-          </Button>
+          <IconButton onClick={handleRefresh} disabled={loading}>
+            <RefreshIcon />
+          </IconButton>
         </Box>
-      </Toolbar>
+      </Paper>
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>{t('name')}</TableCell>
-              <TableCell>{t('tag')}</TableCell>
-              <TableCell>{t('size')}</TableCell>
-              <TableCell>{t('uploadDate')}</TableCell>
-              <TableCell>{t('status')}</TableCell>
-              <TableCell align="right">{t('actions')}</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {!loading && filteredImages
-              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((image) => (
-                <TableRow key={image.id || `${image.name}-${image.tag}`}>
-                  <TableCell>{image.name}</TableCell>
-                  <TableCell>{image.tag}</TableCell>
-                  <TableCell>{formatSize(image.size)}</TableCell>
-                  <TableCell>{formatDate(image.uploadDate)}</TableCell>
-                  <TableCell>
-                    <Chip 
-                      label={t(image.status)}
-                      color={getStatusColor(image.status)}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell align="right">
-                    <Tooltip title={t('install')}>
-                      <IconButton 
-                        size="small" 
-                        color="primary"
-                        disabled={image.status === 'installing'}
-                        onClick={() => {
-                          setSelectedImage(image);
-                          setOpenInstall(true);
-                        }}
-                      >
-                        <InstallIcon />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title={t('details')}>
-                      <IconButton 
-                        size="small" 
-                        color="info"
-                        onClick={() => {
-                          setSelectedImage(image);
-                          setOpenDetails(true);
+      {/* 圖像列表 */}
+      <Paper sx={{ width: '100%', mb: 2 }}>
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell padding="checkbox">
+                  <Checkbox
+                    indeterminate={selected.length > 0 && selected.length < filteredImages.length}
+                    checked={filteredImages.length > 0 && selected.length === filteredImages.length}
+                    onChange={handleSelectAllClick}
+                  />
+                </TableCell>
+                <TableCell>{t('name')}</TableCell>
+                <TableCell>{t('tag')}</TableCell>
+                <TableCell>{t('size')}</TableCell>
+                <TableCell>{t('uploadDate')}</TableCell>
+                <TableCell>{t('status')}</TableCell>
+                <TableCell align="center">{t('info')}</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredImages.map((image) => {
+                const isItemSelected = isSelected(image.id);
+                return (
+                  <TableRow
+                    hover
+                    onClick={(event) => handleClick(event, image.id)}
+                    role="checkbox"
+                    aria-checked={isItemSelected}
+                    tabIndex={-1}
+                    key={image.id}
+                    selected={isItemSelected}
+                  >
+                    <TableCell padding="checkbox">
+                      <Checkbox checked={isItemSelected} />
+                    </TableCell>
+                    <TableCell>{image.name}</TableCell>
+                    <TableCell>{image.tag}</TableCell>
+                    <TableCell>{image.size}</TableCell>
+                    <TableCell>{formatDate(image.uploadDate)}</TableCell>
+                    <TableCell>
+                      <Chip 
+                        label={t(image.status)}
+                        color={getStatusColor(image.status)}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell align="center">
+                      <IconButton
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleViewDetails(image.id);
                         }}
                       >
                         <InfoIcon />
                       </IconButton>
-                    </Tooltip>
-                    <Tooltip title={t('delete')}>
-                      <IconButton 
-                        size="small" 
-                        color="error"
-                        disabled={image.status === 'installing'}
-                        onClick={() => {
-                          setSelectedImage(image);
-                          setOpenDelete(true);
-                        }}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
-                </TableRow>
-            ))}
-            {loading && (
-              <TableRow>
-                <TableCell colSpan={6} align="center">
-                  <CircularProgress size={24} />
-                </TableCell>
-              </TableRow>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Paper>
+
+      {/* 操作按鈕區 */}
+      <Paper sx={{ p: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            {selected.length > 0 && (
+              <>
+                <Button
+                  variant="contained"
+                  color="error"
+                  startIcon={<DeleteIcon />}
+                  onClick={handleBulkDelete}
+                >
+                  {t('delete')} ({selected.length})
+                </Button>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<PackageIcon />}
+                  onClick={handlePackage}
+                >
+                  {t('package')} ({selected.length})
+                </Button>
+              </>
             )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+          </Box>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<UploadIcon />}
+            onClick={() => setUploadOpen(true)}
+          >
+            {t('upload')}
+          </Button>
+        </Box>
+      </Paper>
 
-      <TablePagination
-        component="div"
-        count={filteredImages.length}
-        page={page}
-        onPageChange={handleChangePage}
-        rowsPerPage={rowsPerPage}
-        onRowsPerPageChange={handleChangeRowsPerPage}
-        rowsPerPageOptions={[5, 10, 25, 50]}
-      />
-
-      <ImageDetails
-        open={openDetails}
-        onClose={() => setOpenDetails(false)}
-        image={selectedImage}
-      />
-
+      {/* 對話框 */}
       <ImageUpload
-        open={openUpload}
-        onClose={() => setOpenUpload(false)}
+        open={uploadOpen}
+        onClose={() => setUploadOpen(false)}
         onSuccess={() => {
+          setUploadOpen(false);
           fetchImages();
-          showNotification(t('uploadSuccess'));
         }}
       />
-
-      <ImageInstall
-        open={openInstall}
-        onClose={() => setOpenInstall(false)}
+      
+      <ImageDetails
         image={selectedImage}
-        onSuccess={() => {
-          fetchImages();
-          showNotification(t('installSuccess'));
-        }}
+        open={Boolean(selectedImage)}
+        onClose={() => setSelectedImage(null)}
       />
-
-      <ImageDelete
-        open={openDelete}
-        onClose={() => setOpenDelete(false)}
-        image={selectedImage}
-        onSuccess={() => {
-          fetchImages();
-          showNotification(t('deleteSuccess'));
-        }}
-      />
-
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={handleCloseSnackbar}
-      >
-        <Alert 
-          onClose={handleCloseSnackbar} 
-          severity={snackbar.severity}
-          sx={{ width: '100%' }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
 
       {loading && (
         <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>

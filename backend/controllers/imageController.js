@@ -18,6 +18,11 @@ const getImages = async (req, res) => {
     const { stdout } = await execPromise('docker images --format "{{json .}}"');
     console.log('📦 Raw docker output:', stdout);
 
+    if (!stdout.trim()) {
+      console.log('ℹ️ No images found');
+      return res.json([]);
+    }
+
     const images = stdout
       .trim()
       .split('\n')
@@ -28,27 +33,21 @@ const getImages = async (req, res) => {
       .map(line => {
         try {
           console.log('📝 Parsing JSON line:', line);
-          return JSON.parse(line);
+          const image = JSON.parse(line);
+          return {
+            id: image.ID,
+            name: image.Repository,
+            tag: image.Tag,
+            size: image.Size,
+            createdAt: image.CreatedAt,
+            status: 'available'
+          };
         } catch (err) {
           console.error('❌ Error parsing line:', err);
           return null;
         }
       })
-      .filter(image => {
-        console.log('🔍 Filtered image:', image);
-        return image;
-      })
-      .map(image => {
-        console.log('🎨 Formatting image:', image);
-        return {
-          id: image.ID,
-          name: image.Repository,
-          tag: image.Tag,
-          size: parseInt(image.Size),
-          createdAt: image.CreatedAt,
-          status: 'available'
-        };
-      });
+      .filter(image => image !== null);
 
     console.log('✅ Final images list:', images);
     res.json(images);
@@ -60,6 +59,7 @@ const getImages = async (req, res) => {
     });
   }
 };
+
 
 // 獲取鏡像詳情
 const getImageDetails = async (req, res) => {

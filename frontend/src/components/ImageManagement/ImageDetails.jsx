@@ -35,42 +35,9 @@ function TabPanel({ children, value, index, ...other }) {
   );
 }
 
-const ImageDetails = ({ open, onClose, image }) => {
+const ImageDetails = ({ image, open, onClose }) => {
   const { t } = useTranslation();
   const [tabValue, setTabValue] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [details, setDetails] = useState(null);
-
-  useEffect(() => {
-    if (open && image) {
-      fetchImageDetails();
-    }
-  }, [open, image]);
-
-  const fetchImageDetails = async () => {
-    console.log('🔍 Fetching details for image:', image);
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await fetch(`/api/images/${image.id}`);
-      console.log('📥 Response:', response.status, response.statusText);
-      
-      if (!response.ok) {
-        console.error('❌ Response not OK:', response.status);
-        throw new Error('Failed to fetch image details');
-      }
-      
-      const data = await response.json();
-      console.log('📦 Image details:', data);
-      setDetails(data);
-    } catch (err) {
-      console.error('❌ Error fetching details:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
@@ -89,18 +56,6 @@ const ImageDetails = ({ open, onClose, image }) => {
     return new Date(date).toLocaleString();
   };
 
-  if (loading) {
-    return (
-      <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-        <DialogContent>
-          <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-            <CircularProgress />
-          </Box>
-        </DialogContent>
-      </Dialog>
-    );
-  }
-
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
@@ -109,127 +64,106 @@ const ImageDetails = ({ open, onClose, image }) => {
         </Typography>
       </DialogTitle>
       <DialogContent>
-        {error ? (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        ) : (
-          <>
-            <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-              <Tabs value={tabValue} onChange={handleTabChange}>
-                <Tab label={t('basicInfo')} />
-                <Tab label={t('layers')} />
-                <Tab label={t('history')} />
-                <Tab label={t('tags')} />
-                <Tab label={t('scanResults')} />
-              </Tabs>
-            </Box>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          <Tabs value={tabValue} onChange={handleTabChange}>
+            <Tab label={t('basicInfo')} />
+            <Tab label={t('layers')} />
+            <Tab label={t('config')} />
+          </Tabs>
+        </Box>
 
-            <TabPanel value={tabValue} index={0}>
-              <Grid container spacing={2}>
-                <Grid item xs={12}>
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="subtitle2" color="textSecondary">
-                      {t('name')}
-                    </Typography>
-                    <Typography variant="body1">
-                      {image.name}
-                    </Typography>
-                  </Box>
-                  <Divider />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="subtitle2" color="textSecondary">
-                      {t('tag')}
-                    </Typography>
-                    <Typography variant="body1">
-                      {image.tag}
-                    </Typography>
-                  </Box>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="subtitle2" color="textSecondary">
-                      {t('size')}
-                    </Typography>
-                    <Typography variant="body1">
-                      {formatSize(image.size)}
-                    </Typography>
-                  </Box>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="subtitle2" color="textSecondary">
-                      {t('uploadDate')}
-                    </Typography>
-                    <Typography variant="body1">
-                      {formatDate(image.uploadDate)}
-                    </Typography>
-                  </Box>
-                </Grid>
-                {details && (
-                  <>
-                    <Grid item xs={12} sm={6}>
-                      <Box sx={{ mb: 2 }}>
-                        <Typography variant="subtitle2" color="textSecondary">
-                          {t('architecture')}
-                        </Typography>
-                        <Typography variant="body1">
-                          {details.details.architecture}
-                        </Typography>
-                      </Box>
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                      <Box sx={{ mb: 2 }}>
-                        <Typography variant="subtitle2" color="textSecondary">
-                          {t('os')}
-                        </Typography>
-                        <Typography variant="body1">
-                          {details.details.os}
-                        </Typography>
-                      </Box>
-                    </Grid>
-                  </>
-                )}
-              </Grid>
-            </TabPanel>
-
-            <TabPanel value={tabValue} index={1}>
-              {details && (
-                <List>
-                  {details.details.layers.map((layer, index) => (
-                    <ListItem key={index}>
-                      <ListItemText
-                        primary={`Layer ${index + 1}`}
-                        secondary={layer}
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              )}
-            </TabPanel>
-
-            <TabPanel value={tabValue} index={2}>
-              <Typography variant="body2" color="textSecondary">
-                {t('historyComingSoon')}
+        <TabPanel value={tabValue} index={0}>
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <Typography variant="subtitle2" color="textSecondary">
+                {t('id')}
               </Typography>
-            </TabPanel>
-
-            <TabPanel value={tabValue} index={3}>
-              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                <Chip label={image.tag} color="primary" />
-                <Chip label="latest" variant="outlined" />
-              </Box>
-            </TabPanel>
-
-            <TabPanel value={tabValue} index={4}>
-              <Typography variant="body2" color="textSecondary">
-                {t('scanResultsComingSoon')}
+              <Typography variant="body1" gutterBottom>
+                {image.id}
               </Typography>
-            </TabPanel>
-          </>
-        )}
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Typography variant="subtitle2" color="textSecondary">
+                {t('name')}
+              </Typography>
+              <Typography variant="body1" gutterBottom>
+                {image.name}
+              </Typography>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Typography variant="subtitle2" color="textSecondary">
+                {t('tag')}
+              </Typography>
+              <Typography variant="body1" gutterBottom>
+                {image.tag}
+              </Typography>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Typography variant="subtitle2" color="textSecondary">
+                {t('size')}
+              </Typography>
+              <Typography variant="body1" gutterBottom>
+                {formatSize(image.size)}
+              </Typography>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Typography variant="subtitle2" color="textSecondary">
+                {t('created')}
+              </Typography>
+              <Typography variant="body1" gutterBottom>
+                {formatDate(image.createdAt)}
+              </Typography>
+            </Grid>
+            {image.details && (
+              <>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="textSecondary">
+                    {t('architecture')}
+                  </Typography>
+                  <Typography variant="body1" gutterBottom>
+                    {image.details.architecture}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" color="textSecondary">
+                    {t('os')}
+                  </Typography>
+                  <Typography variant="body1" gutterBottom>
+                    {image.details.os}
+                  </Typography>
+                </Grid>
+              </>
+            )}
+          </Grid>
+        </TabPanel>
+
+        <TabPanel value={tabValue} index={1}>
+          {image.details?.layers && (
+            <List>
+              {image.details.layers.map((layer, index) => (
+                <ListItem key={index}>
+                  <ListItemText
+                    primary={`Layer ${index + 1}`}
+                    secondary={layer}
+                  />
+                </ListItem>
+              ))}
+            </List>
+          )}
+        </TabPanel>
+
+        <TabPanel value={tabValue} index={2}>
+          {image.details?.config && (
+            <pre style={{ 
+              overflow: 'auto', 
+              backgroundColor: '#f5f5f5',
+              padding: '1rem',
+              borderRadius: '4px'
+            }}>
+              {JSON.stringify(image.details.config, null, 2)}
+            </pre>
+          )}
+        </TabPanel>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} color="primary">

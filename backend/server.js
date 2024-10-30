@@ -11,7 +11,10 @@ const imagesRouter = require('./routes/images');
 const app = express();
 const port = process.env.PORT || 3001;
 
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:5173',
+  credentials: true
+}));
 app.use(express.json());
 
 // 初始化 OpenSearch 連接
