@@ -1,0 +1,43 @@
+{
+  "navigation": {
+    "menu": {
+      "dashboard": "儀表板",
+      "images": "映像管理",
+      "metrics": "系統指標",
+      "settings": "設定",
+      "users": "用戶管理"
+    },
+    "breadcrumbs": {
+      "home": "首頁",
+      "dashboard": "儀表板",
+      "images": {
+        "main": "映像",
+        "list": "映像列表",
+        "upload": "上傳映像",
+        "details": "映像詳情",
+        "settings": "映像設定"
+      },
+      "metrics": {
+        "main": "指標",
+        "cluster": "叢集指標",
+        "nodes": "節點指標",
+        "pods": "容器組指標"
+      },
+      "settings": {
+        "main": "設定",
+        "general": "一般設定",
+        "security": "安全設定",
+        "registry": "倉庫設定"
+      }
+    },
+    "actions": {
+      "back": "返回",
+      "next": "下一步",
+      "save": "儲存",
+      "cancel": "取消",
+      "edit": "編輯",
+      "delete": "刪除",
+      "view": "查看"
+    }
+  }
+} 

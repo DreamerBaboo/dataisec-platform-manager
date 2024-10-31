@@ -1,0 +1,128 @@
+{
+  "imageManagement": {
+    "title": "Image Management",
+    "imageList": "Image List",
+    "actions": {
+      "upload": "Upload",
+      "delete": "Delete",
+      "package": "Package",
+      "packaging": "Packaging...",
+      "refresh": "Refresh",
+      "search": "Search Images",
+      "configure": "Configure",
+      "viewDetails": "View Details",
+      "bulkDelete": "Delete ({{count}})",
+      "bulkPackage": "Package ({{count}})",
+      "refreshList": "Refresh List",
+      "configureRegistry": "Configure Registry"
+    },
+    "table": {
+      "name": "Name",
+      "tag": "Tag",
+      "size": "Size",
+      "uploadDate": "Upload Date",
+      "status": "Status",
+      "actions": "Actions",
+      "imageCount": "Images ({{count}})",
+      "noData": "No images found",
+      "loadError": "Error loading images",
+      "size": {
+        "bytes": "B",
+        "kilobytes": "KB",
+        "megabytes": "MB",
+        "gigabytes": "GB"
+      }
+    },
+    "status": {
+      "available": "Available",
+      "pending": "Pending",
+      "error": "Error",
+      "processing": "Processing",
+      "uploading": "Uploading",
+      "downloading": "Downloading"
+    },
+    "details": {
+      "title": "Image Details",
+      "basicInfo": "Basic Info",
+      "tags": "Tags",
+      "layers": {
+        "title": "Layers",
+        "layer": "Layer {{number}}"
+      },
+      "config": {
+        "title": "Configuration",
+        "env": "Environment Variables",
+        "cmd": "Commands",
+        "workdir": "Working Directory",
+        "ports": "Exposed Ports",
+        "noValue": "No value"
+      },
+      "id": "ID",
+      "architecture": "Architecture",
+      "os": "Operating System",
+      "created": "Created",
+      "size": "Size",
+      "noTags": "No tags available",
+      "environmentVariables": "Environment Variables",
+      "commands": "Commands",
+      "workingDirectory": "Working Directory",
+      "exposedPorts": "Exposed Ports"
+    },
+    "upload": {
+      "title": "Upload Image",
+      "dragAndDrop": "Drag and drop image file here",
+      "or": "or",
+      "browse": "Browse Files",
+      "supportedFormats": "Supported formats: .tar, .gz, .tgz",
+      "uploading": "Uploading...",
+      "success": "Upload successful",
+      "error": "Upload failed"
+    },
+    "messages": {
+      "deleteConfirm": "Are you sure you want to delete the selected images?",
+      "deleteSuccess": "Images deleted successfully",
+      "deleteError": "Failed to delete images",
+      "packageStart": "Starting to package images...",
+      "packagePreparing": "Preparing package...",
+      "packageDownloading": "Downloading package...",
+      "packageSuccess": "Package downloaded successfully",
+      "packageError": "Failed to package images",
+      "noImagesFound": "No images found",
+      "errorLoadingImages": "Error loading images"
+    },
+    "registry": {
+      "title": "Registry Configuration",
+      "settings": "Registry Settings",
+      "repository": {
+        "label": "Repository Address",
+        "placeholder": "Enter repository address"
+      },
+      "port": {
+        "label": "Port",
+        "placeholder": "Enter port number"
+      },
+      "credentials": {
+        "title": "Credentials",
+        "username": "Username",
+        "password": "Password"
+      },
+      "ssl": {
+        "label": "Use SSL",
+        "enabled": "Enabled",
+        "disabled": "Disabled"
+      },
+      "test": {
+        "button": "Test Connection",
+        "success": "Connection successful",
+        "failure": "Connection failed"
+      },
+      "save": "Save Settings",
+      "cancel": "Cancel",
+      "validation": {
+        "required": "This field is required",
+        "invalidPort": "Invalid port number",
+        "invalidAddress": "Invalid repository address"
+      }
+    }
+  }
+} 

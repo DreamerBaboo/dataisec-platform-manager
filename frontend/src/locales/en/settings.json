@@ -1,0 +1,82 @@
+{
+  "settings": {
+    "title": "System Settings",
+    "general": {
+      "title": "General Settings",
+      "language": {
+        "label": "Language",
+        "en": "English",
+        "zh-TW": "Traditional Chinese"
+      },
+      "theme": {
+        "label": "Theme",
+        "light": "Light",
+        "dark": "Dark",
+        "system": "System Default"
+      },
+      "dateFormat": {
+        "label": "Date Format",
+        "formats": {
+          "short": "Short",
+          "medium": "Medium",
+          "long": "Long"
+        }
+      }
+    },
+    "registry": {
+      "title": "Registry Settings",
+      "connection": {
+        "title": "Connection Settings",
+        "host": "Host",
+        "port": "Port",
+        "ssl": "Use SSL",
+        "timeout": "Connection Timeout"
+      },
+      "authentication": {
+        "title": "Authentication",
+        "username": "Username",
+        "password": "Password",
+        "token": "Access Token"
+      },
+      "proxy": {
+        "title": "Proxy Settings",
+        "enabled": "Enable Proxy",
+        "host": "Proxy Host",
+        "port": "Proxy Port",
+        "auth": "Proxy Authentication"
+      }
+    },
+    "security": {
+      "title": "Security Settings",
+      "authentication": {
+        "title": "Authentication",
+        "method": "Authentication Method",
+        "sessionTimeout": "Session Timeout",
+        "maxAttempts": "Maximum Login Attempts"
+      },
+      "permissions": {
+        "title": "Permissions",
+        "roles": "Role Management",
+        "users": "User Management",
+        "groups": "Group Management"
+      }
+    },
+    "notifications": {
+      "title": "Notification Settings",
+      "alerts": {
+        "title": "Alert Settings",
+        "enabled": "Enable Alerts",
+        "level": "Alert Level",
+        "channels": "Notification Channels"
+      },
+      "email": {
+        "title": "Email Settings",
+        "server": "SMTP Server",
+        "port": "SMTP Port",
+        "username": "Email Username",
+        "password": "Email Password",
+        "from": "From Address"
+      }
+    }
+  }
+} 

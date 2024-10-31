@@ -1,399 +1,503 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Paper, Typography, Box, CircularProgress, FormControl, InputLabel, Select, MenuItem, useTheme, Button, TextField, Grid, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel } from '@mui/material';
-import ReactECharts from 'echarts-for-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  Box,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TableSortLabel,
+  Typography,
+  Chip,
+  Grid,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  TextField,
+  InputAdornment,
+  Checkbox,
+  Button
+} from '@mui/material';
 import { useTranslation } from 'react-i18next';
-import RefreshIcon from '@mui/icons-material/Refresh';
+import SearchIcon from '@mui/icons-material/Search';
+import CalculateIcon from '@mui/icons-material/Calculate';
+import ReactECharts from 'echarts-for-react';
 import RGL, { WidthProvider } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 
 const ReactGridLayout = WidthProvider(RGL);
 
+const DEFAULT_LAYOUT = [
+  { i: 'metrics', x: 0, y: 0, w: 12, h: 4, minW: 6, minH: 4 },
+  { i: 'statusChart', x: 0, y: 4, w: 6, h: 8, minW: 4, minH: 6 },
+  { i: 'namespaceChart', x: 6, y: 4, w: 6, h: 8, minW: 4, minH: 6 }
+];
+
+const LAYOUT_STORAGE_KEY = 'pod-dashboard-layout';
+
 const PodDashboard = () => {
   const { t } = useTranslation();
-  const [loading, setLoading] = useState(true);
-  const [podMetrics, setPodMetrics] = useState({});
-  const [selectedPod, setSelectedPod] = useState(null);
   const [pods, setPods] = useState([]);
-  const [filteredPods, setFilteredPods] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedNamespace, setSelectedNamespace] = useState('');
-  const [selectedPodType, setSelectedPodType] = useState('');
-  const [orderBy, setOrderBy] = useState('name');
-  const [order, setOrder] = useState('asc');
-  const [layout, setLayout] = useState([
-    { i: 'cpu', x: 0, y: 0, w: 6, h: 8 },
-    { i: 'memory', x: 6, y: 0, w: 6, h: 8 },
-    { i: 'network', x: 0, y: 8, w: 6, h: 8 },
-    { i: 'storage', x: 6, y: 8, w: 6, h: 8 },
-  ]);
+  const [selectedPods, setSelectedPods] = useState([]);
+  const [podMetrics, setPodMetrics] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [filters, setFilters] = useState({
+    namespace: 'all',
+    search: ''
+  });
+  const [namespaces, setNamespaces] = useState([]);
+  const [layout, setLayout] = useState(() => {
+    const savedLayout = localStorage.getItem(LAYOUT_STORAGE_KEY);
+    return savedLayout ? JSON.parse(savedLayout) : DEFAULT_LAYOUT;
+  });
 
-  const theme = useTheme();
-  const chartRefs = useRef({});
-
-  const fetchData = useCallback(async () => {
-    try {
-      setLoading(true);
-      await Promise.all([fetchPodMetrics(), fetchPods()]);
-    } finally {
-      setLoading(false);
-    }
+  // Save layout changes
+  const handleLayoutChange = useCallback((newLayout) => {
+    setLayout(newLayout);
+    localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(newLayout));
   }, []);
 
+  // Fetch namespaces
   useEffect(() => {
-    fetchData();
-    const intervalId = setInterval(fetchData, 5000);
-    return () => clearInterval(intervalId);
-  }, [fetchData]);
+    const fetchNamespaces = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/api/pods/namespaces', {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setNamespaces(data.namespaces);
+        }
+      } catch (error) {
+        console.error('Error fetching namespaces:', error);
+      }
+    };
+    fetchNamespaces();
+  }, []);
+
+  // Fetch pods
+  useEffect(() => {
+    const fetchPods = async () => {
+      try {
+        setLoading(true);
+        const queryParams = new URLSearchParams();
+        if (filters.namespace !== 'all') queryParams.append('namespace', filters.namespace);
+        if (filters.search) queryParams.append('search', filters.search);
+
+        const response = await fetch(`http://localhost:3001/api/pods?${queryParams}`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setPods(data);
+        }
+      } catch (error) {
+        console.error('Error fetching pods:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPods();
+    const interval = setInterval(fetchPods, 30000);
+    return () => clearInterval(interval);
+  }, [filters]);
+
+  // Fetch metrics for selected pods
+  const fetchSelectedPodsMetrics = useCallback(async () => {
+    if (selectedPods.length === 0) {
+      setPodMetrics(null);
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:3001/api/pods/calculate-resources', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ podNames: selectedPods })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setPodMetrics(data);
+      }
+    } catch (error) {
+      console.error('Error fetching pod metrics:', error);
+    }
+  }, [selectedPods]);
 
   useEffect(() => {
-    filterPods();
-  }, [pods, searchTerm, selectedNamespace, selectedPodType]);
+    fetchSelectedPodsMetrics();
+  }, [selectedPods, fetchSelectedPodsMetrics]);
 
-  const fetchPodMetrics = async () => {
-    try {
-      const response = await fetch('http://localhost:3001/api/metrics/pods', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+  // Selection handlers
+  const handleSelectAllClick = (event) => {
+    if (event.target.checked) {
+      setSelectedPods(pods.map(pod => pod.name));
+    } else {
+      setSelectedPods([]);
+    }
+  };
+
+  const handlePodSelect = (podName) => {
+    setSelectedPods(prev => {
+      if (prev.includes(podName)) {
+        return prev.filter(name => name !== podName);
+      } else {
+        return [...prev, podName];
       }
-      const data = await response.json();
-      setPodMetrics(data);
-    } catch (error) {
-      console.error(t('fetchPodMetricsError'), error);
-    }
+    });
   };
 
-  const fetchPods = async () => {
-    try {
-      const response = await fetch('http://localhost:3001/api/pods', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+  // Chart configurations
+  const getPodStatusChartOption = () => {
+    const statusCount = pods.reduce((acc, pod) => {
+      if (pod.status) {
+        acc[pod.status] = (acc[pod.status] || 0) + 1;
       }
-      const data = await response.json();
-      setPods(data);
-    } catch (error) {
-      console.error(t('fetchPodsError'), error);
-    }
-  };
-
-  const filterPods = () => {
-    if (!pods.length) return;
-    let filtered = pods;
-    if (searchTerm) {
-      filtered = filtered.filter(pod => pod.metadata.name.toLowerCase().includes(searchTerm.toLowerCase()));
-    }
-    if (selectedNamespace) {
-      filtered = filtered.filter(pod => pod.metadata.namespace === selectedNamespace);
-    }
-    if (selectedPodType) {
-      filtered = filtered.filter(pod => pod.type === selectedPodType);
-    }
-    setFilteredPods(filtered);
-  };
-
-  const handleRefresh = () => {
-    fetchData();
-  };
-
-  const handlePodSelection = (pod) => {
-    setSelectedPod(pod);
-  };
-
-  const chartStyle = {
-    height: '100%',
-    width: '100%',
-  };
-
-  const getChartOption = (title, data, type = 'line') => {
-    if (!data) {
-      return {
-        xAxis: { type: 'category', data: [] },
-        yAxis: { type: 'value' },
-        series: [{ data: [], type: 'line' }]
-      };
-    }
-
-    if (type === 'pie') {
-      return {
-        tooltip: { trigger: 'item' },
-        series: [{
-          type: 'pie',
-          data: [
-            { value: data.used, name: t('used') },
-            { value: data.free, name: t('available') }
-          ],
-          itemStyle: {
-            color: (params) => params.name === t('used') ? theme.palette.primary.main : theme.palette.secondary.main
-          }
-        }]
-      };
-    } else if (type === 'network') {
-      return {
-        tooltip: { trigger: 'axis' },
-        xAxis: { 
-          type: 'category', 
-          data: data.tx.map(item => item.timestamp),
-          axisLabel: { color: theme.palette.text.secondary }
-        },
-        yAxis: { 
-          type: 'value', 
-          axisLabel: { color: theme.palette.text.secondary }
-        },
-        series: [
-          {
-            name: t('send'),
-            data: data.tx.map(item => item.value),
-            type: 'line',
-            smooth: true,
-            itemStyle: { color: theme.palette.success.main }
-          },
-          {
-            name: t('receive'),
-            data: data.rx.map(item => item.value),
-            type: 'line',
-            smooth: true,
-            itemStyle: { color: theme.palette.error.main }
-          }
-        ]
-      };
-    }
+      return acc;
+    }, {});
 
     return {
-      tooltip: { trigger: 'axis' },
-      xAxis: { 
-        type: 'category', 
-        data: data.map(item => item.timestamp),
-        axisLabel: { color: theme.palette.text.secondary }
+      tooltip: {
+        trigger: 'item',
+        formatter: '{b}: {c} ({d}%)'
       },
-      yAxis: { 
-        type: 'value', 
-        axisLabel: { color: theme.palette.text.secondary }
+      legend: {
+        orient: 'vertical',
+        left: 'left'
       },
       series: [{
-        data: data.map(item => item.value),
-        type: type,
-        smooth: true,
-        itemStyle: { color: theme.palette.primary.main }
+        type: 'pie',
+        radius: ['50%', '70%'],
+        avoidLabelOverlap: true,
+        label: {
+          show: true,
+          formatter: '{b}: {c}'
+        },
+        data: Object.entries(statusCount).map(([status, count]) => ({
+          name: status,
+          value: count,
+          itemStyle: {
+            color: status === 'Running' ? '#4caf50' :
+                   status === 'Pending' ? '#ff9800' :
+                   status === 'Failed' ? '#f44336' : '#9e9e9e'
+          }
+        }))
       }]
     };
   };
 
-  const handleRequestSort = (property) => {
-    const isAsc = orderBy === property && order === 'asc';
-    setOrder(isAsc ? 'desc' : 'asc');
-    setOrderBy(property);
+  const getNamespaceChartOption = () => {
+    const namespaceCount = pods.reduce((acc, pod) => {
+      if (pod.namespace) {
+        acc[pod.namespace] = (acc[pod.namespace] || 0) + 1;
+      }
+      return acc;
+    }, {});
+
+    return {
+      tooltip: {
+        trigger: 'item',
+        formatter: '{b}: {c} pods'
+      },
+      legend: {
+        type: 'scroll',
+        orient: 'vertical',
+        right: 10,
+        top: 20,
+        bottom: 20,
+      },
+      series: [{
+        type: 'pie',
+        radius: '55%',
+        center: ['40%', '50%'],
+        data: Object.entries(namespaceCount).map(([namespace, count], index) => ({
+          name: namespace,
+          value: count,
+          itemStyle: {
+            color: [
+              '#2196f3', '#4caf50', '#ff9800', '#f44336',
+              '#9c27b0', '#00bcd4', '#009688', '#e91e63',
+              '#3f51b5', '#cddc39'
+            ][index % 10]
+          }
+        })),
+        emphasis: {
+          itemStyle: {
+            shadowBlur: 10,
+            shadowOffsetX: 0,
+            shadowColor: 'rgba(0, 0, 0, 0.5)'
+          }
+        },
+        label: {
+          show: true,
+          formatter: '{b}: {c} pods\n({d}%)'
+        }
+      }]
+    };
   };
 
-  const sortedPods = React.useMemo(() => {
-    const comparator = (a, b) => {
-      if (orderBy === 'name') {
-        return order === 'asc'
-          ? a.metadata.name.localeCompare(b.metadata.name)
-          : b.metadata.name.localeCompare(a.metadata.name);
-      }
-      if (orderBy === 'type') {
-        return order === 'asc'
-          ? a.type.localeCompare(b.type)
-          : b.type.localeCompare(a.type);
-      }
-      if (orderBy === 'namespace') {
-        return order === 'asc'
-          ? a.metadata.namespace.localeCompare(b.metadata.namespace)
-          : b.metadata.namespace.localeCompare(a.metadata.namespace);
-      }
-      return 0;
-    };
-    return [...filteredPods].sort(comparator);
-  }, [filteredPods, order, orderBy]);
-
-  const renderChart = (chartId, option, title) => (
-    <Paper elevation={3} sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <Box sx={{ p: 1, background: theme.palette.primary.main, color: theme.palette.primary.contrastText, cursor: 'move' }} className="drag-handle">
-        {title}
-      </Box>
-      <Box sx={{ flexGrow: 1, position: 'relative' }}>
-        <ReactECharts
-          option={option}
-          style={chartStyle}
-          ref={(e) => { if (e) chartRefs.current[chartId] = e; }}
-          opts={{ renderer: 'svg' }}
-          lazyUpdate={true}
-        />
-      </Box>
-    </Paper>
+  // Render metrics cards
+  const MetricsCards = () => (
+    <Grid container spacing={3}>
+      <Grid item xs={12} md={6}>
+        <Paper sx={{ p: 2, height: '100%' }}>
+          <Box className="drag-handle" sx={{ 
+            cursor: 'move',
+            mb: 1,
+            p: 1,
+            bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.100'
+          }}>
+            <Typography variant="subtitle1" fontWeight="medium">
+              {selectedPods.length > 1 ? 
+                `${t('cpuUsage')} (${selectedPods.length} ${t('podsSelected')})` : 
+                t('cpuUsage')}
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Typography variant="h4" color="primary">
+              {podMetrics ? 
+                `${podMetrics.cpu.cores.toFixed(2)} cores` : 
+                '0 cores'}
+            </Typography>
+          </Box>
+        </Paper>
+      </Grid>
+      <Grid item xs={12} md={6}>
+        <Paper sx={{ p: 2, height: '100%' }}>
+          <Box className="drag-handle" sx={{ 
+            cursor: 'move',
+            mb: 1,
+            p: 1,
+            bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.100'
+          }}>
+            <Typography variant="subtitle1" fontWeight="medium">
+              {selectedPods.length > 1 ? 
+                `${t('memoryUsage')} (${selectedPods.length} ${t('podsSelected')})` : 
+                t('memoryUsage')}
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Typography variant="h4" color="secondary">
+              {podMetrics ? 
+                `${podMetrics.memory.usedGB.toFixed(2)} GB` : 
+                '0 GB'}
+            </Typography>
+          </Box>
+        </Paper>
+      </Grid>
+    </Grid>
   );
 
   return (
-    <Box sx={{ flexGrow: 1, color: theme.palette.text.primary }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h5">
-          {t('podDashboard')}
-        </Typography>
-        <Button
-          variant="outlined"
-          startIcon={<RefreshIcon />}
-          onClick={handleRefresh}
-          disabled={loading}
-        >
-          {loading ? t('refreshing') : t('refresh')}
-        </Button>
-      </Box>
-
-      {/* Pod 指標圖表部分 */}
-      <Paper elevation={3} sx={{ p: 2, mb: 2 }}>
-        <Typography variant="h6" gutterBottom>
-          {t('podMetrics')} {selectedPod && `- ${selectedPod.metadata.name}`}
-        </Typography>
+    <Box sx={{ p: 3 }}>
+      {/* Dashboard Area */}
+      <Paper sx={{ p: 2, mb: 3 }}>
         <ReactGridLayout
           className="layout"
           layout={layout}
-          cols={12}
-          rowHeight={30}
-          width={1200}
-          onLayoutChange={(newLayout) => {
-            setLayout(newLayout);
-            setTimeout(() => {
-              Object.values(chartRefs.current).forEach(chart => {
-                if (chart) {
-                  chart.getEchartsInstance().resize();
-                }
-              });
-            }, 0);
-          }}
+          cols={30}
+          rowHeight={20}
+          onLayoutChange={handleLayoutChange}
           draggableHandle=".drag-handle"
           margin={[16, 16]}
           containerPadding={[0, 0]}
           isResizable={true}
-          isBounded={true}
+          isDraggable={true}
         >
-          <div key="cpu" style={{width: '100%', height: '100%'}}>
-            {renderChart('cpu', getChartOption(t('podCpuUsage'), podMetrics[selectedPod?.metadata?.name]?.cpu), t('podCpuUsage'))}
+          {/* Metrics Cards */}
+          <div key="metrics">
+            <MetricsCards />
           </div>
-          <div key="memory" style={{width: '100%', height: '100%'}}>
-            {renderChart('memory', getChartOption(t('podMemoryUsage'), podMetrics[selectedPod?.metadata?.name]?.memory), t('podMemoryUsage'))}
+
+          {/* Status Distribution Chart */}
+          <div key="statusChart">
+            <Paper sx={{ height: '100%', p: 2 }}>
+              <Box className="drag-handle" sx={{ 
+                cursor: 'move',
+                mb: 1,
+                p: 1,
+                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.100'
+              }}>
+                <Typography variant="subtitle1" fontWeight="medium">
+                  {t('podStatusDistribution')}
+                </Typography>
+              </Box>
+              <Box sx={{ height: 'calc(100% - 48px)' }}>
+                <ReactECharts
+                  option={getPodStatusChartOption()}
+                  style={{ height: '100%' }}
+                  opts={{ renderer: 'canvas' }}
+                />
+              </Box>
+            </Paper>
           </div>
-          <div key="network" style={{width: '100%', height: '100%'}}>
-            {renderChart('network', getChartOption(t('podNetworkUsage'), podMetrics[selectedPod?.metadata?.name]?.network, 'network'), t('podNetworkUsage'))}
-          </div>
-          <div key="storage" style={{width: '100%', height: '100%'}}>
-            {renderChart('storage', getChartOption(t('podStorageUsage'), podMetrics[selectedPod?.metadata?.name]?.storage, 'pie'), t('podStorageUsage'))}
+
+          {/* Namespace Distribution Chart */}
+          <div key="namespaceChart">
+            <Paper sx={{ height: '100%', p: 2 }}>
+              <Box className="drag-handle" sx={{ 
+                cursor: 'move',
+                mb: 1,
+                p: 1,
+                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.100'
+              }}>
+                <Typography variant="subtitle1" fontWeight="medium">
+                  {t('podNamespaceDistribution')}
+                </Typography>
+              </Box>
+              <Box sx={{ height: 'calc(100% - 48px)' }}>
+                <ReactECharts
+                  option={getNamespaceChartOption()}
+                  style={{ height: '100%' }}
+                  opts={{ renderer: 'canvas' }}
+                />
+              </Box>
+            </Paper>
           </div>
         </ReactGridLayout>
       </Paper>
 
-      {/* Pod 列表部分 */}
-      <Paper elevation={3} sx={{ p: 2 }}>
-        <Typography variant="h6" gutterBottom>
-          {t('podList')}
-        </Typography>
-        <Grid container spacing={2} sx={{ mb: 2 }}>
-          <Grid item xs={12} sm={4}>
-            <TextField
-              fullWidth
-              label={t('searchPods')}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <FormControl fullWidth>
+      {/* Filters Area */}
+      <Paper sx={{ p: 2, mb: 3 }}>
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={6}>
+            <FormControl fullWidth size="small">
               <InputLabel>{t('namespace')}</InputLabel>
               <Select
-                value={selectedNamespace}
+                value={filters.namespace}
+                onChange={(e) => setFilters(prev => ({ ...prev, namespace: e.target.value }))}
                 label={t('namespace')}
-                onChange={(e) => setSelectedNamespace(e.target.value)}
               >
-                <MenuItem value="">{t('all')}</MenuItem>
-                {/* Add namespace options */}
+                <MenuItem value="all">{t('allNamespaces')}</MenuItem>
+                {namespaces.map(ns => (
+                  <MenuItem key={ns} value={ns}>{ns}</MenuItem>
+                ))}
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={12} sm={4}>
-            <FormControl fullWidth>
-              <InputLabel>{t('podType')}</InputLabel>
-              <Select
-                value={selectedPodType}
-                label={t('podType')}
-                onChange={(e) => setSelectedPodType(e.target.value)}
-              >
-                <MenuItem value="">{t('all')}</MenuItem>
-                <MenuItem value="statefulset">{t('statefulSet')}</MenuItem>
-                <MenuItem value="daemonset">{t('daemonSet')}</MenuItem>
-                <MenuItem value="deployment">{t('deployment')}</MenuItem>
-              </Select>
-            </FormControl>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              size="small"
+              placeholder={t('searchPods')}
+              value={filters.search}
+              onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                )
+              }}
+            />
           </Grid>
         </Grid>
-        {loading ? (
-          <CircularProgress />
-        ) : (
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>
-                    <TableSortLabel
-                      active={orderBy === 'name'}
-                      direction={orderBy === 'name' ? order : 'asc'}
-                      onClick={() => handleRequestSort('name')}
-                    >
-                      {t('podName')}
-                    </TableSortLabel>
-                  </TableCell>
-                  <TableCell>
-                    <TableSortLabel
-                      active={orderBy === 'type'}
-                      direction={orderBy === 'type' ? order : 'asc'}
-                      onClick={() => handleRequestSort('type')}
-                    >
-                      {t('podType')}
-                    </TableSortLabel>
-                  </TableCell>
-                  <TableCell>
-                    <TableSortLabel
-                      active={orderBy === 'namespace'}
-                      direction={orderBy === 'namespace' ? order : 'asc'}
-                      onClick={() => handleRequestSort('namespace')}
-                    >
-                      {t('namespace')}
-                    </TableSortLabel>
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {sortedPods.map((pod) => (
-                  <TableRow
-                    key={pod.metadata.uid || pod.id} // Use a unique identifier for the key
-                    onClick={() => handlePodSelection(pod)}
-                    sx={{
-                      cursor: 'pointer',
-                      '&:hover': {
-                        backgroundColor: theme.palette.action.hover,
-                      },
-                      ...(selectedPod && selectedPod.metadata.uid === pod.metadata.uid
-                        ? { backgroundColor: theme.palette.action.selected }
-                        : {}),
-                    }}
-                  >
-                    <TableCell>{pod.metadata.name}</TableCell>
-                    <TableCell>{pod.type}</TableCell>
-                    <TableCell>{pod.metadata.namespace}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        )}
-        {sortedPods.length === 0 && !loading && (
-          <Typography>{t('noPodData')}</Typography>
-        )}
       </Paper>
+
+      {/* Pod List */}
+      <TableContainer 
+        component={Paper} 
+        sx={{ 
+          maxHeight: 1000,
+          overflow: 'auto'
+        }}
+      >
+        <Table stickyHeader>
+          <TableHead>
+            <TableRow>
+              <TableCell padding="checkbox" sx={{ bgcolor: 'background.paper' }}>
+                <Checkbox
+                  indeterminate={selectedPods.length > 0 && selectedPods.length < pods.length}
+                  checked={pods.length > 0 && selectedPods.length === pods.length}
+                  onChange={handleSelectAllClick}
+                />
+              </TableCell>
+              <TableCell sx={{ bgcolor: 'background.paper' }}>
+                {t('podName')}
+              </TableCell>
+              <TableCell sx={{ bgcolor: 'background.paper' }}>
+                {t('namespace')}
+              </TableCell>
+              <TableCell sx={{ bgcolor: 'background.paper' }}>
+                {t('status')}
+              </TableCell>
+              <TableCell align="right" sx={{ bgcolor: 'background.paper' }}>
+                {t('restarts')}
+              </TableCell>
+              <TableCell align="right" sx={{ bgcolor: 'background.paper' }}>
+                {t('age')}
+              </TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {pods.map((pod) => (
+              <TableRow 
+                key={`${pod.namespace}-${pod.name}`}
+                selected={selectedPods.includes(pod.name)}
+                hover
+                onClick={() => handlePodSelect(pod.name)}
+                sx={{ cursor: 'pointer' }}
+              >
+                <TableCell padding="checkbox">
+                  <Checkbox
+                    checked={selectedPods.includes(pod.name)}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      handlePodSelect(pod.name);
+                    }}
+                  />
+                </TableCell>
+                <TableCell>{pod.name}</TableCell>
+                <TableCell>{pod.namespace}</TableCell>
+                <TableCell>
+                  <Chip
+                    label={pod.status}
+                    color={pod.status === 'Running' ? 'success' :
+                           pod.status === 'Pending' ? 'warning' :
+                           pod.status === 'Failed' ? 'error' : 'default'}
+                    size="small"
+                  />
+                </TableCell>
+                <TableCell align="right">
+                  <Chip
+                    label={pod.restarts || 0}
+                    color={pod.restarts > 0 ? 'warning' : 'default'}
+                    size="small"
+                  />
+                </TableCell>
+                <TableCell align="right">
+                  {formatAge(pod.startTime)}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
     </Box>
   );
+};
+
+// Helper function to format age
+const formatAge = (startTime) => {
+  if (!startTime) return '-';
+  const start = new Date(startTime);
+  const now = new Date();
+  const diff = Math.floor((now - start) / 1000);
+
+  if (diff < 60) return `${diff}s`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+  return `${Math.floor(diff / 86400)}d`;
 };
 
 export default PodDashboard;

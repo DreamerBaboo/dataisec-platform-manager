@@ -1,0 +1,82 @@
+{
+  "settings": {
+    "title": "系統設定",
+    "general": {
+      "title": "一般設定",
+      "language": {
+        "label": "語言",
+        "en": "英文",
+        "zh-TW": "繁體中文"
+      },
+      "theme": {
+        "label": "主題",
+        "light": "淺色",
+        "dark": "深色",
+        "system": "系統預設"
+      },
+      "dateFormat": {
+        "label": "日期格式",
+        "formats": {
+          "short": "簡短",
+          "medium": "中等",
+          "long": "完整"
+        }
+      }
+    },
+    "registry": {
+      "title": "倉庫設定",
+      "connection": {
+        "title": "連線設定",
+        "host": "主機",
+        "port": "端口",
+        "ssl": "使用 SSL",
+        "timeout": "連線逾時"
+      },
+      "authentication": {
+        "title": "認證",
+        "username": "用戶名",
+        "password": "密碼",
+        "token": "存取令牌"
+      },
+      "proxy": {
+        "title": "代理設定",
+        "enabled": "啟用代理",
+        "host": "代理主機",
+        "port": "代理端口",
+        "auth": "代理認證"
+      }
+    },
+    "security": {
+      "title": "安全設定",
+      "authentication": {
+        "title": "認證",
+        "method": "認證方式",
+        "sessionTimeout": "工作階段逾時",
+        "maxAttempts": "最大登入嘗試次數"
+      },
+      "permissions": {
+        "title": "權限",
+        "roles": "角色管理",
+        "users": "用戶管理",
+        "groups": "群組管理"
+      }
+    },
+    "notifications": {
+      "title": "通知設定",
+      "alerts": {
+        "title": "警報設定",
+        "enabled": "啟用警報",
+        "level": "警報等級",
+        "channels": "通知管道"
+      },
+      "email": {
+        "title": "郵件設定",
+        "server": "SMTP 伺服器",
+        "port": "SMTP 端口",
+        "username": "郵件用戶名",
+        "password": "郵件密碼",
+        "from": "寄件地址"
+      }
+    }
+  }
+} 

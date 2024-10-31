@@ -1,0 +1,40 @@
+{
+  "validation": {
+    "required": "This field is required",
+    "email": {
+      "invalid": "Invalid email address",
+      "required": "Email is required"
+    },
+    "password": {
+      "required": "Password is required",
+      "minLength": "Password must be at least {{length}} characters",
+      "maxLength": "Password cannot exceed {{length}} characters",
+      "pattern": "Password must contain letters, numbers and special characters",
+      "match": "Passwords do not match"
+    },
+    "username": {
+      "required": "Username is required",
+      "minLength": "Username must be at least {{length}} characters",
+      "maxLength": "Username cannot exceed {{length}} characters",
+      "pattern": "Username can only contain letters, numbers and underscores"
+    },
+    "number": {
+      "min": "Value must be at least {{min}}",
+      "max": "Value cannot exceed {{max}}",
+      "integer": "Value must be an integer",
+      "positive": "Value must be positive"
+    },
+    "file": {
+      "required": "Please select a file",
+      "size": "File size cannot exceed {{size}}",
+      "type": "Invalid file type. Allowed types: {{types}}",
+      "upload": "Error uploading file"
+    },
+    "date": {
+      "invalid": "Invalid date",
+      "future": "Date must be in the future",
+      "past": "Date must be in the past",
+      "range": "Date must be between {{start}} and {{end}}"
+    }
+  }
+} 

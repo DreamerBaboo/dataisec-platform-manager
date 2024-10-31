@@ -1,0 +1,16 @@
+{
+  "imageManagement": {
+    "title": "鏡像管理",
+    "upload": "上傳鏡像",
+    "delete": "刪除鏡像",
+    "install": "安裝鏡像",
+    "details": "鏡像詳情",
+    "search": "搜索鏡像",
+    "refresh": "刷新",
+    "name": "名稱",
+    "tag": "標籤",
+    "size": "大小",
+    "status": "狀態",
+    "actions": "操作"
+  }
+} 

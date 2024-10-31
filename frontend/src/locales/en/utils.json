@@ -1,0 +1,55 @@
+{
+  "utils": {
+    "formatters": {
+      "date": {
+        "today": "Today",
+        "yesterday": "Yesterday",
+        "daysAgo": "{{count}} days ago",
+        "justNow": "Just now",
+        "minutesAgo": "{{count}} minutes ago",
+        "hoursAgo": "{{count}} hours ago"
+      },
+      "size": {
+        "bytes": "{{size}} B",
+        "kb": "{{size}} KB",
+        "mb": "{{size}} MB",
+        "gb": "{{size}} GB",
+        "tb": "{{size}} TB"
+      },
+      "number": {
+        "thousand": "K",
+        "million": "M",
+        "billion": "B",
+        "decimal": "."
+      }
+    },
+    "validation": {
+      "required": "This field is required",
+      "minLength": "Must be at least {{count}} characters",
+      "maxLength": "Cannot exceed {{count}} characters",
+      "pattern": "Invalid format",
+      "email": "Invalid email address",
+      "url": "Invalid URL",
+      "numeric": "Must be a number",
+      "integer": "Must be an integer",
+      "positive": "Must be positive",
+      "negative": "Must be negative",
+      "date": "Invalid date",
+      "time": "Invalid time",
+      "datetime": "Invalid date and time"
+    },
+    "filters": {
+      "all": "All",
+      "active": "Active",
+      "inactive": "Inactive",
+      "custom": "Custom",
+      "dateRange": {
+        "today": "Today",
+        "yesterday": "Yesterday",
+        "lastWeek": "Last Week",
+        "lastMonth": "Last Month",
+        "custom": "Custom Range"
+      }
+    }
+  }
+} 

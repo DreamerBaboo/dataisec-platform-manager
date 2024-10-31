@@ -7,6 +7,7 @@ import MainPage from './pages/MainPage';
 import { AuthProvider, useAuth } from './utils/auth.jsx';
 import { I18nextProvider } from 'react-i18next';
 import { i18n } from './i18n';
+import { SnackbarProvider } from 'notistack';
 
 export const ColorModeContext = React.createContext({ toggleColorMode: () => {} });
 
@@ -66,24 +67,26 @@ function App() {
   return (
     <ColorModeContext.Provider value={colorMode}>
       <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <I18nextProvider i18n={i18n}>
-          <AuthProvider>
-            <Router>
-              <Routes>
-                <Route path="/login" element={<LoginPage />} />
-                <Route
-                  path="/*"
-                  element={
-                    <PrivateRoute>
-                      <MainPage />
-                    </PrivateRoute>
-                  }
-                />
-              </Routes>
-            </Router>
-          </AuthProvider>
-        </I18nextProvider>
+        <SnackbarProvider maxSnack={3}>
+          <CssBaseline />
+          <I18nextProvider i18n={i18n}>
+            <AuthProvider>
+              <Router>
+                <Routes>
+                  <Route path="/login" element={<LoginPage />} />
+                  <Route
+                    path="/*"
+                    element={
+                      <PrivateRoute>
+                        <MainPage />
+                      </PrivateRoute>
+                    }
+                  />
+                </Routes>
+              </Router>
+            </AuthProvider>
+          </I18nextProvider>
+        </SnackbarProvider>
       </ThemeProvider>
     </ColorModeContext.Provider>
   );

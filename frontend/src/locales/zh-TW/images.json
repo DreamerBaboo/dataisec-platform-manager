@@ -1,0 +1,123 @@
+{
+  "imageManagement": {
+    "title": "映像管理",
+    "imageList": "映像列表",
+    "actions": {
+      "upload": "上傳",
+      "delete": "刪除",
+      "package": "打包",
+      "packaging": "打包中...",
+      "refresh": "重新整理",
+      "search": "搜尋映像",
+      "configure": "設定"
+    },
+    "table": {
+      "name": "名稱",
+      "tag": "標籤",
+      "size": "大小",
+      "uploadDate": "上傳日期",
+      "status": "狀態",
+      "actions": "操作",
+      "imageCount": "映像 ({{count}})",
+      "noData": "未找到映像",
+      "loadError": "載入映像時發生錯誤",
+      "size": {
+        "bytes": "位元組",
+        "kilobytes": "KB",
+        "megabytes": "MB",
+        "gigabytes": "GB"
+      }
+    },
+    "status": {
+      "available": "可用",
+      "pending": "處理中",
+      "error": "錯誤",
+      "processing": "處理中",
+      "uploading": "上傳中",
+      "downloading": "下載中"
+    },
+    "details": {
+      "title": "映像詳情",
+      "basicInfo": "基本資訊",
+      "tags": "標籤",
+      "layers": {
+        "title": "層級",
+        "layer": "層級 {{number}}"
+      },
+      "config": {
+        "title": "配置",
+        "env": "環境變數",
+        "cmd": "命令",
+        "workdir": "工作目錄",
+        "ports": "開放端口",
+        "noValue": "無值"
+      },
+      "id": "識別碼",
+      "architecture": "架構",
+      "os": "作業系統",
+      "created": "建立時間",
+      "size": "大小",
+      "noTags": "無可用標籤",
+      "environmentVariables": "環境變數",
+      "commands": "命令",
+      "workingDirectory": "工作目錄",
+      "exposedPorts": "開放端口"
+    },
+    "upload": {
+      "title": "上傳映像",
+      "dragAndDrop": "拖放映像檔案至此",
+      "or": "或",
+      "browse": "瀏覽檔案",
+      "supportedFormats": "支援格式：.tar、.gz、.tgz",
+      "uploading": "上傳中...",
+      "success": "上傳成功",
+      "error": "上傳失敗"
+    },
+    "messages": {
+      "deleteConfirm": "確定要刪除所選映像嗎？",
+      "deleteSuccess": "映像刪除成功",
+      "deleteError": "刪除映像失敗",
+      "packageStart": "開始打包映像...",
+      "packagePreparing": "準備打包中...",
+      "packageDownloading": "下載打包檔案中...",
+      "packageSuccess": "打包檔案下載成功",
+      "packageError": "打包映像失敗",
+      "noImagesFound": "未找到映像",
+      "errorLoadingImages": "載入映像時發生錯誤"
+    },
+    "registry": {
+      "title": "倉庫配置",
+      "settings": "倉庫設定",
+      "repository": {
+        "label": "倉庫地址",
+        "placeholder": "請輸入倉庫地址"
+      },
+      "port": {
+        "label": "端口",
+        "placeholder": "請輸入端口號"
+      },
+      "credentials": {
+        "title": "認證資訊",
+        "username": "用戶名",
+        "password": "密碼"
+      },
+      "ssl": {
+        "label": "使用 SSL",
+        "enabled": "啟用",
+        "disabled": "停用"
+      },
+      "test": {
+        "button": "測試連接",
+        "success": "連接成功",
+        "failure": "連接失敗"
+      },
+      "save": "儲存設定",
+      "cancel": "取消",
+      "validation": {
+        "required": "此欄位為必填",
+        "invalidPort": "無效的端口號",
+        "invalidAddress": "無效的倉庫地址"
+      }
+    }
+  }
+} 

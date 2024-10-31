@@ -1,0 +1,109 @@
+{
+  "metrics": {
+    "dashboard": {
+      "title": "Metrics Dashboard",
+      "summary": "System Summary",
+      "alerts": "Active Alerts",
+      "trends": "Performance Trends"
+    },
+    "cluster": {
+      "title": "Cluster Metrics",
+      "nodes": "Nodes",
+      "pods": "Pods",
+      "status": {
+        "healthy": "Healthy",
+        "warning": "Warning",
+        "critical": "Critical"
+      },
+      "resources": {
+        "title": "Resource Usage",
+        "cpu": "CPU Usage",
+        "memory": "Memory Usage",
+        "storage": "Storage Usage",
+        "network": "Network Traffic"
+      }
+    },
+    "nodes": {
+      "title": "Node Metrics",
+      "details": "Node Details",
+      "status": "Node Status",
+      "resources": {
+        "title": "Node Resources",
+        "cpu": {
+          "title": "CPU",
+          "usage": "Usage",
+          "limit": "Limit",
+          "request": "Request",
+          "throttling": "Throttling"
+        },
+        "memory": {
+          "title": "Memory",
+          "usage": "Usage",
+          "limit": "Limit",
+          "request": "Request",
+          "swap": "Swap"
+        },
+        "disk": {
+          "title": "Disk",
+          "usage": "Usage",
+          "available": "Available",
+          "readRate": "Read Rate",
+          "writeRate": "Write Rate"
+        },
+        "network": {
+          "title": "Network",
+          "received": "Received",
+          "transmitted": "Transmitted",
+          "errors": "Errors",
+          "drops": "Drops"
+        }
+      }
+    },
+    "pods": {
+      "title": "Pod Metrics",
+      "status": {
+        "running": "Running",
+        "pending": "Pending",
+        "failed": "Failed",
+        "succeeded": "Succeeded",
+        "unknown": "Unknown"
+      },
+      "details": {
+        "name": "Pod Name",
+        "namespace": "Namespace",
+        "node": "Node",
+        "ip": "IP Address",
+        "startTime": "Start Time",
+        "restarts": "Restarts"
+      }
+    },
+    "timeRanges": {
+      "last1h": "Last Hour",
+      "last3h": "Last 3 Hours",
+      "last6h": "Last 6 Hours",
+      "last12h": "Last 12 Hours",
+      "last24h": "Last 24 Hours",
+      "last7d": "Last 7 Days"
+    },
+    "units": {
+      "cpu": {
+        "cores": "Cores",
+        "millicores": "mCores",
+        "percentage": "%"
+      },
+      "memory": {
+        "bytes": "B",
+        "kilobytes": "KB",
+        "megabytes": "MB",
+        "gigabytes": "GB",
+        "terabytes": "TB"
+      },
+      "network": {
+        "bytesPerSecond": "B/s",
+        "kilobytesPerSecond": "KB/s",
+        "megabytesPerSecond": "MB/s",
+        "gigabytesPerSecond": "GB/s"
+      }
+    }
+  }
+} 

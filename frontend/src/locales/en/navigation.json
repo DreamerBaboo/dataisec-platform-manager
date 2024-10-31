@@ -1,0 +1,43 @@
+{
+  "navigation": {
+    "menu": {
+      "dashboard": "Dashboard",
+      "images": "Image Management",
+      "metrics": "System Metrics",
+      "settings": "Settings",
+      "users": "User Management"
+    },
+    "breadcrumbs": {
+      "home": "Home",
+      "dashboard": "Dashboard",
+      "images": {
+        "main": "Images",
+        "list": "Image List",
+        "upload": "Upload Image",
+        "details": "Image Details",
+        "settings": "Image Settings"
+      },
+      "metrics": {
+        "main": "Metrics",
+        "cluster": "Cluster Metrics",
+        "nodes": "Node Metrics",
+        "pods": "Pod Metrics"
+      },
+      "settings": {
+        "main": "Settings",
+        "general": "General Settings",
+        "security": "Security Settings",
+        "registry": "Registry Settings"
+      }
+    },
+    "actions": {
+      "back": "Back",
+      "next": "Next",
+      "save": "Save",
+      "cancel": "Cancel",
+      "edit": "Edit",
+      "delete": "Delete",
+      "view": "View"
+    }
+  }
+} 

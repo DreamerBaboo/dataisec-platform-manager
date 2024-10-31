@@ -1,195 +1,195 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Drawer, List, ListItem, ListItemIcon, ListItemText, Box, IconButton, Collapse, useTheme } from '@mui/material';
-import { Dashboard as DashboardIcon, Storage as StorageIcon, Assignment as LogIcon, Person as ProfileIcon, ChevronLeft, ChevronRight, ExpandLess, ExpandMore } from '@mui/icons-material';
-import { Link, useLocation } from 'react-router-dom';
+import React from 'react';
+import {
+  Drawer,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Box,
+  Divider,
+  Collapse,
+  IconButton
+} from '@mui/material';
+import {
+  Dashboard as DashboardIcon,
+  Storage as StorageIcon,
+  Description as LogIcon,
+  Person as PersonIcon,
+  ExpandLess,
+  ExpandMore,
+  Image as ImageIcon,
+  CloudUpload as UploadIcon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon
+} from '@mui/icons-material';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-
-const MIN_DRAWER_WIDTH = 56;
-const MAX_DRAWER_WIDTH = 300;
+import { useTheme } from '@mui/material/styles';
 
 const SideMenu = ({ open, toggleDrawer }) => {
-  const location = useLocation();
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [imageMenuOpen, setImageMenuOpen] = React.useState(false);
   const theme = useTheme();
-  const [drawerWidth, setDrawerWidth] = useState(open ? 240 : MIN_DRAWER_WIDTH);
-  const [isResizing, setIsResizing] = useState(false);
-  const resizeRef = useRef(null);
-  const [dashboardOpen, setDashboardOpen] = useState(true);
 
   const menuItems = [
     {
-      text: t('dashboard'),
+      text: 'dashboard',
       icon: <DashboardIcon />,
-      path: '/',
-      subItems: [
-        { text: t('systemDashboard'), path: '/' },
-        { text: t('podDashboard'), path: '/pod-dashboard' }
-      ]
+      path: '/'
     },
-    { text: t('podManagement'), icon: <StorageIcon />, path: '/pods' },
-    { text: t('systemLogs'), icon: <LogIcon />, path: '/logs' },
-    { text: t('userProfile'), icon: <ProfileIcon />, path: '/profile' },
+    {
+      text: 'podDashboard',
+      icon: <StorageIcon />,
+      path: '/pod-dashboard'
+    },
+    {
+      text: 'podManagement',
+      icon: <StorageIcon />,
+      path: '/pods'
+    },
+    {
+      text: 'imageManagement',
+      icon: <ImageIcon />,
+      path: '/images'
+    },
+    {
+      text: 'logs',
+      icon: <LogIcon />,
+      path: '/logs'
+    },
+    {
+      text: 'profile',
+      icon: <PersonIcon />,
+      path: '/profile'
+    }
   ];
 
-  useEffect(() => {
-    setDrawerWidth(open ? 240 : MIN_DRAWER_WIDTH);
-  }, [open]);
-
-  const handleMouseDown = (e) => {
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-    setIsResizing(true);
-  };
-
-  const handleMouseMove = (e) => {
-    if (isResizing) {
-      const newWidth = e.clientX;
-      if (newWidth > MIN_DRAWER_WIDTH && newWidth < MAX_DRAWER_WIDTH) {
-        setDrawerWidth(newWidth);
+  const handleClick = (item) => {
+    console.log('handleClick called with item:', item);
+    if (item.subItems) {
+      if (item.text === 'imageManagement') {
+        console.log('Toggling imageMenuOpen from', imageMenuOpen, 'to', !imageMenuOpen);
+        setImageMenuOpen(!imageMenuOpen);
       }
+    } else {
+      console.log('Navigating to path:', item.path);
+      navigate(item.path);
     }
   };
 
-  const handleMouseUp = () => {
-    document.removeEventListener('mousemove', handleMouseMove);
-    document.removeEventListener('mouseup', handleMouseUp);
-    setIsResizing(false);
-  };
-
-  useEffect(() => {
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, []);
-
-  const handleDashboardClick = () => {
-    setDashboardOpen(!dashboardOpen);
+  const isSelected = (path) => {
+    const selected = location.pathname === path;
+    console.log('isSelected check:', { path, currentPath: location.pathname, selected });
+    return selected;
   };
 
   return (
-    <>
-      <Drawer
-        variant="permanent"
-        open={open}
-        sx={{
-          width: drawerWidth,
-          flexShrink: 0,
-          '& .MuiDrawer-paper': {
-            width: drawerWidth,
-            boxSizing: 'border-box',
-            overflowX: 'hidden',
-            height: '100%',
-            transition: isResizing ? 'none' : theme.transitions.create('width', {
-              easing: theme.transitions.easing.sharp,
-              duration: theme.transitions.duration.enteringScreen,
-            }),
-            backgroundColor: theme.palette.background.default,
-            color: theme.palette.text.primary,
-          },
-        }}
-      >
-        <List sx={{ flexGrow: 1, mt: 8, pr: 0.5 }}>
+    <Drawer
+      variant="permanent"
+      open={open}
+      sx={{
+        width: open ? 240 : 56,
+        flexShrink: 0,
+        '& .MuiDrawer-paper': {
+          width: open ? 240 : 56,
+          boxSizing: 'border-box',
+          whiteSpace: 'nowrap',
+          overflowX: 'hidden',
+          transition: theme.transitions.create(['width'], {
+            easing: theme.transitions.easing.sharp,
+            duration: theme.transitions.duration.enteringScreen,
+          }),
+        },
+      }}
+    >
+      <Box sx={{ mt: 8 }}>
+        <List>
           {menuItems.map((item) => (
             <React.Fragment key={item.text}>
               <ListItem
-                onClick={item.subItems ? handleDashboardClick : undefined}
-                component={item.subItems ? 'div' : Link}
-                to={item.subItems ? undefined : item.path}
-                selected={location.pathname === item.path}
-                sx={{ 
+                button
+                onClick={() => handleClick(item)}
+                selected={item.path ? isSelected(item.path) : false}
+                sx={{
+                  minHeight: 48,
                   justifyContent: open ? 'initial' : 'center',
-                  px: 1.5,
-                  color: theme.palette.text.primary,
-                  '&.Mui-selected': {
-                    backgroundColor: theme.palette.action.selected,
-                    '&:hover': {
-                      backgroundColor: theme.palette.action.hover,
-                    },
-                  },
-                  '&:hover': {
-                    backgroundColor: theme.palette.action.hover,
-                  },
+                  px: 2.5,
                 }}
               >
-                <ListItemIcon sx={{ 
-                  minWidth: 0, 
-                  mr: open ? 2 : 'auto', 
-                  justifyContent: 'center',
-                  color: theme.palette.text.primary,
-                }}>
+                <ListItemIcon
+                  sx={{
+                    minWidth: 0,
+                    mr: open ? 3 : 'auto',
+                    justifyContent: 'center',
+                  }}
+                >
                   {item.icon}
                 </ListItemIcon>
                 <ListItemText 
-                  primary={item.text} 
-                  sx={{ 
-                    opacity: open ? 1 : 0,
-                    color: theme.palette.text.primary,
-                  }} 
+                  primary={t(item.text)} 
+                  sx={{ opacity: open ? 1 : 0 }}
                 />
-                {item.subItems && open && (dashboardOpen ? <ExpandLess /> : <ExpandMore />)}
+                {item.subItems && open && (
+                  item.text === 'imageManagement' ? 
+                    imageMenuOpen ? <ExpandLess /> : <ExpandMore /> 
+                    : null
+                )}
               </ListItem>
               {item.subItems && (
-                <Collapse in={dashboardOpen && open} timeout="auto" unmountOnExit>
+                <Collapse in={imageMenuOpen && open} timeout="auto" unmountOnExit>
                   <List component="div" disablePadding>
                     {item.subItems.map((subItem) => (
                       <ListItem
                         key={subItem.text}
-                        component={Link}
-                        to={subItem.path}
-                        selected={location.pathname === subItem.path}
-                        sx={{ 
-                          pl: 4,
-                          color: theme.palette.text.primary,
-                          '&.Mui-selected': {
-                            backgroundColor: theme.palette.action.selected,
-                            '&:hover': {
-                              backgroundColor: theme.palette.action.hover,
-                            },
-                          },
-                          '&:hover': {
-                            backgroundColor: theme.palette.action.hover,
-                          },
-                        }}
+                        button
+                        onClick={() => navigate(subItem.path)}
+                        selected={isSelected(subItem.path)}
+                        sx={{ pl: 4 }}
                       >
-                        <ListItemText primary={subItem.text} />
+                        <ListItemIcon>{subItem.icon}</ListItemIcon>
+                        <ListItemText primary={t(subItem.text)} />
                       </ListItem>
                     ))}
                   </List>
                 </Collapse>
               )}
+              {item.divider && <Divider />}
             </React.Fragment>
           ))}
         </List>
-        <Box sx={{ position: 'absolute', bottom: 0, right: 0, p: 0.5 }}>
-          <IconButton onClick={toggleDrawer} sx={{ 
-            backgroundColor: theme.palette.background.paper,
-            color: theme.palette.text.primary,
-            '&:hover': {
-              backgroundColor: theme.palette.action.hover,
-            },
-          }}>
-            {open ? <ChevronLeft /> : <ChevronRight />}
-          </IconButton>
-        </Box>
-      </Drawer>
+      </Box>
+
       <Box
-        ref={resizeRef}
-        onMouseDown={handleMouseDown}
         sx={{
-          position: 'absolute',
-          left: drawerWidth,
-          top: 0,
+          position: 'fixed',
           bottom: 0,
-          width: '5px',
-          cursor: 'ew-resize',
+          left: open ? 240 : 56,
+          transform: 'translateX(-100%)',
+          transition: theme.transitions.create(['left'], {
+            easing: theme.transitions.easing.sharp,
+            duration: theme.transitions.duration.enteringScreen,
+          }),
+          borderTop: `1px solid ${theme.palette.divider}`,
+          borderRight: `1px solid ${theme.palette.divider}`,
+          borderBottom: `1px solid ${theme.palette.divider}`,
+          borderRadius: '0 4px 4px 0',
+          bgcolor: 'background.paper',
           zIndex: theme.zIndex.drawer + 2,
-          '&:hover': {
-            backgroundColor: theme.palette.action.hover,
-          },
         }}
-      />
-    </>
+      >
+        <IconButton
+          onClick={toggleDrawer}
+          sx={{
+            padding: '8px',
+            borderRadius: '0 4px 4px 0',
+          }}
+        >
+          {open ? <ChevronLeftIcon /> : <ChevronRightIcon />}
+        </IconButton>
+      </Box>
+    </Drawer>
   );
 };
 

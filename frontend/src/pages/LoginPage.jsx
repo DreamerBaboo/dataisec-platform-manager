@@ -21,11 +21,14 @@ function LoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    console.log('Login form submitted:', { username, password });
     try {
       await auth.login(username, password);
+      console.log('Login successful, navigating to:', location.state?.from || '/');
       const { from } = location.state || { from: { pathname: "/" } };
       navigate(from);
     } catch (error) {
+      console.error('Login failed:', error);
       setError(t('loginFailed') + ': ' + error.message);
     }
   };

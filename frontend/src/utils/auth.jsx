@@ -6,6 +6,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
 
   const login = async (username, password) => {
+    console.log('Login attempt:', { username, password });
     try {
       const response = await fetch('http://localhost:3001/api/login', {
         method: 'POST',
@@ -16,10 +17,12 @@ export const AuthProvider = ({ children }) => {
       });
 
       if (!response.ok) {
+        console.log('Login failed:', response.status, response.statusText);
         throw new Error('Login failed');
       }
 
       const data = await response.json();
+      console.log('Login successful:', data);
       localStorage.setItem('token', data.token);
       setUser(data.user);
       return data.user;
@@ -30,6 +33,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    console.log('Logging out');
     localStorage.removeItem('token');
     setUser(null);
   };

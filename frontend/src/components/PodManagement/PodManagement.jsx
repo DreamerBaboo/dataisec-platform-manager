@@ -1,51 +1,154 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, Tabs, Tab, Button } from '@mui/material';
-import PodList from './PodList';
-import PodForm from './PodForm';
-import axios from 'axios';
+import {
+  Box,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Checkbox,
+  Typography,
+  Button,
+  CircularProgress
+} from '@mui/material';
+import { useTranslation } from 'react-i18next';
 
-function PodManagement() {
-  const [tabValue, setTabValue] = useState(0);
+const PodManagement = () => {
+  const { t } = useTranslation();
   const [pods, setPods] = useState([]);
+  const [selectedPods, setSelectedPods] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const fetchPods = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('http://localhost:3001/api/pods', {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          // Filter out any invalid pod data
+          const validPods = data.filter(pod => pod && pod.name && pod.namespace);
+          setPods(validPods);
+        }
+      } catch (error) {
+        console.error('Error fetching pods:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchPods();
+    const interval = setInterval(fetchPods, 30000);
+    return () => clearInterval(interval);
   }, []);
 
-  const fetchPods = async () => {
-    try {
-      setLoading(true);
-      const response = await axios.get('http://localhost:3001/pods', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      setPods(response.data);
-      setLoading(false);
-    } catch (error) {
-      console.error('獲取 Pod 列表失敗:', error);
-      setLoading(false);
+  const handleSelectAllClick = (event) => {
+    if (event.target.checked) {
+      const newSelected = pods.map(pod => pod.name);
+      setSelectedPods(newSelected);
+    } else {
+      setSelectedPods([]);
     }
   };
 
-  const handleTabChange = (event, newValue) => {
-    setTabValue(newValue);
+  const handlePodSelect = (podName) => {
+    setSelectedPods(prev => {
+      if (prev.includes(podName)) {
+        return prev.filter(name => name !== podName);
+      } else {
+        return [...prev, podName];
+      }
+    });
   };
 
-  return (
-    <Box sx={{ width: '100%' }}>
-      <Typography variant="h4" gutterBottom>
-        Pod 管理
-      </Typography>
-      <Tabs value={tabValue} onChange={handleTabChange}>
-        <Tab label="Pod 列表" />
-        <Tab label="創建新 Pod" />
-      </Tabs>
-      <Box sx={{ mt: 2 }}>
-        {tabValue === 0 && <PodList pods={pods} loading={loading} onRefresh={fetchPods} />}
-        {tabValue === 1 && <PodForm onSubmit={fetchPods} />}
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
       </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ p: 3 }}>
+      <Typography variant="h4" gutterBottom>
+        {t('podManagement')}
+      </Typography>
+      <TableContainer component={Paper} sx={{ maxHeight: 400, overflow: 'auto' }}>
+        <Table stickyHeader>
+          <TableHead>
+            <TableRow>
+              <TableCell padding="checkbox" sx={{ bgcolor: 'background.paper' }}>
+                <Checkbox
+                  indeterminate={selectedPods.length > 0 && selectedPods.length < pods.length}
+                  checked={pods.length > 0 && selectedPods.length === pods.length}
+                  onChange={handleSelectAllClick}
+                />
+              </TableCell>
+              <TableCell sx={{ bgcolor: 'background.paper' }}>{t('podName')}</TableCell>
+              <TableCell sx={{ bgcolor: 'background.paper' }}>{t('namespace')}</TableCell>
+              <TableCell sx={{ bgcolor: 'background.paper' }}>{t('status')}</TableCell>
+              <TableCell align="right" sx={{ bgcolor: 'background.paper' }}>{t('restarts')}</TableCell>
+              <TableCell align="right" sx={{ bgcolor: 'background.paper' }}>{t('age')}</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {pods.map((pod) => (
+              <TableRow 
+                key={`${pod.namespace}-${pod.name}`}
+                selected={selectedPods.includes(pod.name)}
+                hover
+                onClick={() => handlePodSelect(pod.name)}
+                sx={{ cursor: 'pointer' }}
+              >
+                <TableCell padding="checkbox">
+                  <Checkbox
+                    checked={selectedPods.includes(pod.name)}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      handlePodSelect(pod.name);
+                    }}
+                  />
+                </TableCell>
+                <TableCell>{pod.name}</TableCell>
+                <TableCell>{pod.namespace}</TableCell>
+                <TableCell>{pod.status}</TableCell>
+                <TableCell align="right">{pod.restarts || 0}</TableCell>
+                <TableCell align="right">{formatAge(pod.startTime)}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+      {selectedPods.length > 0 && (
+        <Button
+          variant="contained"
+          color="primary"
+          sx={{ mt: 2 }}
+          onClick={() => console.log('Selected Pods:', selectedPods)}
+        >
+          {t('performAction')} ({selectedPods.length})
+        </Button>
+      )}
     </Box>
   );
-}
+};
+
+// Helper function to format age
+const formatAge = (startTime) => {
+  if (!startTime) return '-';
+  const start = new Date(startTime);
+  const now = new Date();
+  const diff = Math.floor((now - start) / 1000);
+
+  if (diff < 60) return `${diff}s`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+  return `${Math.floor(diff / 86400)}d`;
+};
 
 export default PodManagement;

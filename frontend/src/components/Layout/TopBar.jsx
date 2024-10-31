@@ -32,6 +32,18 @@ const TopBar = ({ open, drawerWidth, handleDrawerToggle }) => {
       }}
     >
       <Toolbar>
+        <IconButton
+          color="inherit"
+          aria-label="open drawer"
+          onClick={handleDrawerToggle}
+          edge="start"
+          sx={{
+            marginRight: 2,
+            ...(open && { display: 'none' }),
+          }}
+        >
+          <MenuIcon />
+        </IconButton>
         <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
           <img src="/path/to/your/logo.png" alt="Logo" style={{ height: 40, marginRight: 16 }} />
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
