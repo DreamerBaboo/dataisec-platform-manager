@@ -1,0 +1,51 @@
+{
+  "dashboard": {
+    "title": "系統儀表板",
+    "overview": {
+      "title": "系統概覽",
+      "totalNodes": "節點總數",
+      "totalPods": "容器組總數",
+      "totalImages": "映像總數",
+      "systemHealth": "系統健康狀態"
+    },
+    "alerts": {
+      "title": "系統警報",
+      "noAlerts": "無活動警報",
+      "severity": {
+        "critical": "危急",
+        "warning": "警告",
+        "info": "提示"
+      }
+    },
+    "resources": {
+      "title": "資源使用",
+      "cpu": {
+        "title": "CPU 使用率",
+        "total": "總 CPU",
+        "used": "已使用 CPU",
+        "available": "可用 CPU"
+      },
+      "memory": {
+        "title": "記憶體使用率",
+        "total": "總記憶體",
+        "used": "已使用記憶體",
+        "available": "可用記憶體"
+      },
+      "storage": {
+        "title": "儲存使用率",
+        "total": "總儲存空間",
+        "used": "已使用儲存空間",
+        "available": "可用儲存空間"
+      }
+    },
+    "health": {
+      "title": "組件健康狀態",
+      "status": {
+        "healthy": "健康",
+        "warning": "警告",
+        "error": "錯誤",
+        "unknown": "未知"
+      }
+    }
+  }
+} 

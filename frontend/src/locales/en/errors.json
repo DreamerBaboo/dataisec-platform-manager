@@ -1,0 +1,48 @@
+{
+  "errors": {
+    "system": {
+      "title": "System Error",
+      "unknown": "An unknown error occurred",
+      "network": "Network error",
+      "timeout": "Request timeout",
+      "maintenance": "System under maintenance"
+    },
+    "api": {
+      "title": "API Error",
+      "request": "Request failed",
+      "response": "Invalid response",
+      "validation": "Validation failed",
+      "unauthorized": "Unauthorized access",
+      "forbidden": "Access forbidden",
+      "notFound": "Resource not found",
+      "serverError": "Server error"
+    },
+    "docker": {
+      "title": "Docker Error",
+      "connection": "Cannot connect to Docker daemon",
+      "permission": "Docker permission denied",
+      "pull": "Failed to pull image",
+      "push": "Failed to push image",
+      "build": "Failed to build image",
+      "remove": "Failed to remove image",
+      "tag": "Failed to tag image",
+      "save": "Failed to save image",
+      "load": "Failed to load image"
+    },
+    "file": {
+      "title": "File Error",
+      "upload": "File upload failed",
+      "download": "File download failed",
+      "size": "File size exceeds limit",
+      "type": "Invalid file type",
+      "missing": "File not found",
+      "corrupt": "File is corrupted"
+    },
+    "actions": {
+      "retry": "Retry",
+      "cancel": "Cancel",
+      "close": "Close",
+      "details": "Show Details"
+    }
+  }
+} 

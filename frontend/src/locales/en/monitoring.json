@@ -1,0 +1,73 @@
+{
+  "monitoring": {
+    "title": "System Monitoring",
+    "realtime": {
+      "title": "Real-time Monitoring",
+      "refresh": "Auto Refresh",
+      "interval": "Refresh Interval",
+      "lastUpdate": "Last Updated"
+    },
+    "performance": {
+      "title": "Performance Metrics",
+      "cpu": {
+        "title": "CPU Usage",
+        "total": "Total CPU",
+        "user": "User Space",
+        "system": "System Space",
+        "idle": "Idle",
+        "iowait": "I/O Wait"
+      },
+      "memory": {
+        "title": "Memory Usage",
+        "total": "Total Memory",
+        "used": "Used Memory",
+        "free": "Free Memory",
+        "cached": "Cached",
+        "buffers": "Buffers",
+        "swap": "Swap Usage"
+      },
+      "disk": {
+        "title": "Disk Usage",
+        "read": "Read Rate",
+        "write": "Write Rate",
+        "iops": "IOPS",
+        "latency": "Latency",
+        "utilization": "Utilization"
+      },
+      "network": {
+        "title": "Network Traffic",
+        "in": "Inbound",
+        "out": "Outbound",
+        "packets": "Packets",
+        "errors": "Errors",
+        "drops": "Drops"
+      }
+    },
+    "alerts": {
+      "title": "System Alerts",
+      "levels": {
+        "critical": "Critical",
+        "warning": "Warning",
+        "info": "Information"
+      },
+      "status": {
+        "active": "Active",
+        "resolved": "Resolved",
+        "acknowledged": "Acknowledged"
+      }
+    },
+    "logs": {
+      "title": "System Logs",
+      "filters": {
+        "level": "Log Level",
+        "source": "Log Source",
+        "timeRange": "Time Range"
+      },
+      "actions": {
+        "download": "Download Logs",
+        "clear": "Clear Logs",
+        "filter": "Filter Logs"
+      }
+    }
+  }
+} 

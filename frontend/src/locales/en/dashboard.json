@@ -1,0 +1,51 @@
+{
+  "dashboard": {
+    "title": "System Dashboard",
+    "overview": {
+      "title": "System Overview",
+      "totalNodes": "Total Nodes",
+      "totalPods": "Total Pods",
+      "totalImages": "Total Images",
+      "systemHealth": "System Health"
+    },
+    "alerts": {
+      "title": "System Alerts",
+      "noAlerts": "No active alerts",
+      "severity": {
+        "critical": "Critical",
+        "warning": "Warning",
+        "info": "Information"
+      }
+    },
+    "resources": {
+      "title": "Resource Usage",
+      "cpu": {
+        "title": "CPU Usage",
+        "total": "Total CPU",
+        "used": "Used CPU",
+        "available": "Available CPU"
+      },
+      "memory": {
+        "title": "Memory Usage",
+        "total": "Total Memory",
+        "used": "Used Memory",
+        "available": "Available Memory"
+      },
+      "storage": {
+        "title": "Storage Usage",
+        "total": "Total Storage",
+        "used": "Used Storage",
+        "available": "Available Storage"
+      }
+    },
+    "health": {
+      "title": "Component Health",
+      "status": {
+        "healthy": "Healthy",
+        "warning": "Warning",
+        "error": "Error",
+        "unknown": "Unknown"
+      }
+    }
+  }
+} 

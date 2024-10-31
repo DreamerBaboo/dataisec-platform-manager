@@ -1,0 +1,55 @@
+{
+  "utils": {
+    "formatters": {
+      "date": {
+        "today": "今天",
+        "yesterday": "昨天",
+        "daysAgo": "{{count}} 天前",
+        "justNow": "剛剛",
+        "minutesAgo": "{{count}} 分鐘前",
+        "hoursAgo": "{{count}} 小時前"
+      },
+      "size": {
+        "bytes": "{{size}} 位元組",
+        "kb": "{{size}} KB",
+        "mb": "{{size}} MB",
+        "gb": "{{size}} GB",
+        "tb": "{{size}} TB"
+      },
+      "number": {
+        "thousand": "千",
+        "million": "百萬",
+        "billion": "十億",
+        "decimal": "."
+      }
+    },
+    "validation": {
+      "required": "此欄位為必填",
+      "minLength": "至少需要 {{count}} 個字符",
+      "maxLength": "不能超過 {{count}} 個字符",
+      "pattern": "格式無效",
+      "email": "無效的電子郵件地址",
+      "url": "無效的網址",
+      "numeric": "必須是數字",
+      "integer": "必須是整數",
+      "positive": "必須是正數",
+      "negative": "必須是負數",
+      "date": "無效的日期",
+      "time": "無效的時間",
+      "datetime": "無效的日期和時間"
+    },
+    "filters": {
+      "all": "全部",
+      "active": "啟用",
+      "inactive": "停用",
+      "custom": "自訂",
+      "dateRange": {
+        "today": "今天",
+        "yesterday": "昨天",
+        "lastWeek": "上週",
+        "lastMonth": "上月",
+        "custom": "自訂範圍"
+      }
+    }
+  }
+} 

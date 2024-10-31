@@ -1,0 +1,73 @@
+{
+  "monitoring": {
+    "title": "系統監控",
+    "realtime": {
+      "title": "即時監控",
+      "refresh": "自動重整",
+      "interval": "重整間隔",
+      "lastUpdate": "最後更新"
+    },
+    "performance": {
+      "title": "效能指標",
+      "cpu": {
+        "title": "CPU 使用率",
+        "total": "總 CPU",
+        "user": "用戶空間",
+        "system": "系統空間",
+        "idle": "閒置",
+        "iowait": "I/O 等待"
+      },
+      "memory": {
+        "title": "記憶體使用率",
+        "total": "總記憶體",
+        "used": "已使用",
+        "free": "可用",
+        "cached": "快取",
+        "buffers": "緩衝",
+        "swap": "交換空間使用率"
+      },
+      "disk": {
+        "title": "磁碟使用率",
+        "read": "讀取速率",
+        "write": "寫入速率",
+        "iops": "IOPS",
+        "latency": "延遲",
+        "utilization": "使用率"
+      },
+      "network": {
+        "title": "網路流量",
+        "in": "入站",
+        "out": "出站",
+        "packets": "封包",
+        "errors": "錯誤",
+        "drops": "丟包"
+      }
+    },
+    "alerts": {
+      "title": "系統警報",
+      "levels": {
+        "critical": "危急",
+        "warning": "警告",
+        "info": "提示"
+      },
+      "status": {
+        "active": "活動中",
+        "resolved": "已解決",
+        "acknowledged": "已確認"
+      }
+    },
+    "logs": {
+      "title": "系統日誌",
+      "filters": {
+        "level": "日誌等級",
+        "source": "日誌來源",
+        "timeRange": "時間範圍"
+      },
+      "actions": {
+        "download": "下載日誌",
+        "clear": "清除日誌",
+        "filter": "篩選日誌"
+      }
+    }
+  }
+} 

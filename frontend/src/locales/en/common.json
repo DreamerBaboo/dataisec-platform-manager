@@ -29,5 +29,35 @@
     "pending": "Pending",
     "running": "Running",
     "stopped": "Stopped"
+  },
+  "components": {
+    "loading": {
+      "text": "Loading...",
+      "error": "Error loading data",
+      "retry": "Retry"
+    },
+    "errorBoundary": {
+      "title": "Something went wrong",
+      "message": "An error occurred while rendering this component",
+      "retry": "Retry",
+      "details": "Error Details"
+    },
+    "pagination": {
+      "rowsPerPage": "Rows per page:",
+      "of": "of",
+      "next": "Next",
+      "previous": "Previous"
+    },
+    "dialog": {
+      "close": "Close",
+      "confirm": "Confirm",
+      "cancel": "Cancel"
+    },
+    "notification": {
+      "success": "Success",
+      "error": "Error",
+      "warning": "Warning",
+      "info": "Information"
+    }
   }
 } 

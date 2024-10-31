@@ -29,5 +29,35 @@
     "pending": "處理中",
     "running": "運行中",
     "stopped": "已停止"
+  },
+  "components": {
+    "loading": {
+      "text": "載入中...",
+      "error": "載入資料時發生錯誤",
+      "retry": "重試"
+    },
+    "errorBoundary": {
+      "title": "發生錯誤",
+      "message": "渲染此組件時發生錯誤",
+      "retry": "重試",
+      "details": "錯誤詳情"
+    },
+    "pagination": {
+      "rowsPerPage": "每頁行數：",
+      "of": "共",
+      "next": "下一頁",
+      "previous": "上一頁"
+    },
+    "dialog": {
+      "close": "關閉",
+      "confirm": "確認",
+      "cancel": "取消"
+    },
+    "notification": {
+      "success": "成功",
+      "error": "錯誤",
+      "warning": "警告",
+      "info": "提示"
+    }
   }
 } 

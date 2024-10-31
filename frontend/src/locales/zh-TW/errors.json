@@ -1,0 +1,48 @@
+{
+  "errors": {
+    "system": {
+      "title": "系統錯誤",
+      "unknown": "發生未知錯誤",
+      "network": "網路錯誤",
+      "timeout": "請求超時",
+      "maintenance": "系統維護中"
+    },
+    "api": {
+      "title": "API 錯誤",
+      "request": "請求失敗",
+      "response": "無效的回應",
+      "validation": "驗證失敗",
+      "unauthorized": "未授權的存取",
+      "forbidden": "禁止存取",
+      "notFound": "找不到資源",
+      "serverError": "伺服器錯誤"
+    },
+    "docker": {
+      "title": "Docker 錯誤",
+      "connection": "無法連接到 Docker 守護程序",
+      "permission": "Docker 權限不足",
+      "pull": "拉取映像失敗",
+      "push": "推送映像失敗",
+      "build": "建構映像失敗",
+      "remove": "刪除映像失敗",
+      "tag": "標記映像失敗",
+      "save": "儲存映像失敗",
+      "load": "載入映像失敗"
+    },
+    "file": {
+      "title": "檔案錯誤",
+      "upload": "檔案上傳失敗",
+      "download": "檔案下載失敗",
+      "size": "檔案大小超過限制",
+      "type": "無效的檔案類型",
+      "missing": "找不到檔案",
+      "corrupt": "檔案已損壞"
+    },
+    "actions": {
+      "retry": "重試",
+      "cancel": "取消",
+      "close": "關閉",
+      "details": "顯示詳情"
+    }
+  }
+} 
