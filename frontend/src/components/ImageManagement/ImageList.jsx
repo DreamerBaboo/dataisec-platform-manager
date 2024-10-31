@@ -43,9 +43,10 @@ const ImageList = () => {
   const [selected, setSelected] = useState([]);
   const [packagingStatus, setPackagingStatus] = useState({
     loading: false,
-    progress: 0
+    progress: 0,
+    snackbarKey: null
   });
-  const { enqueueSnackbar } = useSnackbar();
+  const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 
   const showNotification = (message, variant) => {
     enqueueSnackbar(message, { 
@@ -167,8 +168,26 @@ const ImageList = () => {
 
   const handlePackage = async () => {
     console.log('📦 Packaging images:', selected);
-    setPackagingStatus({ loading: true, progress: 0 });
+    setPackagingStatus(prev => ({ ...prev, loading: true, progress: 0 }));
     
+    // 顯示開始打包的通知
+    const snackbarKey = enqueueSnackbar('開始打包鏡像...', {
+      variant: 'info',
+      persist: true,
+      anchorOrigin: {
+        vertical: 'bottom',
+        horizontal: 'right'
+      },
+      action: (key) => (
+        <CircularProgress 
+          size={24} 
+          sx={{ color: 'white', marginLeft: 1 }} 
+        />
+      )
+    });
+    
+    setPackagingStatus(prev => ({ ...prev, snackbarKey }));
+
     try {
       const selectedImages = filteredImages
         .filter(img => selected.includes(img.id))
@@ -179,7 +198,22 @@ const ImageList = () => {
           fullName: `${img.name}:${img.tag}`
         }));
 
-      console.log('📦 Selected images for packaging:', selectedImages);
+      // 更新通知為準備中
+      closeSnackbar(snackbarKey);
+      const preparingKey = enqueueSnackbar('正在準備打包文件...', {
+        variant: 'info',
+        persist: true,
+        anchorOrigin: {
+          vertical: 'bottom',
+          horizontal: 'right'
+        },
+        action: (key) => (
+          <CircularProgress 
+            size={24} 
+            sx={{ color: 'white', marginLeft: 1 }} 
+          />
+        )
+      });
 
       const response = await fetch(`http://localhost:3001/api/images/package`, {
         method: 'POST',
@@ -194,33 +228,64 @@ const ImageList = () => {
         throw new Error('Failed to package images');
       }
 
-      // 獲取文件名
-      const filename = response.headers.get('Content-Disposition')?.split('filename=')[1] || 'images.tar';
+      // 更新通知為下載中
+      closeSnackbar(preparingKey);
+      const downloadingKey = enqueueSnackbar('正在下載打包文件...', {
+        variant: 'info',
+        persist: true,
+        anchorOrigin: {
+          vertical: 'bottom',
+          horizontal: 'right'
+        },
+        action: (key) => (
+          <CircularProgress 
+            size={24} 
+            sx={{ color: 'white', marginLeft: 1 }} 
+          />
+        )
+      });
+
+      // 生成當前日期字符串 YYYY-MM-DD 格式
+      const today = new Date().toISOString().split('T')[0];
+      const filename = `image-${today}.tar`;
       
-      // 將響應轉換為 blob
       const blob = await response.blob();
-      
-      // 創建下載鏈接
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = filename;
-      
-      // 觸發下載
+      a.download = filename;  // 使用新的文件名格式
       document.body.appendChild(a);
       a.click();
-      
-      // 清理
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
 
-      showNotification(t('packageSuccess'), 'success');
+      // 關閉下載通知並顯示成功通知
+      closeSnackbar(downloadingKey);
+      enqueueSnackbar('鏡像打包完成並已下載', { 
+        variant: 'success',
+        autoHideDuration: 3000,
+        anchorOrigin: {
+          vertical: 'bottom',
+          horizontal: 'right'
+        }
+      });
     } catch (error) {
       console.error('❌ Error packaging images:', error);
       setError(error.message);
-      showNotification(t('packageError'), 'error');
+      enqueueSnackbar('打包鏡像失敗', { 
+        variant: 'error',
+        autoHideDuration: 3000,
+        anchorOrigin: {
+          vertical: 'bottom',
+          horizontal: 'right'
+        }
+      });
     } finally {
-      setPackagingStatus({ loading: false, progress: 0 });
+      setPackagingStatus({
+        loading: false,
+        progress: 0,
+        snackbarKey: null
+      });
     }
   };
 
