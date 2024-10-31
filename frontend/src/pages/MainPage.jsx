@@ -5,7 +5,7 @@ import TopBar from '../components/Layout/TopBar';
 import SideMenu from '../components/Layout/SideMenu';
 import SystemDashboard from '../components/Dashboard/SystemDashboard';
 import PodDashboard from '../components/Dashboard/PodDashboard';
-import PodManagement from '../components/PodManagement/PodManagement';
+import PodManagement from '../components/PodManagement/PodList';
 import CreatePod from '../components/PodManagement/CreatePod';
 import EditPod from '../components/PodManagement/EditPod';
 import LogViewer from '../components/SystemLogs/LogViewer';
@@ -54,7 +54,6 @@ function MainPage() {
           <Route path="/logs" element={<LogViewer />} />
           <Route path="/profile" element={<UserProfile />} />
           <Route path="/images" element={<ImageList />} />
-          <Route path="/images/upload" element={<ImageUpload standalone />} />
         </Routes>
       </Box>
     </Box>
