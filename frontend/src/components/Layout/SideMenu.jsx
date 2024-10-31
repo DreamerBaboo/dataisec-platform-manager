@@ -52,18 +52,7 @@ const SideMenu = ({ open, toggleDrawer }) => {
     {
       text: 'imageManagement',
       icon: <ImageIcon />,
-      subItems: [
-        {
-          text: 'imageList',
-          icon: <ImageIcon />,
-          path: '/images'
-        },
-        {
-          text: 'uploadImage',
-          icon: <UploadIcon />,
-          path: '/images/upload'
-        }
-      ]
+      path: '/images'
     },
     {
       text: 'logs',

@@ -1,0 +1,33 @@
+{
+  "common": {
+    "actions": "操作",
+    "add": "新增",
+    "cancel": "取消",
+    "close": "關閉",
+    "confirm": "確認",
+    "delete": "刪除",
+    "edit": "編輯",
+    "error": "錯誤",
+    "loading": "載入中",
+    "save": "儲存",
+    "search": "搜尋",
+    "success": "成功",
+    "upload": "上傳",
+    "view": "查看"
+  },
+  "errors": {
+    "generalError": "發生錯誤",
+    "loadingError": "載入資料時發生錯誤",
+    "networkError": "網路錯誤",
+    "permissionDenied": "權限不足",
+    "unauthorized": "未授權的存取"
+  },
+  "status": {
+    "active": "啟用",
+    "failed": "失敗",
+    "inactive": "停用",
+    "pending": "處理中",
+    "running": "運行中",
+    "stopped": "已停止"
+  }
+} 

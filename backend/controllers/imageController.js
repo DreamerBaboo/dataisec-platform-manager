@@ -153,7 +153,7 @@ const getImageDetails = async (req, res) => {
     
     const { stdout } = await execPromise(`docker inspect ${imageName}`);
     const details = JSON.parse(stdout)[0];
-    console.log('📦 Raw image details:', details);
+    console.log('���� Raw image details:', details);
 
     // 直接使用 repoTags 數組
     const response = {
@@ -315,35 +315,6 @@ const deleteImage = async (req, res) => {
     });
   }
 };
-
-// // 安裝鏡像
-// const installImage = async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     const { registry, tag, pullPolicy } = req.body;
-
-//     if (!id) {
-//       return res.status(400).json({ message: 'Image ID is required' });
-//     }
-
-//     let pullCommand = `docker pull ${id}`;
-//     if (registry && tag) {
-//       pullCommand = `docker pull ${registry}/${id}:${tag}`;
-//     }
-
-//     const { stdout } = await execPromise(pullCommand);
-//     res.json({ 
-//       message: 'Image installed successfully', 
-//       details: stdout 
-//     });
-//   } catch (error) {
-//     logError(error, 'installing image');
-//     res.status(500).json({ 
-//       message: 'Failed to install image', 
-//       error: error.message 
-//     });
-//   }
-// };
 
 const packageImages = async (req, res) => {
   console.log('📦 Packaging images request received');
@@ -591,7 +562,6 @@ module.exports = {
   getImageDetails,
   uploadImage,
   deleteImage,
-  installImage,
   packageImages,
   extractImages,
   loadImages,

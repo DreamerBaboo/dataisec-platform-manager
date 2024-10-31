@@ -1,0 +1,33 @@
+{
+  "common": {
+    "actions": "Actions",
+    "add": "Add",
+    "cancel": "Cancel",
+    "close": "Close",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "error": "Error",
+    "loading": "Loading",
+    "save": "Save",
+    "search": "Search",
+    "success": "Success",
+    "upload": "Upload",
+    "view": "View"
+  },
+  "errors": {
+    "generalError": "An error occurred",
+    "loadingError": "Error loading data",
+    "networkError": "Network error",
+    "permissionDenied": "Permission denied",
+    "unauthorized": "Unauthorized access"
+  },
+  "status": {
+    "active": "Active",
+    "failed": "Failed",
+    "inactive": "Inactive",
+    "pending": "Pending",
+    "running": "Running",
+    "stopped": "Stopped"
+  }
+} 

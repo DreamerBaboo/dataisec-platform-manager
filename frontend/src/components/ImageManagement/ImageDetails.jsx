@@ -59,9 +59,7 @@ const ImageDetails = ({ image, open, onClose }) => {
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
-        <Typography variant="h6">
-          {t('imageDetails')}
-        </Typography>
+        {t('imageDetails')}
       </DialogTitle>
       <DialogContent>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
@@ -129,14 +127,12 @@ const ImageDetails = ({ image, open, onClose }) => {
                 <ListItem key={index}>
                   <ListItemText
                     primary={
-                      <Typography variant="body1">
-                        <Chip 
-                          label={tag}
-                          size="small"
-                          color="primary"
-                          sx={{ maxWidth: '100%' }}
-                        />
-                      </Typography>
+                      <Chip 
+                        label={tag}
+                        size="small"
+                        color="primary"
+                        sx={{ maxWidth: '100%' }}
+                      />
                     }
                   />
                 </ListItem>
@@ -145,9 +141,9 @@ const ImageDetails = ({ image, open, onClose }) => {
               <ListItem>
                 <ListItemText
                   primary={
-                    <Typography variant="body1" color="textSecondary">
+                    <Box component="span" sx={{ color: 'text.secondary' }}>
                       {t('noTags')}
-                    </Typography>
+                    </Box>
                   }
                 />
               </ListItem>
@@ -177,7 +173,9 @@ const ImageDetails = ({ image, open, onClose }) => {
         <TabPanel value={tabValue} index={3}>
           {image.details?.config && (
             <Box>
-              <Typography variant="h6" gutterBottom>環境變量</Typography>
+              <Typography variant="subtitle1" gutterBottom>
+                環境變量
+              </Typography>
               <Paper sx={{ p: 2, mb: 2, bgcolor: 'grey.50' }}>
                 {image.details.config.env?.map((env, index) => (
                   <Typography key={index} variant="body2" sx={{ fontFamily: 'monospace' }}>
@@ -186,21 +184,27 @@ const ImageDetails = ({ image, open, onClose }) => {
                 ))}
               </Paper>
 
-              <Typography variant="h6" gutterBottom>命令</Typography>
+              <Typography variant="subtitle1" gutterBottom>
+                命令
+              </Typography>
               <Paper sx={{ p: 2, mb: 2, bgcolor: 'grey.50' }}>
                 <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                   {image.details.config.cmd?.join(' ') || '-'}
                 </Typography>
               </Paper>
 
-              <Typography variant="h6" gutterBottom>工作目錄</Typography>
+              <Typography variant="subtitle1" gutterBottom>
+                工作目錄
+              </Typography>
               <Paper sx={{ p: 2, mb: 2, bgcolor: 'grey.50' }}>
                 <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                   {image.details.config.workdir || '-'}
                 </Typography>
               </Paper>
 
-              <Typography variant="h6" gutterBottom>暴露端口</Typography>
+              <Typography variant="subtitle1" gutterBottom>
+                暴露端口
+              </Typography>
               <Paper sx={{ p: 2, mb: 2, bgcolor: 'grey.50' }}>
                 {Object.keys(image.details.config.exposedPorts || {}).map((port, index) => (
                   <Typography key={index} variant="body2" sx={{ fontFamily: 'monospace' }}>

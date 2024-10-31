@@ -85,54 +85,11 @@ const handleErrors = (err, req, res, next) => {
 // 路由
 router.get('/', authenticateToken, imageController.getImages);
 router.get('/:name/:tag?', authenticateToken, imageController.getImageDetails);
-router.post('/upload', 
-  authenticateToken,
-  (req, res, next) => {
-    console.log('📝 Processing upload request');
-    console.log('📤 Headers:', req.headers);
-    next();
-  },
-  upload.single('image'),
-  handleErrors,
-  imageController.uploadImage
-);
-
-router.post('/extract', 
-  authenticateToken, 
-  (req, res, next) => {
-    console.log('🔍 Processing extract request');
-    console.log('📥 Request body:', req.body);
-    next();
-  },
-  imageController.extractImages
-);
-
-router.post('/load',
-  authenticateToken,
-  (req, res, next) => {
-    console.log('📥 Processing load request');
-    console.log('📦 Request body:', req.body);
-    next();
-  },
-  imageController.loadImages
-);
-
-router.post('/retag',
-  authenticateToken,
-  (req, res, next) => {
-    console.log('🏷️ Processing retag request');
-    console.log('📦 Request body:', req.body);
-    next();
-  },
-  imageController.retagImages
-);
-
-router.post('/delete', authenticateToken, (req, res, next) => {
-  console.log('🗑️ Processing delete request');
-  console.log('📦 Request body:', req.body);
-  next();
-}, imageController.deleteImage);
-router.post('/:id/install', authenticateToken, imageController.installImage);
+router.post('/upload', authenticateToken, upload.single('image'), handleErrors, imageController.uploadImage);
+router.post('/extract', authenticateToken, imageController.extractImages);
+router.post('/load', authenticateToken, imageController.loadImages);
+router.post('/retag', authenticateToken, imageController.retagImages);
+router.post('/delete', authenticateToken, imageController.deleteImage);
 router.post('/package', authenticateToken, imageController.packageImages);
 
 // 錯誤處理中間件
