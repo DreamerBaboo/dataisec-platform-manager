@@ -46,19 +46,19 @@ export const deleteImage = async (req, res) => {
   }
 };
 
-export const pullImage = async (req, res) => {
-  const { name, tag } = req.body;
-  const config = await getRegistryConfig();
+// export const pullImage = async (req, res) => {
+//   const { name, tag } = req.body;
+//   const config = await getRegistryConfig();
   
-  try {
-    const fullName = `${config.url}:${config.port}/${name}:${tag}`;
-    await execAsync(`docker pull ${fullName}`);
-    res.json({ message: 'Image pulled successfully' });
-  } catch (error) {
-    console.error('Failed to pull image:', error);
-    res.status(500).json({ error: 'Failed to pull image' });
-  }
-};
+//   try {
+//     const fullName = `${config.url}:${config.port}/${name}:${tag}`;
+//     await execAsync(`docker pull ${fullName}`);
+//     res.json({ message: 'Image pulled successfully' });
+//   } catch (error) {
+//     console.error('Failed to pull image:', error);
+//     res.status(500).json({ error: 'Failed to pull image' });
+//   }
+// };
 
 export const pushImage = async (req, res) => {
   const { name, tag } = req.body;

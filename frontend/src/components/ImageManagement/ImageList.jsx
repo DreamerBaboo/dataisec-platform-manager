@@ -17,19 +17,25 @@ import {
   alpha,
   Chip,
   CircularProgress,
-  Alert
+  Alert,
+  TableSortLabel,
+  InputAdornment
 } from '@mui/material';
 import {
   Refresh as RefreshIcon,
   Upload as UploadIcon,
   Delete as DeleteIcon,
   Archive as PackageIcon,
-  Info as InfoIcon
+  Info as InfoIcon,
+  Settings as SettingsIcon,
+  Search as SearchIcon,
+  Clear as ClearIcon
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import ImageUpload from './ImageUpload';
 import ImageDetails from './ImageDetails';
 import { useSnackbar } from 'notistack';
+import RepositoryConfig from './RepositoryConfig';
 
 const ImageList = () => {
   const { t } = useTranslation();
@@ -46,7 +52,14 @@ const ImageList = () => {
     progress: 0,
     snackbarKey: null
   });
+  const [configOpen, setConfigOpen] = useState(false);
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
+  const [order, setOrder] = useState('desc');
+  const [orderBy, setOrderBy] = useState('uploadDate');
+  const ROW_HEIGHT = 53; // 每行的高度（根據 MUI 的默認值）
+  const HEADER_HEIGHT = 56; // 表頭高度
+  const ROWS_PER_PAGE = 10; // 默認顯示 10 行
+  const TABLE_HEIGHT = ROW_HEIGHT * ROWS_PER_PAGE + HEADER_HEIGHT;
 
   const showNotification = (message, variant) => {
     enqueueSnackbar(message, { 
@@ -114,10 +127,54 @@ const ImageList = () => {
     setFilteredImages(filtered);
   }, [searchTerm, images]);
 
-  const handleRefresh = () => {
-    fetchImages();
+  const handleRefresh = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetch('http://localhost:3001/api/images', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Accept': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch images');
+      }
+      
+      const data = await response.json();
+      setImages(data);
+      setFilteredImages(data.filter(image => 
+        image.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        image.tag.toLowerCase().includes(searchTerm.toLowerCase())
+      ));
+    } catch (error) {
+      console.error('Error fetching images:', error);
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
+  // 清除搜索內容
+  const handleClearSearch = () => {
+    setSearchTerm('');
+    setFilteredImages(images);
+  };
+
+  // 搜索處理
+  const handleSearch = (value) => {
+    setSearchTerm(value);
+    if (!value.trim()) {
+      setFilteredImages(images);
+      return;
+    }
+    const filtered = images.filter(image => 
+      image.name.toLowerCase().includes(value.toLowerCase()) ||
+      image.tag.toLowerCase().includes(value.toLowerCase())
+    );
+    setFilteredImages(filtered);
+  };
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -134,27 +191,30 @@ const ImageList = () => {
 
   const handleSelectAllClick = (event) => {
     if (event.target.checked) {
-      const newSelected = filteredImages.map(image => image.id);
+      const newSelected = filteredImages.map(image => `${image.name}:${image.tag}`);
       setSelected(newSelected);
     } else {
       setSelected([]);
     }
   };
 
-  const handleClick = (event, id) => {
-    const selectedIndex = selected.indexOf(id);
+  const handleClick = (event, imageName, imageTag) => {
+    const imageKey = `${imageName}:${imageTag}`;
+    const selectedIndex = selected.indexOf(imageKey);
     let newSelected = [];
 
     if (selectedIndex === -1) {
-      newSelected = [...selected, id];
+      newSelected = [...selected, imageKey];
     } else {
-      newSelected = selected.filter(item => item !== id);
+      newSelected = selected.filter(id => id !== imageKey);
     }
 
     setSelected(newSelected);
   };
 
-  const isSelected = (id) => selected.indexOf(id) !== -1;
+  const isSelected = (imageName, imageTag) => {
+    return selected.indexOf(`${imageName}:${imageTag}`) !== -1;
+  };
 
   const handleBulkDelete = async () => {
     try {
@@ -167,7 +227,7 @@ const ImageList = () => {
   };
 
   const handlePackage = async () => {
-    console.log('📦 Packaging images:', selected);
+    console.log('📦 Starting package process...');
     setPackagingStatus(prev => ({ ...prev, loading: true, progress: 0 }));
     
     // 顯示開始打包的通知
@@ -189,14 +249,17 @@ const ImageList = () => {
     setPackagingStatus(prev => ({ ...prev, snackbarKey }));
 
     try {
-      const selectedImages = filteredImages
-        .filter(img => selected.includes(img.id))
-        .map(img => ({
-          id: img.id,
-          name: img.name,
-          tag: img.tag,
-          fullName: `${img.name}:${img.tag}`
-        }));
+      // 從選中的項目中獲取完整的鏡像信息
+      const selectedImages = selected.map(imageKey => {
+        const [name, tag] = imageKey.split(':');
+        return {
+          name,
+          tag,
+          fullName: imageKey
+        };
+      });
+
+      console.log('📦 Images to package:', selectedImages);
 
       // 更新通知為準備中
       closeSnackbar(snackbarKey);
@@ -215,7 +278,7 @@ const ImageList = () => {
         )
       });
 
-      const response = await fetch(`http://localhost:3001/api/images/package`, {
+      const response = await fetch('http://localhost:3001/api/images/package', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -225,7 +288,8 @@ const ImageList = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to package images');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to package images');
       }
 
       // 更新通知為下載中
@@ -247,13 +311,13 @@ const ImageList = () => {
 
       // 生成當前日期字符串 YYYY-MM-DD 格式
       const today = new Date().toISOString().split('T')[0];
-      const filename = `image-${today}.tar`;
+      const filename = `images-${today}.tar`;
       
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = filename;  // 使用新的文件名格式
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -271,8 +335,7 @@ const ImageList = () => {
       });
     } catch (error) {
       console.error('❌ Error packaging images:', error);
-      setError(error.message);
-      enqueueSnackbar('打包鏡像失敗', { 
+      enqueueSnackbar(error.message || '打包鏡像失敗', { 
         variant: 'error',
         autoHideDuration: 3000,
         anchorOrigin: {
@@ -312,29 +375,157 @@ const ImageList = () => {
     }
   };
 
+  const handleConfigSave = ({ repository, port }) => {
+    setConfigOpen(false);
+    enqueueSnackbar('倉庫設定已更新', {
+      variant: 'success',
+      anchorOrigin: { vertical: 'bottom', horizontal: 'right' }
+    });
+  };
+
+  // 使用 MUI 的排序處理函數
+  const handleRequestSort = (event, property) => {
+    const isAsc = orderBy === property && order === 'asc';
+    setOrder(isAsc ? 'desc' : 'asc');
+    setOrderBy(property);
+  };
+
+  // 使用 MUI 的表頭組件
+  const headCells = [
+    { id: 'name', label: t('name') },
+    { id: 'tag', label: t('tag') },
+    { id: 'size', label: t('size'), numeric: true },
+    { id: 'uploadDate', label: t('uploadDate') },
+    { id: 'status', label: t('status') },
+  ];
+
+  // 修改格式化大小的函數
+  const formatSize = (sizeString) => {
+    // 如果是數字，使用標準的格式化邏輯
+    if (typeof sizeString === 'number') {
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      if (sizeString === 0) return '0 B';
+      const i = parseInt(Math.floor(Math.log(sizeString) / Math.log(1024)), 10);
+      return `${Math.round(sizeString / (1024 ** i), 2)} ${sizes[i]}`;
+    }
+
+    // 如果是字符串（從倉庫獲取的格式），直接返回
+    if (typeof sizeString === 'string') {
+      // 處理可能的 "123MB" 或 "123 MB" 格式
+      return sizeString.replace(/([0-9.]+)([A-Z]+)/, '$1 $2');
+    }
+
+    return 'Unknown size';
+  };
+
+  // 修改日期格式化數
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    
+    try {
+      // 處理不同的日期格式
+      let date;
+      if (dateString.includes('ago')) {
+        // 處理 "x days ago" 格式
+        const now = new Date();
+        const days = parseInt(dateString.match(/\d+/)[0]);
+        date = new Date(now.setDate(now.getDate() - days));
+      } else if (dateString.includes('About')) {
+        // 處理 "About a minute ago" 等格式
+        date = new Date();
+      } else {
+        date = new Date(dateString);
+      }
+
+      // 檢查日期是否有效
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid date:', dateString);
+        return dateString; // 如果無法解析，返回原始字符串
+      }
+
+      // 使用 Intl.DateTimeFormat 格式化日期
+      return new Intl.DateTimeFormat('zh-TW', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      }).format(date);
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return dateString; // 發生錯誤時返回原始字符串
+    }
+  };
+
+  // // 修改生成唯一鍵的函數
+  // const generateUniqueKey = (image) => {
+  //   // 使用完整的鏡像名稱（包括倉庫地址和標籤）作為唯一鍵
+  //   const fullName = image.name;
+  //   return fullName;  // 直接使用完整名稱作為鍵
+  // };
+
   return (
     <Box sx={{ width: '100%' }}>
-      {/* 搜索和刷新工具欄 */}
+      {/* 工具欄 */}
       <Paper sx={{ mb: 2, p: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <TextField
-            size="small"
-            variant="outlined"
-            placeholder={t('searchImages')}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            sx={{ flexGrow: 1 }}
-          />
-          <IconButton onClick={handleRefresh} disabled={loading}>
-            <RefreshIcon />
-          </IconButton>
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          gap: 2 
+        }}>
+          <Typography variant="h6" component="div">
+            {t('imageList')} ({images.length})
+          </Typography>
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center',
+            gap: 1,
+            flex: 1,
+            maxWidth: 500,
+            ml: 2
+          }}>
+            <TextField
+              size="small"
+              placeholder={t('searchImages')}
+              value={searchTerm}
+              onChange={(e) => handleSearch(e.target.value)}
+              sx={{ flex: 1 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon color="action" />
+                  </InputAdornment>
+                ),
+                endAdornment: searchTerm && (
+                  <InputAdornment position="end">
+                    <IconButton
+                      size="small"
+                      onClick={handleClearSearch}
+                      edge="end"
+                    >
+                      <ClearIcon />
+                    </IconButton>
+                  </InputAdornment>
+                )
+              }}
+            />
+            <IconButton onClick={() => setConfigOpen(true)}>
+              <SettingsIcon />
+            </IconButton>
+            <IconButton onClick={handleRefresh} disabled={loading}>
+              <RefreshIcon />
+            </IconButton>
+          </Box>
         </Box>
       </Paper>
 
-      {/* 圖像列表 */}
-      <Paper sx={{ width: '100%', mb: 2 }}>
-        <TableContainer>
-          <Table>
+      {/* 表格 */}
+      <Paper sx={{ width: '100%', mb: 3 }}>
+        <TableContainer sx={{ maxHeight: TABLE_HEIGHT }}>
+          <Table stickyHeader>
             <TableHead>
               <TableRow>
                 <TableCell padding="checkbox">
@@ -344,62 +535,91 @@ const ImageList = () => {
                     onChange={handleSelectAllClick}
                   />
                 </TableCell>
-                <TableCell>{t('name')}</TableCell>
-                <TableCell>{t('tag')}</TableCell>
-                <TableCell>{t('size')}</TableCell>
-                <TableCell>{t('uploadDate')}</TableCell>
-                <TableCell>{t('status')}</TableCell>
-                <TableCell align="center">{t('info')}</TableCell>
+                {headCells.map((headCell) => (
+                  <TableCell
+                    key={headCell.id}
+                    align={headCell.numeric ? 'right' : 'left'}
+                    sortDirection={orderBy === headCell.id ? order : false}
+                  >
+                    <TableSortLabel
+                      active={orderBy === headCell.id}
+                      direction={orderBy === headCell.id ? order : 'asc'}
+                      onClick={(event) => handleRequestSort(event, headCell.id)}
+                    >
+                      {headCell.label}
+                    </TableSortLabel>
+                  </TableCell>
+                ))}
+                <TableCell align="center">{t('actions')}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredImages.map((image) => {
-                const isItemSelected = selected.includes(image.id);
-                return (
-                  <TableRow
-                    hover
-                    onClick={(event) => handleClick(event, image.id)}
-                    role="checkbox"
-                    aria-checked={isItemSelected}
-                    tabIndex={-1}
-                    key={image.id}
-                    selected={isItemSelected}
-                  >
-                    <TableCell padding="checkbox">
-                      <Checkbox checked={isItemSelected} />
-                    </TableCell>
-                    <TableCell>{image.name}</TableCell>
-                    <TableCell>{image.tag}</TableCell>
-                    <TableCell>{image.size}</TableCell>
-                    <TableCell>{image.uploadDate}</TableCell>
-                    <TableCell>
-                      <Chip 
-                        label={t(image.status)}
-                        color={getStatusColor(image.status)}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell align="center">
-                      <IconButton
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleViewDetails(image.id);
-                        }}
-                      >
-                        <InfoIcon />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+              {stableSort(filteredImages, getComparator(order, orderBy))
+                .map((image) => {
+                  const isItemSelected = isSelected(image.name, image.tag);
+                  const uniqueKey = `${image.name}:${image.tag}`;
+                  
+                  return (
+                    <TableRow
+                      hover
+                      onClick={(event) => handleClick(event, image.name, image.tag)}
+                      role="checkbox"
+                      aria-checked={isItemSelected}
+                      tabIndex={-1}
+                      key={uniqueKey}
+                      selected={isItemSelected}
+                    >
+                      <TableCell padding="checkbox">
+                        <Checkbox checked={isItemSelected} />
+                      </TableCell>
+                      <TableCell>{image.name}</TableCell>
+                      <TableCell>{image.tag}</TableCell>
+                      <TableCell align="right">{formatSize(image.size)}</TableCell>
+                      <TableCell>
+                        {formatDate(image.createdAt || image.uploadDate)}
+                      </TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={t(image.status)}
+                          color={getStatusColor(image.status)}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell align="center">
+                        <IconButton
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewDetails(image.id);
+                          }}
+                        >
+                          <InfoIcon />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              {filteredImages.length === 0 && !loading && (
+                <TableRow>
+                  <TableCell colSpan={7} align="center">
+                    <Typography color="textSecondary">
+                      {error ? t('errorLoadingImages') : t('noImagesFound')}
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </TableContainer>
       </Paper>
 
       {/* 操作按鈕區 */}
-      <Paper sx={{ p: 2 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Paper sx={{ p: 2, mt: 2 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          gap: 2
+        }}>
           <Box sx={{ display: 'flex', gap: 1 }}>
             {selected.length > 0 && (
               <>
@@ -469,8 +689,46 @@ const ImageList = () => {
           </Typography>
         </Box>
       )}
+
+      <RepositoryConfig 
+        open={configOpen}
+        onClose={handleConfigSave}
+      />
     </Box>
   );
 };
+
+// MUI 的排序輔助函數
+function descendingComparator(a, b, orderBy) {
+  if (orderBy === 'size') {
+    return b.size - a.size;
+  }
+  if (orderBy === 'uploadDate') {
+    return new Date(b.uploadDate) - new Date(a.uploadDate);
+  }
+  if (b[orderBy] < a[orderBy]) {
+    return -1;
+  }
+  if (b[orderBy] > a[orderBy]) {
+    return 1;
+  }
+  return 0;
+}
+
+function getComparator(order, orderBy) {
+  return order === 'desc'
+    ? (a, b) => descendingComparator(a, b, orderBy)
+    : (a, b) => -descendingComparator(a, b, orderBy);
+}
+
+function stableSort(array, comparator) {
+  const stabilizedThis = array.map((el, index) => [el, index]);
+  stabilizedThis.sort((a, b) => {
+    const order = comparator(a[0], b[0]);
+    if (order !== 0) return order;
+    return a[1] - b[1];
+  });
+  return stabilizedThis.map((el) => el[0]);
+}
 
 export default ImageList;

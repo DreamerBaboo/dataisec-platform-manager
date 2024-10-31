@@ -1,5 +1,5 @@
 import React from 'react';
-import { Grid, Paper, Box } from '@mui/material';
+import { Grid2, Paper, Box } from '@mui/material';
 import ImageStats from './ImageStats';
 import ImageFilter from './ImageFilter';
 import RegistryHealth from './RegistryHealth';

@@ -4,6 +4,8 @@ const multer = require('multer');
 const path = require('path');
 const { authenticateToken } = require('../middleware/auth');
 const imageController = require('../controllers/imageController');
+const jwt = require('jsonwebtoken');
+const fs = require('fs');
 
 // 添加路由級別日誌中間件
 const routeLogger = (req, res, next) => {
@@ -19,14 +21,24 @@ const routeLogger = (req, res, next) => {
 
 router.use(routeLogger);
 
+// 確保上傳目錄存在
+const UPLOAD_DIR = path.join(__dirname, '../uploads');
+if (!fs.existsSync(UPLOAD_DIR)) {
+  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+  console.log('📁 Created upload directory:', UPLOAD_DIR);
+}
+
 // 配置 multer 存儲
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/');
+    console.log('📁 Using upload directory:', UPLOAD_DIR);
+    cb(null, UPLOAD_DIR);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
-    cb(null, `${file.fieldname}-${uniqueSuffix}${path.extname(file.originalname)}`);
+    const filename = `${file.fieldname}-${uniqueSuffix}${path.extname(file.originalname)}`;
+    console.log('📝 Generated filename:', filename);
+    cb(null, filename);
   }
 });
 
@@ -46,7 +58,7 @@ const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: 1024 * 1024 * 1000, // 1GB
+    fileSize: 1024 * 1024 * 10000, // 10GB
     files: 1
   }
 });
@@ -72,15 +84,60 @@ const handleErrors = (err, req, res, next) => {
 
 // 路由
 router.get('/', authenticateToken, imageController.getImages);
-router.get('/:id', authenticateToken, imageController.getImageDetails);
+router.get('/:name/:tag?', authenticateToken, imageController.getImageDetails);
 router.post('/upload', 
-  authenticateToken, 
+  authenticateToken,
+  (req, res, next) => {
+    console.log('📝 Processing upload request');
+    console.log('📤 Headers:', req.headers);
+    next();
+  },
   upload.single('image'),
   handleErrors,
   imageController.uploadImage
 );
+
+router.post('/extract', 
+  authenticateToken, 
+  (req, res, next) => {
+    console.log('🔍 Processing extract request');
+    console.log('📥 Request body:', req.body);
+    next();
+  },
+  imageController.extractImages
+);
+
+router.post('/load',
+  authenticateToken,
+  (req, res, next) => {
+    console.log('📥 Processing load request');
+    console.log('📦 Request body:', req.body);
+    next();
+  },
+  imageController.loadImages
+);
+
+router.post('/retag',
+  authenticateToken,
+  (req, res, next) => {
+    console.log('🏷️ Processing retag request');
+    console.log('📦 Request body:', req.body);
+    next();
+  },
+  imageController.retagImages
+);
+
 router.delete('/:id', authenticateToken, imageController.deleteImage);
 router.post('/:id/install', authenticateToken, imageController.installImage);
 router.post('/package', authenticateToken, imageController.packageImages);
+
+// 錯誤處理中間件
+router.use((err, req, res, next) => {
+  console.error('❌ Route Error:', err);
+  res.status(500).json({
+    message: 'Internal server error',
+    error: err.message
+  });
+});
 
 module.exports = router; 
