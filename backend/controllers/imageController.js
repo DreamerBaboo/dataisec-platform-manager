@@ -30,7 +30,7 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage: storage,
   limits: {
-    fileSize: 1024 * 1024 * 10000, // 10GB
+    fileSize: 1024 * 1024 * 10000, // 2GB
     files: 1
   }
 });
@@ -153,12 +153,39 @@ const getImageDetails = async (req, res) => {
     
     const { stdout } = await execPromise(`docker inspect ${imageName}`);
     const details = JSON.parse(stdout)[0];
-    console.log('���� Raw image details:', details);
+    console.log('📦 Raw image details:', details);
 
-    // 直接使用 repoTags 數組
+    // 確保 RepoTags 是數組並處理 null/undefined 情況
+    let repoTags = [];
+    if (details.RepoTags && Array.isArray(details.RepoTags)) {
+      repoTags = details.RepoTags;
+    } else if (details.RepoTags === null || details.RepoTags === undefined) {
+      // 如果 RepoTags 不存在，使用當前的名稱和標籤
+      repoTags = [`${name}:${tag || 'latest'}`];
+    }
+
+    console.log('🏷️ Image tags:', repoTags);
+
+    // 解析每個標籤
+    const tagInfo = repoTags.map(tagString => {
+      const lastColonIndex = tagString.lastIndexOf(':');
+      if (lastColonIndex === -1) {
+        return {
+          repository: tagString,
+          tag: 'latest'
+        };
+      }
+      return {
+        repository: tagString.slice(0, lastColonIndex),
+        tag: tagString.slice(lastColonIndex + 1)
+      };
+    });
+
+    console.log('📑 Parsed tag info:', tagInfo);
+
     const response = {
       id: details.Id,
-      repoTags: details.RepoTags || [`${name}:${tag || 'latest'}`], // 如果 RepoTags 為空則使用默認值
+      repoTags: tagInfo,
       size: details.Size,
       createdAt: details.Created,
       architecture: details.Architecture,
@@ -269,9 +296,14 @@ const deleteImage = async (req, res) => {
   try {
     await checkDockerPermissions();
     const { images } = req.body;
-    console.log('🗑️ Deleting images:', images);
+    
+    if (!images || !Array.isArray(images) || images.length === 0) {
+      return res.status(400).json({ message: 'No images selected for deletion' });
+    }
 
+    console.log('🗑️ Deleting images:', images);
     const results = [];
+
     for (const imageKey of images) {
       try {
         console.log(`🗑️ Removing image: ${imageKey}`);
@@ -288,14 +320,10 @@ const deleteImage = async (req, res) => {
           status: 'error',
           error: error.message
         });
-        
-        // 不中斷流程，繼續處理其他鏡像
-        continue;
       }
     }
 
-    // 返回所有鏡像的處理結果
-    res.json({ 
+    res.json({
       message: 'Images deletion completed',
       results
     });
@@ -312,6 +340,35 @@ const deleteImage = async (req, res) => {
     res.status(500).json({
       message: 'Failed to delete images',
       error: error.message
+    });
+  }
+};
+
+// 安裝鏡像
+const installImage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { registry, tag, pullPolicy } = req.body;
+
+    if (!id) {
+      return res.status(400).json({ message: 'Image ID is required' });
+    }
+
+    let pullCommand = `docker pull ${id}`;
+    if (registry && tag) {
+      pullCommand = `docker pull ${registry}/${id}:${tag}`;
+    }
+
+    const { stdout } = await execPromise(pullCommand);
+    res.json({ 
+      message: 'Image installed successfully', 
+      details: stdout 
+    });
+  } catch (error) {
+    logError(error, 'installing image');
+    res.status(500).json({ 
+      message: 'Failed to install image', 
+      error: error.message 
     });
   }
 };
@@ -422,7 +479,7 @@ const extractImages = async (req, res) => {
         return { 
           name, 
           tag, 
-          originalName: fullName
+          originalName: fullName  // 保存原始名稱用於後操作
         };
       })
       .filter(Boolean);
@@ -435,42 +492,11 @@ const extractImages = async (req, res) => {
       console.log('🧹 Cleaned up temp file:', filePath);
     } catch (unlinkError) {
       console.error('⚠️ Error cleaning up temp file:', unlinkError);
-      // 即使刪除失敗也繼續執行，但記錄錯誤
-    }
-
-    // 檢查上傳目錄中的所有臨時文件
-    try {
-      const uploadDir = path.join(__dirname, '../uploads');
-      const files = await fsPromises.readdir(uploadDir);
-      
-      // 刪除所有臨時文件
-      for (const file of files) {
-        const filePath = path.join(uploadDir, file);
-        try {
-          await fsPromises.unlink(filePath);
-          console.log('🧹 Cleaned up additional temp file:', filePath);
-        } catch (err) {
-          console.error('⚠️ Error cleaning up additional temp file:', err);
-        }
-      }
-    } catch (err) {
-      console.error('⚠️ Error cleaning up upload directory:', err);
     }
 
     res.json({ images });
   } catch (error) {
     console.error('❌ Error in extractImages:', error);
-    
-    // 如果出錯，也嘗試清理臨時文件
-    if (req.body.filePath) {
-      try {
-        await fsPromises.unlink(req.body.filePath);
-        console.log('🧹 Cleaned up temp file after error:', req.body.filePath);
-      } catch (unlinkError) {
-        console.error('⚠️ Error cleaning up temp file after error:', unlinkError);
-      }
-    }
-
     if (error.message.includes('permission')) {
       return res.status(403).json({
         message: 'Permission denied',
@@ -562,6 +588,7 @@ module.exports = {
   getImageDetails,
   uploadImage,
   deleteImage,
+  installImage,
   packageImages,
   extractImages,
   loadImages,

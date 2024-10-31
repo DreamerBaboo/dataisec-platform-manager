@@ -227,29 +227,45 @@ const ImageList = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({ images: selected })
+        body: JSON.stringify({ 
+          images: selected  // 發送選中的鏡像數組
+        })
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Failed to delete images');
+        throw new Error(error.message || '刪除鏡像失敗');
       }
 
       const result = await response.json();
       console.log('✅ Delete result:', result);
 
+      // 檢查是否有任何錯誤
+      const hasErrors = result.results.some(r => r.status === 'error');
+      
+      if (hasErrors) {
+        // 如果有錯誤，顯示部分成功的消息
+        enqueueSnackbar('部分鏡像刪除失敗', {
+          variant: 'warning',
+          anchorOrigin: {
+            vertical: 'bottom',
+            horizontal: 'right'
+          }
+        });
+      } else {
+        // 全部成功
+        enqueueSnackbar('已成功刪除所選鏡像', {
+          variant: 'success',
+          anchorOrigin: {
+            vertical: 'bottom',
+            horizontal: 'right'
+          }
+        });
+      }
+
       // 刷新鏡像列表
       fetchImages();
       setSelected([]);
-      
-      // 顯示成功消息
-      enqueueSnackbar('已成功刪除所選鏡像', {
-        variant: 'success',
-        anchorOrigin: {
-          vertical: 'bottom',
-          horizontal: 'right'
-        }
-      });
     } catch (error) {
       console.error('❌ Error deleting images:', error);
       enqueueSnackbar(error.message || '刪除鏡像失敗', {
