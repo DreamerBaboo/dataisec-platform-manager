@@ -210,6 +210,7 @@ const ImageList = () => {
     }
 
     setSelected(newSelected);
+    console.log('👉 Selected images:', newSelected);
   };
 
   const isSelected = (imageName, imageTag) => {
@@ -218,11 +219,46 @@ const ImageList = () => {
 
   const handleBulkDelete = async () => {
     try {
-      await Promise.all(selected.map(id => fetch(`/api/images/${id}`, { method: 'DELETE' })));
+      console.log('🗑️ Starting bulk delete for images:', selected);
+      
+      const response = await fetch('http://localhost:3001/api/images/delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ images: selected })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to delete images');
+      }
+
+      const result = await response.json();
+      console.log('✅ Delete result:', result);
+
+      // 刷新鏡像列表
       fetchImages();
       setSelected([]);
+      
+      // 顯示成功消息
+      enqueueSnackbar('已成功刪除所選鏡像', {
+        variant: 'success',
+        anchorOrigin: {
+          vertical: 'bottom',
+          horizontal: 'right'
+        }
+      });
     } catch (error) {
-      setError(error.message);
+      console.error('❌ Error deleting images:', error);
+      enqueueSnackbar(error.message || '刪除鏡像失敗', {
+        variant: 'error',
+        anchorOrigin: {
+          vertical: 'bottom',
+          horizontal: 'right'
+        }
+      });
     }
   };
 
@@ -458,13 +494,6 @@ const ImageList = () => {
       return dateString; // 發生錯誤時返回原始字符串
     }
   };
-
-  // // 修改生成唯一鍵的函數
-  // const generateUniqueKey = (image) => {
-  //   // 使用完整的鏡像名稱（包括倉庫地址和標籤）作為唯一鍵
-  //   const fullName = image.name;
-  //   return fullName;  // 直接使用完整名稱作為鍵
-  // };
 
   return (
     <Box sx={{ width: '100%' }}>

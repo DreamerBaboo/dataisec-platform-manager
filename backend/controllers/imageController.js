@@ -30,7 +30,7 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage: storage,
   limits: {
-    fileSize: 1024 * 1024 * 2000, // 2GB
+    fileSize: 1024 * 1024 * 10000, // 10GB
     files: 1
   }
 });
@@ -267,58 +267,83 @@ const uploadImage = async (req, res) => {
 // 刪除鏡像
 const deleteImage = async (req, res) => {
   try {
-    const { id } = req.params;
-    if (!id) {
-      return res.status(400).json({ message: 'Image ID is required' });
+    await checkDockerPermissions();
+    const { images } = req.body;
+    console.log('🗑️ Deleting images:', images);
+
+    const results = [];
+    for (const imageKey of images) {
+      try {
+        console.log(`🗑️ Removing image: ${imageKey}`);
+        await execPromise(`docker rmi ${imageKey}`);
+        console.log(`✅ Successfully removed image: ${imageKey}`);
+        results.push({
+          image: imageKey,
+          status: 'success'
+        });
+      } catch (error) {
+        console.error(`❌ Error removing image ${imageKey}:`, error);
+        results.push({
+          image: imageKey,
+          status: 'error',
+          error: error.message
+        });
+        
+        // 不中斷流程，繼續處理其他鏡像
+        continue;
+      }
     }
 
-    // 檢鏡像是否存在
-    try {
-      await execPromise(`docker inspect ${id}`);
-    } catch (error) {
-      return res.status(404).json({ message: 'Image not found' });
-    }
-
-    // 強制刪除鏡像
-    await execPromise(`docker rmi ${id} -f`);
-    res.json({ message: 'Image deleted successfully' });
-  } catch (error) {
-    logError(error, 'deleting image');
-    res.status(500).json({ 
-      message: 'Failed to delete image', 
-      error: error.message 
-    });
-  }
-};
-
-// 安裝鏡像
-const installImage = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { registry, tag, pullPolicy } = req.body;
-
-    if (!id) {
-      return res.status(400).json({ message: 'Image ID is required' });
-    }
-
-    let pullCommand = `docker pull ${id}`;
-    if (registry && tag) {
-      pullCommand = `docker pull ${registry}/${id}:${tag}`;
-    }
-
-    const { stdout } = await execPromise(pullCommand);
+    // 返回所有鏡像的處理結果
     res.json({ 
-      message: 'Image installed successfully', 
-      details: stdout 
+      message: 'Images deletion completed',
+      results
     });
   } catch (error) {
-    logError(error, 'installing image');
-    res.status(500).json({ 
-      message: 'Failed to install image', 
-      error: error.message 
+    console.error('❌ Error in deleteImage:', error);
+    
+    if (error.message.includes('permission denied')) {
+      return res.status(403).json({
+        message: 'Permission denied',
+        error: error.message
+      });
+    }
+
+    res.status(500).json({
+      message: 'Failed to delete images',
+      error: error.message
     });
   }
 };
+
+// // 安裝鏡像
+// const installImage = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const { registry, tag, pullPolicy } = req.body;
+
+//     if (!id) {
+//       return res.status(400).json({ message: 'Image ID is required' });
+//     }
+
+//     let pullCommand = `docker pull ${id}`;
+//     if (registry && tag) {
+//       pullCommand = `docker pull ${registry}/${id}:${tag}`;
+//     }
+
+//     const { stdout } = await execPromise(pullCommand);
+//     res.json({ 
+//       message: 'Image installed successfully', 
+//       details: stdout 
+//     });
+//   } catch (error) {
+//     logError(error, 'installing image');
+//     res.status(500).json({ 
+//       message: 'Failed to install image', 
+//       error: error.message 
+//     });
+//   }
+// };
 
 const packageImages = async (req, res) => {
   console.log('📦 Packaging images request received');
