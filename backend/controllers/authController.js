@@ -1,7 +1,5 @@
 const jwt = require('jsonwebtoken');
 
-// 移除 bcrypt 和 User 模型的引入，因為我們不再使用數據庫
-
 exports.login = async (req, res) => {
   const { username, password } = req.body;
   console.log('Login attempt:', { username, password });
