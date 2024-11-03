@@ -58,10 +58,17 @@
     },
     "logs": {
       "title": "System Logs",
+      "search": "Search",
       "filters": {
         "level": "Log Level",
         "source": "Log Source",
         "timeRange": "Time Range"
+      },
+      "fields": {
+        "timestamp": "Timestamp",
+        "level": "Level",
+        "message": "Message",
+        "source": "Source"
       },
       "actions": {
         "download": "Download Logs",

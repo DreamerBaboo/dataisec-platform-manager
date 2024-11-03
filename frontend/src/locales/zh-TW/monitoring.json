@@ -58,10 +58,17 @@
     },
     "logs": {
       "title": "系統日誌",
+      "search": "搜尋",
       "filters": {
         "level": "日誌等級",
         "source": "日誌來源",
         "timeRange": "時間範圍"
+      },
+      "fields": {
+        "timestamp": "時間",
+        "level": "等級",
+        "message": "訊息",
+        "source": "來源"
       },
       "actions": {
         "download": "下載日誌",

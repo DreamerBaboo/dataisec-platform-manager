@@ -13,10 +13,10 @@ import {
   Button,
   CircularProgress
 } from '@mui/material';
-import { useTranslation } from 'react-i18next';
+import { useAppTranslation } from '../../hooks/useAppTranslation';
 
 const PodManagement = () => {
-  const { t } = useTranslation();
+  const { t } = useAppTranslation();
   const [pods, setPods] = useState([]);
   const [selectedPods, setSelectedPods] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -76,7 +76,7 @@ const PodManagement = () => {
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>
-        {t('podManagement')}
+        {t('podManagement:podManagement.title')}
       </Typography>
       <TableContainer component={Paper} sx={{ maxHeight: 400, overflow: 'auto' }}>
         <Table stickyHeader>
@@ -89,11 +89,11 @@ const PodManagement = () => {
                   onChange={handleSelectAllClick}
                 />
               </TableCell>
-              <TableCell sx={{ bgcolor: 'background.paper' }}>{t('podName')}</TableCell>
-              <TableCell sx={{ bgcolor: 'background.paper' }}>{t('namespace')}</TableCell>
-              <TableCell sx={{ bgcolor: 'background.paper' }}>{t('status')}</TableCell>
-              <TableCell align="right" sx={{ bgcolor: 'background.paper' }}>{t('restarts')}</TableCell>
-              <TableCell align="right" sx={{ bgcolor: 'background.paper' }}>{t('age')}</TableCell>
+              <TableCell sx={{ bgcolor: 'background.paper' }}>{t('podManagement:podManagement.table.name')}</TableCell>
+              <TableCell sx={{ bgcolor: 'background.paper' }}>{t('podManagement:podManagement.table.namespace')}</TableCell>
+              <TableCell sx={{ bgcolor: 'background.paper' }}>{t('podManagement:podManagement.table.status')}</TableCell>
+              <TableCell align="right" sx={{ bgcolor: 'background.paper' }}>{t('podManagement:podManagement.table.restarts')}</TableCell>
+              <TableCell align="right" sx={{ bgcolor: 'background.paper' }}>{t('podManagement:podManagement.table.age')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>

@@ -2,6 +2,9 @@
   "imageManagement": {
     "title": "Image Management",
     "imageList": "Image List",
+    "noImagesFound": "No images found",
+    "errorLoadingImages": "Error loading images",
+    "searchImages": "Search Images",
     "actions": {
       "upload": "Upload",
       "delete": "Delete",
@@ -14,7 +17,13 @@
       "bulkDelete": "Delete ({{count}})",
       "bulkPackage": "Package ({{count}})",
       "refreshList": "Refresh List",
-      "configureRegistry": "Configure Registry"
+      "configureRegistry": "Configure Registry",
+      "save": "Save",
+      "cancel": "Cancel",
+      "confirm": "Confirm",
+      "supportedFormats": "Supported formats: .tar, .gz, .tgz",
+      "dropFilesHere": "Drag and drop image file here",
+      "dragDropImage": "Drag and drop image file here"
     },
     "table": {
       "name": "Name",
@@ -79,7 +88,8 @@
       "error": "Upload failed"
     },
     "messages": {
-      "deleteConfirm": "Are you sure you want to delete the selected images?",
+      "deleteConfirm": "Are you sure you want to delete the selected images?",  
+      "deletePartFail": "Failed to delete some images",
       "deleteSuccess": "Images deleted successfully",
       "deleteError": "Failed to delete images",
       "packageStart": "Starting to package images...",
@@ -88,19 +98,31 @@
       "packageSuccess": "Package downloaded successfully",
       "packageError": "Failed to package images",
       "noImagesFound": "No images found",
-      "errorLoadingImages": "Error loading images"
+      "errorLoadingImages": "Error loading images",
+      "errorFetch": "Failed to fetch images",
+      "configSuccess": "Registry settings updated",
+      "extracting": "Extracting images...",
+      "extractingSuccess": "Images extracted successfully",
+      "reTagging": "Re-tagging images...",
+      "noPermission": "No permission to execute Docker commands. Please ensure the service has the correct permission settings.",
+      "reTagError": "Failed to re-tag images",
+      "reTagSuccess": "Images re-tagged successfully",
+      "confirmLoad": "Confirm loading images",
+      "confirmLoadMessage": "The following images will be loaded to the local repository:",
+      "newTag": "New Tag",
+      "keepOriginal": "Keep original image (do not delete after re-tagging)"
     },
     "registry": {
       "title": "Registry Configuration",
       "settings": "Registry Settings",
       "repository": {
         "label": "Repository Address",
-        "placeholder": "Enter repository address"
-      },
+        "placeholder": "Enter repository address like: localhost"
+      },  
       "port": {
         "label": "Port",
-        "placeholder": "Enter port number"
-      },
+        "placeholder": "Enter port number like: 5000"
+      },  
       "credentials": {
         "title": "Credentials",
         "username": "Username",

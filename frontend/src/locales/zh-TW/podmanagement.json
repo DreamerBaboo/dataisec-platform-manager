@@ -1,0 +1,12 @@
+{
+    "podManagement": {
+        "title": "Pod 管理",
+        "table": {
+            "name": "名稱",
+            "namespace": "命名空間",
+            "status": "狀態",
+            "restarts": "重啟次數",
+            "age": "年齡"
+        }
+    }
+}

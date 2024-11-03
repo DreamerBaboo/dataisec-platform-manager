@@ -2,15 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { DataGrid } from '@mui/x-data-grid';
 import { Typography, Box, Paper, TextField } from '@mui/material';
 import axios from 'axios';
-
-const columns = [
-  { field: 'timestamp', headerName: '時間戳', width: 200 },
-  { field: 'level', headerName: '級別', width: 100 },
-  { field: 'message', headerName: '消息', width: 500 },
-  { field: 'source', headerName: '來源', width: 200 },
-];
+import { useAppTranslation } from '../../hooks/useAppTranslation';
 
 const LogViewer = () => {
+  const { t } = useAppTranslation(['monitoring', 'common']);
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -44,15 +39,22 @@ const LogViewer = () => {
     log.source.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const columns = [
+    { field: 'timestamp', headerName: t('monitoring:monitoring.logs.fields.timestamp'), width: 200 },
+    { field: 'level', headerName: t('monitoring:monitoring.logs.fields.level'), width: 100 },
+    { field: 'message', headerName: t('monitoring:monitoring.logs.fields.message'), width: 500 },
+    { field: 'source', headerName: t('monitoring:monitoring.logs.fields.source'), width: 200 },
+  ];
+
   return (
     <Box sx={{ height: 600, width: '100%' }}>
       <Typography variant="h4" gutterBottom>
-        系統日誌
+        {t('monitoring:monitoring.logs.title')}
       </Typography>
       <Paper elevation={3} sx={{ p: 2, mb: 2 }}>
         <TextField
           fullWidth
-          label="搜索日誌"
+          label={t('monitoring:monitoring.logs.search')}
           variant="outlined"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}

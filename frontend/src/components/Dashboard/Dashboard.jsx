@@ -5,6 +5,7 @@ import axios from 'axios';
 import RGL, { WidthProvider } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
+import { useTranslation } from 'react-i18next';
 
 const ReactGridLayout = WidthProvider(RGL);
 
@@ -24,6 +25,8 @@ const Dashboard = () => {
 
   const theme = useTheme();
   const chartRefs = useRef({});
+
+  const { t } = useTranslation();
 
   useEffect(() => {
     fetchMetrics();
@@ -130,7 +133,7 @@ const Dashboard = () => {
   return (
     <Box sx={{ flexGrow: 1, color: theme.palette.text.primary }}>
       <Typography variant="h5" gutterBottom sx={{ mb: 2 }}>
-        系統儀表板
+        {t('dashboard.title')}
       </Typography>
       <ReactGridLayout
         className="layout"

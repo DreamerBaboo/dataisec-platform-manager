@@ -1,5 +1,6 @@
 {
   "common": {
+    "appName": "Dataisec Platform Manager",
     "actions": "Actions",
     "add": "Add",
     "cancel": "Cancel",
@@ -13,7 +14,10 @@
     "search": "Search",
     "success": "Success",
     "upload": "Upload",
-    "view": "View"
+    "view": "View",
+    "cluster": "Cluster",
+    "refresh": "Refresh",
+    "lastUpdate": "Last Update"
   },
   "errors": {
     "generalError": "An error occurred",

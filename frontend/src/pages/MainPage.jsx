@@ -12,10 +12,13 @@ import LogViewer from '../components/SystemLogs/LogViewer';
 import UserProfile from '../components/UserProfile/UserProfile';
 import ImageList from '../components/ImageManagement/ImageList';
 import ImageUpload from '../components/ImageManagement/ImageUpload';
+import { useAppTranslation } from '../hooks/useAppTranslation';
 
 function MainPage() {
   const [open, setOpen] = useState(true);
   const theme = useTheme();
+  const { t, currentLanguage, changeLanguage, languages } = useAppTranslation(['navigation', 'common']);
+ 
 
   const toggleDrawer = () => {
     console.log('Toggling drawer. Current state:', open);

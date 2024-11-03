@@ -2,97 +2,80 @@ import React, { useState, useContext } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { TextField, Button, Paper, Typography, Box, Alert, Select, MenuItem, useTheme } from '@mui/material';
 import { useAuth } from '../utils/auth.jsx';
-import { useTranslation } from 'react-i18next';
+import { useAppTranslation } from '../hooks/useAppTranslation';
 import { ColorModeContext } from '../App';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 
 function LoginPage() {
-  const [username, setUsername] = useState('testuser'); // 設置默認用戶名
-  const [password, setPassword] = useState('testpassword'); // 設置默認密碼
+  const [username, setUsername] = useState('testuser');
+  const [password, setPassword] = useState('testpassword');
   const [error, setError] = useState('');
   const auth = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const { t, i18n } = useTranslation();
+  const { t, currentLanguage, changeLanguage, languages } = useAppTranslation(['auth', 'common']);
   const theme = useTheme();
   const colorMode = useContext(ColorModeContext);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    console.log('Login form submitted:', { username, password });
     try {
       await auth.login(username, password);
-      console.log('Login successful, navigating to:', location.state?.from || '/');
-      const { from } = location.state || { from: { pathname: "/" } };
-      navigate(from);
+      navigate(location.state?.from || '/');
     } catch (error) {
-      console.error('Login failed:', error);
-      setError(t('loginFailed') + ': ' + error.message);
+      setError('invalidCredentials');
     }
-  };
-
-  const handleLanguageChange = (event) => {
-    i18n.changeLanguage(event.target.value);
   };
 
   return (
     <Box
       sx={{
         display: 'flex',
-        justifyContent: 'center',
+        flexDirection: 'column',
         alignItems: 'center',
-        height: '100vh',
-        backgroundColor: theme.palette.background.default,
+        justifyContent: 'center',
+        minHeight: '100vh',
+        bgcolor: 'background.default'
       }}
     >
-      <Paper elevation={3} sx={{ padding: 4, width: 350, backgroundColor: theme.palette.background.paper }}>
-        <Typography variant="h5" component="h1" gutterBottom align="center" color="textPrimary">
-          {t('appName')}
+      <Paper
+        elevation={3}
+        sx={{
+          p: 4,
+          width: '100%',
+          maxWidth: 400,
+          bgcolor: 'background.paper'
+        }}
+      >
+        <Typography component="h1" variant="h5" align="center" gutterBottom>
+          {t('auth:auth.login.title')}
         </Typography>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Select
-            value={i18n.language}
-            onChange={handleLanguageChange}
-            sx={{ width: '45%' }}
-          >
-            <MenuItem value="zh">中文</MenuItem>
-            <MenuItem value="en">English</MenuItem>
-          </Select>
-          <Button
-            onClick={colorMode.toggleColorMode}
-            color="inherit"
-            sx={{ width: '45%' }}
-          >
-            {theme.palette.mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
-            {theme.palette.mode === 'dark' ? t('lightMode') : t('darkMode')}
-          </Button>
-        </Box>
+        
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {t(`auth:auth.login.errors.${error}`)}
+          </Alert>
+        )}
+
         <form onSubmit={handleSubmit}>
-          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
           <TextField
-            label={t('username')}
+            label={t('auth:auth.login.username')}
             fullWidth
             margin="normal"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             required
-            InputLabelProps={{
-              style: { color: theme.palette.text.secondary },
-            }}
           />
           <TextField
-            label={t('password')}
+            label={t('auth:auth.login.password')}
             type="password"
             fullWidth
             margin="normal"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            InputLabelProps={{
-              style: { color: theme.palette.text.secondary },
-            }}
           />
           <Button
             type="submit"
@@ -101,9 +84,27 @@ function LoginPage() {
             fullWidth
             sx={{ mt: 2 }}
           >
-            {t('login')}
+            {t('auth:auth.login.submit')}
           </Button>
         </form>
+
+        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Select
+            value={currentLanguage}
+            onChange={(e) => changeLanguage(e.target.value)}
+            size="small"
+          >
+            {Object.entries(languages).map(([code, name]) => (
+              <MenuItem key={code} value={code}>
+                {name}
+              </MenuItem>
+            ))}
+          </Select>
+          
+          <Button onClick={colorMode.toggleColorMode}>
+            {theme.palette.mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
+          </Button>
+        </Box>
       </Paper>
     </Box>
   );

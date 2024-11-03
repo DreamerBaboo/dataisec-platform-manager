@@ -1,0 +1,12 @@
+{
+    "podManagement": {
+        "title": "Pod Management",
+        "table": {
+            "name": "Name",
+            "namespace": "Namespace",
+            "status": "Status",
+            "restarts": "Restarts",
+            "age": "Age"
+        }
+    }
+}

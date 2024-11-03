@@ -3,6 +3,7 @@ import { Box, Tabs, Tab, CircularProgress, IconButton, Tooltip, Paper } from '@m
 import { useTranslation } from 'react-i18next';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import MetricsDisplay from './MetricsDisplay';
+import { useAppTranslation } from '../../hooks/useAppTranslation';
 
 const REFRESH_INTERVAL = 30000; // 30 seconds
 
@@ -148,7 +149,7 @@ const SystemDashboard = () => {
                 <Tab
                   key={node}
                   value={node}
-                  label={node === 'cluster' ? t('cluster') : node}
+                  label={node === 'cluster' ? t('common:common.cluster') : node}
                 />
               ))}
             </Tabs>
@@ -167,10 +168,10 @@ const SystemDashboard = () => {
                 color: 'text.secondary',
                 whiteSpace: 'nowrap'
               }}>
-                {t('lastUpdate')}: {lastUpdate.toLocaleTimeString()}
+                {t('common:common.lastUpdate')}: {lastUpdate.toLocaleTimeString()}
               </Box>
             )}
-            <Tooltip title={t('refresh')}>
+            <Tooltip title={t('common:common.refresh')}>
               <span>
                 <IconButton 
                   onClick={handleRefresh}

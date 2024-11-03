@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Typography, Box, Paper, TextField, Button, Switch, FormControlLabel } from '@mui/material';
 import { useAuth } from '../../utils/auth';
-
+import { useAppTranslation } from '../../hooks/useAppTranslation';
 const UserProfile = () => {
+  const {t} = useAppTranslation(['settings', 'common']);
+ 
   const { user } = useAuth();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -24,13 +26,13 @@ const UserProfile = () => {
   return (
     <Box sx={{ maxWidth: 600, margin: 'auto' }}>
       <Typography variant="h4" gutterBottom>
-        用戶資料
+        {t('settings:settings.profile.title')}
       </Typography>
       <Paper elevation={3} sx={{ p: 3 }}>
         <form onSubmit={handleSubmit}>
           <TextField
             fullWidth
-            label="用戶名"
+            label={t('settings:settings.profile.username')}
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             margin="normal"
@@ -38,7 +40,7 @@ const UserProfile = () => {
           />
           <TextField
             fullWidth
-            label="電子郵件"
+            label={t('settings:settings.profile.email')}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             margin="normal"
@@ -52,11 +54,11 @@ const UserProfile = () => {
                 color="primary"
               />
             }
-            label="深色模式"
+            label={t('settings:settings.theme.dark')}
           />
           <Box sx={{ mt: 2 }}>
             <Button type="submit" variant="contained" color="primary">
-              保存更改
+              {t('common:common.save')}
             </Button>
           </Box>
         </form>

@@ -1,5 +1,6 @@
 {
   "common": {
+    "appName": "Dataisec 平台管理器",
     "actions": "操作",
     "add": "新增",
     "cancel": "取消",
@@ -13,7 +14,10 @@
     "search": "搜尋",
     "success": "成功",
     "upload": "上傳",
-    "view": "查看"
+    "view": "查看",
+    "cluster": "叢集",
+    "refresh": "重新整理",
+    "lastUpdate": "最後更新"
   },
   "errors": {
     "generalError": "發生錯誤",

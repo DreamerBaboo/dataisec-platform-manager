@@ -31,14 +31,15 @@ import {
   Search as SearchIcon,
   Clear as ClearIcon
 } from '@mui/icons-material';
-import { useTranslation } from 'react-i18next';
+//import { useTranslation } from 'react-i18next';
 import ImageUpload from './ImageUpload';
 import ImageDetails from './ImageDetails';
 import { useSnackbar } from 'notistack';
 import RepositoryConfig from './RepositoryConfig';
+import { useAppTranslation } from '../../hooks/useAppTranslation';
 
 const ImageList = () => {
-  const { t } = useTranslation();
+  const { t } = useAppTranslation();
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -61,16 +62,16 @@ const ImageList = () => {
   const ROWS_PER_PAGE = 10; // 默認顯示 10 行
   const TABLE_HEIGHT = ROW_HEIGHT * ROWS_PER_PAGE + HEADER_HEIGHT;
 
-  const showNotification = (message, variant) => {
-    enqueueSnackbar(message, { 
-      variant,
-      autoHideDuration: 3000,
-      anchorOrigin: {
-        vertical: 'top',
-        horizontal: 'center'
-      }
-    });
-  };
+  // const showNotification = (message, variant) => {
+  //   enqueueSnackbar(message, { 
+  //     variant,
+  //     autoHideDuration: 3000,
+  //     anchorOrigin: {
+  //       vertical: 'top',
+  //       horizontal: 'center'
+  //     }
+  //   });
+  // };
 
   const fetchImages = async () => {
     console.log('🔄 Starting to fetch images...');
@@ -137,9 +138,8 @@ const ImageList = () => {
           'Accept': 'application/json'
         }
       });
-      
       if (!response.ok) {
-        throw new Error('Failed to fetch images');
+        throw new Error(t('images:imageManagement.messages.errorFetch'));
       }
       
       const data = await response.json();
@@ -245,16 +245,16 @@ const ImageList = () => {
       
       if (hasErrors) {
         // 如果有錯誤，顯示部分成功的消息
-        enqueueSnackbar('部分鏡像刪除失敗', {
+        enqueueSnackbar(t('images:imageManagement.messages.deletePartFail'), {
           variant: 'warning',
           anchorOrigin: {
             vertical: 'bottom',
-            horizontal: 'right'
+            horizontal: 'right'  // default 
           }
         });
       } else {
         // 全部成功
-        enqueueSnackbar('已成功刪除所選鏡像', {
+        enqueueSnackbar(t('images:imageManagement.messages.deleteSuccess'), {
           variant: 'success',
           anchorOrigin: {
             vertical: 'bottom',
@@ -268,7 +268,7 @@ const ImageList = () => {
       setSelected([]);
     } catch (error) {
       console.error('❌ Error deleting images:', error);
-      enqueueSnackbar(error.message || '刪除鏡像失敗', {
+      enqueueSnackbar(error.message || t('images:imageManagement.messages.deletError'), {
         variant: 'error',
         anchorOrigin: {
           vertical: 'bottom',
@@ -283,7 +283,7 @@ const ImageList = () => {
     setPackagingStatus(prev => ({ ...prev, loading: true, progress: 0 }));
     
     // 顯示開始打包的通知
-    const snackbarKey = enqueueSnackbar('開始打包鏡像...', {
+    const snackbarKey = enqueueSnackbar(t('images:imageManagement.message.packageStart'), {
       variant: 'info',
       persist: true,
       anchorOrigin: {
@@ -315,7 +315,7 @@ const ImageList = () => {
 
       // 更新通知為準備中
       closeSnackbar(snackbarKey);
-      const preparingKey = enqueueSnackbar('正在準備打包文件...', {
+      const preparingKey = enqueueSnackbar(t('images:images.imageManagement.messages.packagePreparing'), {
         variant: 'info',
         persist: true,
         anchorOrigin: {
@@ -346,7 +346,7 @@ const ImageList = () => {
 
       // 更新通知為下載中
       closeSnackbar(preparingKey);
-      const downloadingKey = enqueueSnackbar('正在下載打包文件...', {
+      const downloadingKey = enqueueSnackbar(t('images:imageManagement.messages.packageDownloading'), {
         variant: 'info',
         persist: true,
         anchorOrigin: {
@@ -377,7 +377,7 @@ const ImageList = () => {
 
       // 關閉下載通知並顯示成功通知
       closeSnackbar(downloadingKey);
-      enqueueSnackbar('鏡像打包完成並已下載', { 
+      enqueueSnackbar(t('images:imageManagement.messages.packageSuccess'), { 
         variant: 'success',
         autoHideDuration: 3000,
         anchorOrigin: {
@@ -387,7 +387,7 @@ const ImageList = () => {
       });
     } catch (error) {
       console.error('❌ Error packaging images:', error);
-      enqueueSnackbar(error.message || '打包鏡像失敗', { 
+      enqueueSnackbar(error.message || t('images:imageManagement.messages.packageError'), { 
         variant: 'error',
         autoHideDuration: 3000,
         anchorOrigin: {
@@ -429,7 +429,7 @@ const ImageList = () => {
 
   const handleConfigSave = ({ repository, port }) => {
     setConfigOpen(false);
-    enqueueSnackbar('倉庫設定已更新', {
+    enqueueSnackbar(t('images:imageManagement.messages.configSuccess'), {
       variant: 'success',
       anchorOrigin: { vertical: 'bottom', horizontal: 'right' }
     });
@@ -444,11 +444,11 @@ const ImageList = () => {
 
   // 使用 MUI 的表頭組件
   const headCells = [
-    { id: 'name', label: t('name') },
-    { id: 'tag', label: t('tag') },
-    { id: 'size', label: t('size'), numeric: true },
-    { id: 'uploadDate', label: t('uploadDate') },
-    { id: 'status', label: t('status') },
+    { id: 'name', label: t('images:imageManagement.table.name') },
+    { id: 'tag', label: t('images:imageManagement.table.tag') },
+    { id: 'size', label: t('images:imageManagement.table.size'), numeric: true },
+    { id: 'uploadDate', label: t('images:imageManagement.table.uploadDate') },
+    { id: 'status', label: t('images:imageManagement.table.status') },
   ];
 
   // 修改格式化大小的函數
@@ -490,6 +490,7 @@ const ImageList = () => {
       }
 
       // 檢查日期是否有效
+      console.log('🔍 Date:', date);
       if (isNaN(date.getTime())) {
         console.warn('Invalid date:', dateString);
         return dateString; // 如果無法解析，返回原始字符串
@@ -522,7 +523,7 @@ const ImageList = () => {
           gap: 2 
         }}>
           <Typography variant="h6" component="div">
-            {t('imageList')} ({images.length})
+            {t('images:imageManagement.imageList')} ({images.length})
           </Typography>
           <Box sx={{ 
             display: 'flex', 
@@ -534,7 +535,7 @@ const ImageList = () => {
           }}>
             <TextField
               size="small"
-              placeholder={t('searchImages')}
+              placeholder={t('images:imageManagement.searchImages')}
               value={searchTerm}
               onChange={(e) => handleSearch(e.target.value)}
               sx={{ flex: 1 }}
@@ -595,7 +596,7 @@ const ImageList = () => {
                     </TableSortLabel>
                   </TableCell>
                 ))}
-                <TableCell align="center">{t('actions')}</TableCell>
+                <TableCell align="center">{t('images:imageManagement.table.actions')}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -625,7 +626,7 @@ const ImageList = () => {
                       </TableCell>
                       <TableCell>
                         <Chip 
-                          label={t(image.status)}
+                          label={t(`images:imageManagement.status.${image.status}`)}
                           color={getStatusColor(image.status)}
                           size="small"
                         />
@@ -647,7 +648,7 @@ const ImageList = () => {
                 <TableRow>
                   <TableCell colSpan={7} align="center">
                     <Typography color="textSecondary">
-                      {error ? t('errorLoadingImages') : t('noImagesFound')}
+                      {error ? t('images:imageManagement.errorLoadingImages') : t('images:imageManagement.noImagesFound')}
                     </Typography>
                   </TableCell>
                 </TableRow>
@@ -674,7 +675,7 @@ const ImageList = () => {
                   startIcon={<DeleteIcon />}
                   onClick={handleBulkDelete}
                 >
-                  {t('delete')} ({selected.length})
+                  {t('images:imageManagement.actions.delete')} ({selected.length})  
                 </Button>
                 <Button
                   variant="contained"
@@ -683,7 +684,7 @@ const ImageList = () => {
                   onClick={handlePackage}
                   disabled={packagingStatus.loading}
                 >
-                  {packagingStatus.loading ? t('packaging') : t('package')} ({selected.length})
+                  {packagingStatus.loading ? t('images:imageManagement.actions.packaging') : t('images:imageManagement.actions.package')} ({selected.length})
                 </Button>
               </>
             )}
@@ -694,7 +695,7 @@ const ImageList = () => {
             startIcon={<UploadIcon />}
             onClick={() => setUploadOpen(true)}
           >
-            {t('upload')}
+            {t('images:imageManagement.actions.upload')}
           </Button>
         </Box>
       </Paper>
@@ -730,7 +731,7 @@ const ImageList = () => {
       {!loading && !error && images.length === 0 && (
         <Box sx={{ p: 3, textAlign: 'center' }}>
           <Typography color="textSecondary">
-            {t('noImagesFound')}
+            {t('images:images.imageManagement.noImagesFound')}
           </Typography>
         </Box>
       )}

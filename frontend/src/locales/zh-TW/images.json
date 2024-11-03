@@ -2,6 +2,9 @@
   "imageManagement": {
     "title": "映像管理",
     "imageList": "映像列表",
+    "noImagesFound": "未找到映像",
+    "errorLoadingImages": "載入映像時發生錯誤",
+    "searchImages": "搜尋映像",
     "actions": {
       "upload": "上傳",
       "delete": "刪除",
@@ -9,7 +12,13 @@
       "packaging": "打包中...",
       "refresh": "重新整理",
       "search": "搜尋映像",
-      "configure": "設定"
+      "configure": "設定",
+      "save": "儲存",
+      "cancel": "取消",
+      "confirm": "確認",
+      "supportedFormats": "支援格式：.tar、.gz、.tgz",
+      "dropFilesHere": "拖放映像檔案至此",
+      "dragDropImage": "拖放映像檔案至此"
     },
     "table": {
       "name": "名稱",
@@ -75,6 +84,7 @@
     },
     "messages": {
       "deleteConfirm": "確定要刪除所選映像嗎？",
+      "deletePartFail": "部分映像刪除失敗",
       "deleteSuccess": "映像刪除成功",
       "deleteError": "刪除映像失敗",
       "packageStart": "開始打包映像...",
@@ -83,18 +93,30 @@
       "packageSuccess": "打包檔案下載成功",
       "packageError": "打包映像失敗",
       "noImagesFound": "未找到映像",
-      "errorLoadingImages": "載入映像時發生錯誤"
+      "errorLoadingImages": "載入映像時發生錯誤",
+      "errorFetch": "載入映像失敗",
+      "configSuccess": "倉庫設定已更新",
+      "extracting": "映像提取中...",
+      "extractingSuccess": "映像提取完成",
+      "reTagging": "重新標籤映像中...",
+      "noPermission": "沒有執行 Docker 命令的權限。請確保服務有正確的權限設置。",
+      "reTagError": "重新標籤映像失敗",
+      "reTagSuccess": "映像重新標籤完成",
+      "confirmLoad": "確認載入映像",
+      "confirmLoadMessage": "以下映像將被載入到本地倉庫：",
+      "newTag": "新標籤",
+      "keepOriginal": "保留原始映像（重新標籤後不刪除原始映像）"
     },
     "registry": {
       "title": "倉庫配置",
       "settings": "倉庫設定",
       "repository": {
         "label": "倉庫地址",
-        "placeholder": "請輸入倉庫地址"
-      },
+        "placeholder": "請輸入倉庫地址 如: localhost"
+      }, 
       "port": {
         "label": "端口",
-        "placeholder": "請輸入端口號"
+        "placeholder": "請輸入端口號 如: 5000"
       },
       "credentials": {
         "title": "認證資訊",

@@ -27,12 +27,12 @@ import {
   Error as ErrorIcon,
   Info as InfoIcon
 } from '@mui/icons-material';
-import { useTranslation } from 'react-i18next';
 import { useDropzone } from 'react-dropzone';
 import { useSnackbar } from 'notistack';
+import { useAppTranslation } from '../../hooks/useAppTranslation';
 
 const ImageUpload = ({ open, onClose, onSuccess }) => {
-  const { t } = useTranslation();
+  const { t } = useAppTranslation();
   const [files, setFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -143,7 +143,7 @@ const ImageUpload = ({ open, onClose, onSuccess }) => {
       
       // 解析上傳的鏡像文件
       console.log('🔍 Starting image extraction');
-      setProcessingStatus('正在解析鏡像文件...');
+      setProcessingStatus(t('images:imageManagement.messages.extracting'));
       
       const extractResponse = await fetch('http://localhost:3001/api/images/extract', {
         method: 'POST',
@@ -166,7 +166,7 @@ const ImageUpload = ({ open, onClose, onSuccess }) => {
       setConfirmationOpen(true);
       setProcessingStatus('');
 
-      enqueueSnackbar('鏡像文件解析完成', {
+      enqueueSnackbar(t('images:imageManagement.messages.extractingSuccess'), {
         variant: 'success',
         anchorOrigin: { vertical: 'bottom', horizontal: 'right' }
       });
@@ -221,7 +221,7 @@ const ImageUpload = ({ open, onClose, onSuccess }) => {
 
   const handleConfirmLoad = async () => {
     try {
-      setProcessingStatus('正在重新標記鏡像...');
+      setProcessingStatus(t('images:imageManagement.messages.reTagging'));
       const repository = localStorage.getItem('repositoryHost') || 'localhost';
       const port = localStorage.getItem('repositoryPort') || '5000';
 
@@ -242,15 +242,15 @@ const ImageUpload = ({ open, onClose, onSuccess }) => {
       if (!response.ok) {
         const error = await response.json();
         if (response.status === 403) {
-          throw new Error('沒有執行 Docker 命令的權限。請確保服務有正確的權限設置。');
+          throw new Error(t('images:imageManagement.messages.noPermission'));
         }
-        throw new Error(error.message || '重新標記鏡像失敗');
+        throw new Error(error.message || t('images:imageManagement.messages.reTagError'));
       }
 
       const result = await response.json();
       console.log('✅ Retag results:', result);
 
-      enqueueSnackbar('鏡像處理完成', {
+      enqueueSnackbar(t('images:imageManagement.messages.reTagSuccess'), {
         variant: 'success',
         anchorOrigin: { vertical: 'bottom', horizontal: 'right' }
       });
@@ -259,7 +259,7 @@ const ImageUpload = ({ open, onClose, onSuccess }) => {
       onSuccess();
     } catch (error) {
       console.error('❌ Error during retag process:', error);
-      enqueueSnackbar(error.message || '鏡像處理失敗', {
+      enqueueSnackbar(error.message || t('images:imageManagement.messages.reTagError'), {
         variant: 'error',
         anchorOrigin: { vertical: 'bottom', horizontal: 'right' }
       });
@@ -279,16 +279,16 @@ const ImageUpload = ({ open, onClose, onSuccess }) => {
       <DialogTitle>
         <Box display="flex" alignItems="center" gap={1}>
           <InfoIcon color="primary" />
-          <Typography variant="h6">確認載入鏡像</Typography>
+          <Typography variant="h6">{t('images:imageManagement.messages.confirmLoad')}</Typography>
         </Box>
       </DialogTitle>
       <DialogContent>
         <Box sx={{ mb: 2 }}>
           <Typography variant="subtitle1" gutterBottom>
-            以下鏡像將被載入到本地倉庫：
+            {t('images:imageManagement.messages.confirmLoadMessage')}
           </Typography>
           <Typography variant="body2" color="textSecondary" paragraph>
-            目標倉庫: {localStorage.getItem('repositoryHost') || 'localhost'}:{localStorage.getItem('repositoryPort') || '5000'}
+            {t('images:imageManagement.registry.repository.label')}: {localStorage.getItem('repositoryHost') || 'localhost'}:{localStorage.getItem('repositoryPort') || '5000'}
           </Typography>
         </Box>
         
@@ -305,7 +305,7 @@ const ImageUpload = ({ open, onClose, onSuccess }) => {
                     }
                     secondary={
                       <Typography variant="body2" color="textSecondary">
-                        新標籤: {`${localStorage.getItem('repositoryHost') || 'localhost'}:${localStorage.getItem('repositoryPort') || '5000'}/${image.name}:${image.tag}`}
+                        {t('images:imageManagement.messages.newTag')}: {`${localStorage.getItem('repositoryHost') || 'localhost'}:${localStorage.getItem('repositoryPort') || '5000'}/${image.name}:${image.tag}`}
                       </Typography>
                     }
                   />
@@ -326,7 +326,7 @@ const ImageUpload = ({ open, onClose, onSuccess }) => {
           }
           label={
             <Typography variant="body2">
-              保留原始鏡像（重新標記後不刪除原始鏡像）
+              {t('images:imageManagement.messages.keepOriginal')}
             </Typography>
           }
         />
@@ -345,7 +345,7 @@ const ImageUpload = ({ open, onClose, onSuccess }) => {
           onClick={() => setConfirmationOpen(false)}
           disabled={!!processingStatus}
         >
-          取消
+          {t('images:imageManagement.actions.cancel')}
         </Button>
         <Button 
           onClick={handleConfirmLoad}
@@ -353,7 +353,7 @@ const ImageUpload = ({ open, onClose, onSuccess }) => {
           disabled={!!processingStatus}
           startIcon={processingStatus ? <CircularProgress size={20} /> : null}
         >
-          {processingStatus || '確認載入'}
+          {processingStatus || t('images:imageManagement.actions.confirm')}
         </Button>
       </DialogActions>
     </Dialog>
@@ -364,7 +364,7 @@ const ImageUpload = ({ open, onClose, onSuccess }) => {
       <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
         <DialogTitle>
           <Box display="flex" justifyContent="space-between" alignItems="center">
-            {t('uploadImage')}
+            {t('images:imageManagement.actions.upload')}
             <IconButton onClick={handleClose} size="small" disabled={uploading}>
               <CloseIcon />
             </IconButton>
@@ -396,10 +396,10 @@ const ImageUpload = ({ open, onClose, onSuccess }) => {
             <input {...getInputProps()} />
             <UploadIcon sx={{ fontSize: 48, color: 'action.active', mb: 1 }} />
             <Typography variant="body1" gutterBottom>
-              {isDragActive ? t('dropFilesHere') : t('dragDropImage')}
+              {isDragActive ? t('images:imageManagement.actions.dropFilesHere') : t('images:imageManagement.actions.dragDropImage')}
             </Typography>
             <Typography variant="body2" color="textSecondary">
-              {t('supportedFormats')}
+              {t('images:imageManagement.actions.supportedFormats')}
             </Typography>
           </Box>
 
@@ -444,7 +444,7 @@ const ImageUpload = ({ open, onClose, onSuccess }) => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose} disabled={uploading}>
-            {t('cancel')}
+            {t('images:imageManagement.actions.cancel')}
           </Button>
           <Button
             onClick={handleUpload}
@@ -453,7 +453,7 @@ const ImageUpload = ({ open, onClose, onSuccess }) => {
             disabled={files.length === 0 || uploading}
             startIcon={uploading && <CircularProgress size={20} />}
           >
-            {uploading ? t('uploading') : t('upload')}
+            {uploading ? t('images:imageManagement.status.uploading') : t('images:imageManagement.actions.upload')}
           </Button>
         </DialogActions>
       </Dialog>
