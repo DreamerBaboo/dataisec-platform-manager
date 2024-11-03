@@ -36,6 +36,7 @@ import ImageUpload from './ImageUpload';
 import ImageDetails from './ImageDetails';
 import { useSnackbar } from 'notistack';
 import RepositoryConfig from './RepositoryConfig';
+import { getApiUrl } from '../../config/api';
 
 const ImageList = () => {
   const { t } = useAppTranslation("imageManagement");
@@ -77,12 +78,8 @@ const ImageList = () => {
     try {
       setLoading(true);
       setError(null);
-      // 使用完整的 URL
-      const response = await fetch('http://localhost:3001/api/images', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`, // 添加認證
-          'Accept': 'application/json'
-        }
+      const response = await fetch(getApiUrl('api/images'), {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       console.log('📥 Response received:', response.status, response.statusText);
       
@@ -131,11 +128,8 @@ const ImageList = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch('http://localhost:3001/api/images', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Accept': 'application/json'
-        }
+      const response = await fetch(getApiUrl('api/images'), {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       
       if (!response.ok) {

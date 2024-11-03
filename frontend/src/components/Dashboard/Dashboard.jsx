@@ -6,6 +6,7 @@ import RGL, { WidthProvider } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import { useTranslation } from 'react-i18next';
+import { getApiUrl } from '../../config/api';
 
 const ReactGridLayout = WidthProvider(RGL);
 
@@ -63,7 +64,7 @@ const Dashboard = () => {
 
   const fetchPods = async () => {
     try {
-      const response = await axios.get('http://localhost:3001/pods', {
+      const response = await axios.get(getApiUrl('api/pods'), {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       setPods(response.data);

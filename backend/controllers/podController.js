@@ -182,6 +182,7 @@ const getPodMetrics = async (req, res) => {
     });
 
     const latestMetrics = response.body.aggregations.latest_metrics.top[0]?.metrics || {};
+
     const metrics = {
       memory: {
         used: latestMetrics['kubernetes.pod.memory.usage.bytes'] || 0,

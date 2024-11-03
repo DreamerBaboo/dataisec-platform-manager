@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import MetricsDisplay from './MetricsDisplay';
 import { useAppTranslation } from '../../hooks/useAppTranslation';
+import { getApiUrl } from '../../config/api';
 
 const REFRESH_INTERVAL = 30000; // 30 seconds
 
@@ -59,8 +60,8 @@ const SystemDashboard = () => {
     try {
       setLoading(true);
       const url = selectedNode === 'cluster' 
-        ? 'http://localhost:3001/api/metrics/system'
-        : `http://localhost:3001/api/metrics/system/node/${selectedNode}`;
+        ? getApiUrl('api/metrics/system')
+        : getApiUrl(`api/metrics/system/node/${selectedNode}`);
 
       const response = await fetch(url, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }

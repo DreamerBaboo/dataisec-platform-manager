@@ -14,6 +14,7 @@ import {
   CircularProgress
 } from '@mui/material';
 import { useAppTranslation } from '../../hooks/useAppTranslation';
+import { getApiUrl } from '../../config/api';
 
 const PodManagement = () => {
   const { t } = useAppTranslation();
@@ -25,7 +26,7 @@ const PodManagement = () => {
     const fetchPods = async () => {
       try {
         setLoading(true);
-        const response = await fetch('http://localhost:3001/api/pods', {
+        const response = await fetch(getApiUrl('api/pods'), {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         });
         if (response.ok) {
