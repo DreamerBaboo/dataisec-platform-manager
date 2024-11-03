@@ -32,7 +32,7 @@ import { useSnackbar } from 'notistack';
 import { useAppTranslation } from '../../hooks/useAppTranslation';
 
 const ImageUpload = ({ open, onClose, onSuccess }) => {
-  const { t } = useAppTranslation();
+  const { t } = useAppTranslation('imageManagement');
   const [files, setFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -174,13 +174,13 @@ const ImageUpload = ({ open, onClose, onSuccess }) => {
       console.error('❌ Error during upload process:', error);
       setProcessingStatus('');
       
-      let errorMessage = '上傳失敗';
+      let errorMessage = t('imageManagement:message.uploadFailed');
       if (error.message.includes('No authentication token')) {
-        errorMessage = '請先登入';
+        errorMessage = t('imageManagement:message.pleaseLogin');
       } else if (error.message.includes('Network error')) {
-        errorMessage = '網絡錯誤';
+        errorMessage = t('imageManagement:message.networkError');
       } else if (error.message.includes('timeout')) {
-        errorMessage = '上傳超時';
+        errorMessage = t('imageManagement:message.uploadTimeout');
       }
       
       enqueueSnackbar(errorMessage, {
@@ -242,15 +242,15 @@ const ImageUpload = ({ open, onClose, onSuccess }) => {
       if (!response.ok) {
         const error = await response.json();
         if (response.status === 403) {
-          throw new Error(t('images:imageManagement.messages.noPermission'));
+          throw new Error(t('imageManagement:message.noPermission'));
         }
-        throw new Error(error.message || t('images:imageManagement.messages.reTagError'));
+        throw new Error(error.message || t('imageManagement:message.reTagError'));
       }
 
       const result = await response.json();
       console.log('✅ Retag results:', result);
 
-      enqueueSnackbar(t('images:imageManagement.messages.reTagSuccess'), {
+      enqueueSnackbar(t('imageManagement:message.reTagSuccess'), {
         variant: 'success',
         anchorOrigin: { vertical: 'bottom', horizontal: 'right' }
       });
@@ -259,7 +259,7 @@ const ImageUpload = ({ open, onClose, onSuccess }) => {
       onSuccess();
     } catch (error) {
       console.error('❌ Error during retag process:', error);
-      enqueueSnackbar(error.message || t('images:imageManagement.messages.reTagError'), {
+      enqueueSnackbar(error.message || t('imageManagement:message.reTagError'), {
         variant: 'error',
         anchorOrigin: { vertical: 'bottom', horizontal: 'right' }
       });
@@ -279,16 +279,16 @@ const ImageUpload = ({ open, onClose, onSuccess }) => {
       <DialogTitle>
         <Box display="flex" alignItems="center" gap={1}>
           <InfoIcon color="primary" />
-          <Typography variant="h6">{t('images:imageManagement.messages.confirmLoad')}</Typography>
+          <Typography variant="h6">{t('imageManagement:message.confirmLoad')}</Typography>
         </Box>
       </DialogTitle>
       <DialogContent>
         <Box sx={{ mb: 2 }}>
           <Typography variant="subtitle1" gutterBottom>
-            {t('images:imageManagement.messages.confirmLoadMessage')}
+            {t('imageManagement:message.confirmLoadMessage')}
           </Typography>
           <Typography variant="body2" color="textSecondary" paragraph>
-            {t('images:imageManagement.registry.repository.label')}: {localStorage.getItem('repositoryHost') || 'localhost'}:{localStorage.getItem('repositoryPort') || '5000'}
+            {t('imageManagement:registry.repository.label')}: {localStorage.getItem('repositoryHost') || 'localhost'}:{localStorage.getItem('repositoryPort') || '5000'}
           </Typography>
         </Box>
         
@@ -305,7 +305,7 @@ const ImageUpload = ({ open, onClose, onSuccess }) => {
                     }
                     secondary={
                       <Typography variant="body2" color="textSecondary">
-                        {t('images:imageManagement.messages.newTag')}: {`${localStorage.getItem('repositoryHost') || 'localhost'}:${localStorage.getItem('repositoryPort') || '5000'}/${image.name}:${image.tag}`}
+                        {t('imageManagement:message.newTag')}: {`${localStorage.getItem('repositoryHost') || 'localhost'}:${localStorage.getItem('repositoryPort') || '5000'}/${image.name}:${image.tag}`}
                       </Typography>
                     }
                   />
@@ -326,7 +326,7 @@ const ImageUpload = ({ open, onClose, onSuccess }) => {
           }
           label={
             <Typography variant="body2">
-              {t('images:imageManagement.messages.keepOriginal')}
+              {t('imageManagement:message.keepOriginal')}
             </Typography>
           }
         />
@@ -345,7 +345,7 @@ const ImageUpload = ({ open, onClose, onSuccess }) => {
           onClick={() => setConfirmationOpen(false)}
           disabled={!!processingStatus}
         >
-          {t('images:imageManagement.actions.cancel')}
+          {t('imageManagement:actions.cancel')}
         </Button>
         <Button 
           onClick={handleConfirmLoad}
@@ -353,7 +353,7 @@ const ImageUpload = ({ open, onClose, onSuccess }) => {
           disabled={!!processingStatus}
           startIcon={processingStatus ? <CircularProgress size={20} /> : null}
         >
-          {processingStatus || t('images:imageManagement.actions.confirm')}
+          {processingStatus || t('imageManagement:actions.confirm')}
         </Button>
       </DialogActions>
     </Dialog>
@@ -364,7 +364,7 @@ const ImageUpload = ({ open, onClose, onSuccess }) => {
       <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
         <DialogTitle>
           <Box display="flex" justifyContent="space-between" alignItems="center">
-            {t('images:imageManagement.actions.upload')}
+            {t('imageManagement:actions.upload')}
             <IconButton onClick={handleClose} size="small" disabled={uploading}>
               <CloseIcon />
             </IconButton>
@@ -396,10 +396,10 @@ const ImageUpload = ({ open, onClose, onSuccess }) => {
             <input {...getInputProps()} />
             <UploadIcon sx={{ fontSize: 48, color: 'action.active', mb: 1 }} />
             <Typography variant="body1" gutterBottom>
-              {isDragActive ? t('images:imageManagement.actions.dropFilesHere') : t('images:imageManagement.actions.dragDropImage')}
+              {isDragActive ? t('imageManagement:actions.dropFilesHere') : t('imageManagement:actions.dragDropImage')}
             </Typography>
             <Typography variant="body2" color="textSecondary">
-              {t('images:imageManagement.actions.supportedFormats')}
+              {t('imageManagement:actions.supportedFormats')}
             </Typography>
           </Box>
 
@@ -444,7 +444,7 @@ const ImageUpload = ({ open, onClose, onSuccess }) => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose} disabled={uploading}>
-            {t('images:imageManagement.actions.cancel')}
+            {t('imageManagement:actions.cancel')}
           </Button>
           <Button
             onClick={handleUpload}
@@ -453,7 +453,7 @@ const ImageUpload = ({ open, onClose, onSuccess }) => {
             disabled={files.length === 0 || uploading}
             startIcon={uploading && <CircularProgress size={20} />}
           >
-            {uploading ? t('images:imageManagement.status.uploading') : t('images:imageManagement.actions.upload')}
+            {uploading ? t('imageManagement:status.uploading') : t('imageManagement:actions.upload')}
           </Button>
         </DialogActions>
       </Dialog>

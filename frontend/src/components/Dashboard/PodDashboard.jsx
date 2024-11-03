@@ -21,7 +21,7 @@ import {
   Checkbox,
   Button
 } from '@mui/material';
-import { useTranslation } from 'react-i18next';
+import { useAppTranslation } from '../../hooks/useAppTranslation';
 import SearchIcon from '@mui/icons-material/Search';
 import CalculateIcon from '@mui/icons-material/Calculate';
 import ReactECharts from 'echarts-for-react';
@@ -40,7 +40,7 @@ const DEFAULT_LAYOUT = [
 const LAYOUT_STORAGE_KEY = 'pod-dashboard-layout';
 
 const PodDashboard = () => {
-  const { t } = useTranslation();
+  const { t } = useAppTranslation();
   const [pods, setPods] = useState([]);
   const [selectedPods, setSelectedPods] = useState([]);
   const [podMetrics, setPodMetrics] = useState(null);
@@ -259,14 +259,14 @@ const PodDashboard = () => {
           }}>
             <Typography variant="subtitle1" fontWeight="medium">
               {selectedPods.length > 1 ? 
-                `${t('cpuUsage')} (${selectedPods.length} ${t('podsSelected')})` : 
-                t('cpuUsage')}
+                `${t('dashboard:dashboard.resources.cpu.title')} (${selectedPods.length} ${t('dashboard:podsSelected')})` : 
+                t('dashboard:dashboard.resources.cpu.title')}
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Typography variant="h4" color="primary">
               {podMetrics ? 
-                `${podMetrics.cpu.cores.toFixed(2)} cores` : 
+                `${t('dashboard:dashboard.resources.cpu.total')} ${podMetrics.cpu.cores.toFixed(2)} ${t('dashboard:dashboard.resources.cpu.used')}` : 
                 '0 cores'}
             </Typography>
           </Box>
@@ -282,8 +282,8 @@ const PodDashboard = () => {
           }}>
             <Typography variant="subtitle1" fontWeight="medium">
               {selectedPods.length > 1 ? 
-                `${t('memoryUsage')} (${selectedPods.length} ${t('podsSelected')})` : 
-                t('memoryUsage')}
+                `${t('dashboard:dashboard.resources.memory.title')} (${selectedPods.length} ${t('dashboard:podsSelected')})` : 
+                t('dashboard:dashboard.resources.memory.title')}
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -329,7 +329,7 @@ const PodDashboard = () => {
                 bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.100'
               }}>
                 <Typography variant="subtitle1" fontWeight="medium">
-                  {t('podStatusDistribution')}
+                  {t('dashboard:dashboard.podStatusDistribution')}
                 </Typography>
               </Box>
               <Box sx={{ height: 'calc(100% - 48px)' }}>
@@ -352,7 +352,7 @@ const PodDashboard = () => {
                 bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.100'
               }}>
                 <Typography variant="subtitle1" fontWeight="medium">
-                  {t('podNamespaceDistribution')}
+                  {t('dashboard:dashboard.podNamespaceDistribution')}
                 </Typography>
               </Box>
               <Box sx={{ height: 'calc(100% - 48px)' }}>
@@ -372,13 +372,13 @@ const PodDashboard = () => {
         <Grid container spacing={2}>
           <Grid item xs={12} sm={6}>
             <FormControl fullWidth size="small">
-              <InputLabel>{t('namespace')}</InputLabel>
+              <InputLabel>{t('dashboard:dashboard.namespace')}</InputLabel>
               <Select
                 value={filters.namespace}
                 onChange={(e) => setFilters(prev => ({ ...prev, namespace: e.target.value }))}
-                label={t('namespace')}
+                label={t('dashboard:dashboard.namespace')}
               >
-                <MenuItem value="all">{t('allNamespaces')}</MenuItem>
+                <MenuItem value="all">{t('dashboard:dashboard.allNamespaces')}</MenuItem>
                 {namespaces.map(ns => (
                   <MenuItem key={ns} value={ns}>{ns}</MenuItem>
                 ))}
@@ -389,7 +389,7 @@ const PodDashboard = () => {
             <TextField
               fullWidth
               size="small"
-              placeholder={t('searchPods')}
+              placeholder={t('dashboard:dashboard.searchPods')}
               value={filters.search}
               onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
               InputProps={{
@@ -423,19 +423,19 @@ const PodDashboard = () => {
                 />
               </TableCell>
               <TableCell sx={{ bgcolor: 'background.paper' }}>
-                {t('podName')}
+                {t('dashboard:dashboard.podName')}
               </TableCell>
               <TableCell sx={{ bgcolor: 'background.paper' }}>
-                {t('namespace')}
+                {t('dashboard:dashboard.namespace')}
               </TableCell>
               <TableCell sx={{ bgcolor: 'background.paper' }}>
-                {t('status')}
+                {t('dashboard:dashboard.status')}
               </TableCell>
               <TableCell align="right" sx={{ bgcolor: 'background.paper' }}>
-                {t('restarts')}
+                {t('dashboard:dashboard.restarts')}
               </TableCell>
               <TableCell align="right" sx={{ bgcolor: 'background.paper' }}>
-                {t('age')}
+                {t('dashboard:dashboard.age')}
               </TableCell>
             </TableRow>
           </TableHead>

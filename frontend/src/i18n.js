@@ -15,6 +15,7 @@ import enSettings from './locales/en/settings.json';
 import enUtils from './locales/en/utils.json';
 import enValidation from './locales/en/validation.json';
 import enPodManagement from './locales/en/podmanagement.json';
+import enImageManagement from './locales/en/imagemanagement.json';
 import zhAuth from './locales/zh-TW/auth.json';
 import zhCommon from './locales/zh-TW/common.json';
 import zhComponents from './locales/zh-TW/components.json';
@@ -28,6 +29,7 @@ import zhSettings from './locales/zh-TW/settings.json';
 import zhUtils from './locales/zh-TW/utils.json';
 import zhValidation from './locales/zh-TW/validation.json';
 import zhPodManagement from './locales/zh-TW/podmanagement.json';
+import zhImageManagement from './locales/zh-TW/imagemanagement.json';
 
 i18n
   .use(initReactI18next)
@@ -46,7 +48,8 @@ i18n
         settings: enSettings,
         utils: enUtils,
         validation: enValidation,
-        podManagement: enPodManagement
+        podManagement: enPodManagement,
+        imageManagement: enImageManagement
       },
       'zh-TW': {
         auth: zhAuth,
@@ -61,7 +64,8 @@ i18n
         settings: zhSettings,
         utils: zhUtils,
         validation: zhValidation,
-        podManagement: zhPodManagement
+        podManagement: zhPodManagement,
+        imageManagement: zhImageManagement
       }
     },
     lng: 'zh-TW',
@@ -69,7 +73,7 @@ i18n
     interpolation: {
       escapeValue: false
     },
-    ns: ['auth', 'common', 'components', 'dashboard', 'errors', 'images', 'metrics', 'monitoring', 'navigation', 'settings', 'utils', 'validation', 'podManagement'],
+    ns: ['auth', 'common', 'components', 'dashboard', 'errors', 'images', 'metrics', 'monitoring', 'navigation', 'settings', 'utils', 'validation', 'podManagement', 'imageManagement'],
     defaultNS: 'common'
   });
 

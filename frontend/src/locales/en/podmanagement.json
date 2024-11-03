@@ -1,6 +1,42 @@
+
 {
-    "podManagement": {
-        "title": "Pod Management",
+    "pods": {
+        "management": {
+            "title": "Pod Management",
+            "create": "Create Pod",
+            "delete": "Delete Pod",
+            "refresh": "Refresh",
+            "search": "Search Pod",
+            "noPodsFound": "No Pods Found",
+            "columns": {
+                "name": "Name",
+                "namespace": "Namespace",
+                "status": "Status",
+                "restarts": "Restarts",
+                "age": "Age"
+            },
+            "status": {
+                "running": "Running",
+                "pending": "Pending",
+                "failed": "Failed",
+                "succeeded": "Succeeded",
+                "unknown": "Unknown"
+            },  
+            "actions": {
+                "view": "View",
+                "edit": "Edit",
+                "delete": "Delete",
+                "logs": "Logs",
+                "shell": "Shell"
+            }
+        },
+        "details": {
+            "title": "Pod Details",
+            "basic": "Basic Information",
+            "status": "Status Information",
+            "events": "Events",
+            "logs": "Logs"
+        },
         "table": {
             "name": "Name",
             "namespace": "Namespace",
@@ -8,5 +44,5 @@
             "restarts": "Restarts",
             "age": "Age"
         }
-    }
+    }   
 }

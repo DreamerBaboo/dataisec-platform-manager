@@ -31,15 +31,14 @@ import {
   Search as SearchIcon,
   Clear as ClearIcon
 } from '@mui/icons-material';
-//import { useTranslation } from 'react-i18next';
+import { useAppTranslation } from '../../hooks/useAppTranslation';
 import ImageUpload from './ImageUpload';
 import ImageDetails from './ImageDetails';
 import { useSnackbar } from 'notistack';
 import RepositoryConfig from './RepositoryConfig';
-import { useAppTranslation } from '../../hooks/useAppTranslation';
 
 const ImageList = () => {
-  const { t } = useAppTranslation();
+  const { t } = useAppTranslation("imageManagement");
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -138,8 +137,9 @@ const ImageList = () => {
           'Accept': 'application/json'
         }
       });
+      
       if (!response.ok) {
-        throw new Error(t('images:imageManagement.messages.errorFetch'));
+        throw new Error('Failed to fetch images');
       }
       
       const data = await response.json();
@@ -234,7 +234,7 @@ const ImageList = () => {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || '刪除鏡像失敗');
+        throw new Error(error.message || t('imageManagement:message.deleteFailed'));
       }
 
       const result = await response.json();
@@ -245,16 +245,16 @@ const ImageList = () => {
       
       if (hasErrors) {
         // 如果有錯誤，顯示部分成功的消息
-        enqueueSnackbar(t('images:imageManagement.messages.deletePartFail'), {
+        enqueueSnackbar(t('imageManagement:message.partialDeleteFailed'), {
           variant: 'warning',
           anchorOrigin: {
             vertical: 'bottom',
-            horizontal: 'right'  // default 
+            horizontal: 'right'
           }
         });
       } else {
         // 全部成功
-        enqueueSnackbar(t('images:imageManagement.messages.deleteSuccess'), {
+        enqueueSnackbar(t('imageManagement:message.deleteSuccess'), {
           variant: 'success',
           anchorOrigin: {
             vertical: 'bottom',
@@ -268,7 +268,7 @@ const ImageList = () => {
       setSelected([]);
     } catch (error) {
       console.error('❌ Error deleting images:', error);
-      enqueueSnackbar(error.message || t('images:imageManagement.messages.deletError'), {
+      enqueueSnackbar(error.message || t('imageManagement:message.deleteFailed'), {
         variant: 'error',
         anchorOrigin: {
           vertical: 'bottom',
@@ -283,7 +283,7 @@ const ImageList = () => {
     setPackagingStatus(prev => ({ ...prev, loading: true, progress: 0 }));
     
     // 顯示開始打包的通知
-    const snackbarKey = enqueueSnackbar(t('images:imageManagement.message.packageStart'), {
+    const snackbarKey = enqueueSnackbar(t('imageManagement:message.packageStart'), {
       variant: 'info',
       persist: true,
       anchorOrigin: {
@@ -315,7 +315,7 @@ const ImageList = () => {
 
       // 更新通知為準備中
       closeSnackbar(snackbarKey);
-      const preparingKey = enqueueSnackbar(t('images:images.imageManagement.messages.packagePreparing'), {
+      const preparingKey = enqueueSnackbar(t('imageManagement:message.preparing'), {
         variant: 'info',
         persist: true,
         anchorOrigin: {
@@ -346,7 +346,7 @@ const ImageList = () => {
 
       // 更新通知為下載中
       closeSnackbar(preparingKey);
-      const downloadingKey = enqueueSnackbar(t('images:imageManagement.messages.packageDownloading'), {
+      const downloadingKey = enqueueSnackbar(t('imageManagement.message.downloading'), {
         variant: 'info',
         persist: true,
         anchorOrigin: {
@@ -377,7 +377,7 @@ const ImageList = () => {
 
       // 關閉下載通知並顯示成功通知
       closeSnackbar(downloadingKey);
-      enqueueSnackbar(t('images:imageManagement.messages.packageSuccess'), { 
+        enqueueSnackbar(t('imageManagement.message.downloadSuccess'), { 
         variant: 'success',
         autoHideDuration: 3000,
         anchorOrigin: {
@@ -387,7 +387,7 @@ const ImageList = () => {
       });
     } catch (error) {
       console.error('❌ Error packaging images:', error);
-      enqueueSnackbar(error.message || t('images:imageManagement.messages.packageError'), { 
+      enqueueSnackbar(error.message || t('imageManagement.message.packageFailed'), { 
         variant: 'error',
         autoHideDuration: 3000,
         anchorOrigin: {
@@ -429,7 +429,7 @@ const ImageList = () => {
 
   const handleConfigSave = ({ repository, port }) => {
     setConfigOpen(false);
-    enqueueSnackbar(t('images:imageManagement.messages.configSuccess'), {
+    enqueueSnackbar('倉庫設定已更新', {
       variant: 'success',
       anchorOrigin: { vertical: 'bottom', horizontal: 'right' }
     });
@@ -444,11 +444,11 @@ const ImageList = () => {
 
   // 使用 MUI 的表頭組件
   const headCells = [
-    { id: 'name', label: t('images:imageManagement.table.name') },
-    { id: 'tag', label: t('images:imageManagement.table.tag') },
-    { id: 'size', label: t('images:imageManagement.table.size'), numeric: true },
-    { id: 'uploadDate', label: t('images:imageManagement.table.uploadDate') },
-    { id: 'status', label: t('images:imageManagement.table.status') },
+    { id: 'name', label: t('imageManagement:table.name') },
+    { id: 'tag', label: t('imageManagement:table.tag') },
+    { id: 'size', label: t('imageManagement:table.size'), numeric: true },
+    { id: 'uploadDate', label: t('imageManagement:table.uploadDate') },
+    { id: 'status', label: t('imageManagement:table.status') },
   ];
 
   // 修改格式化大小的函數
@@ -490,7 +490,6 @@ const ImageList = () => {
       }
 
       // 檢查日期是否有效
-      console.log('🔍 Date:', date);
       if (isNaN(date.getTime())) {
         console.warn('Invalid date:', dateString);
         return dateString; // 如果無法解析，返回原始字符串
@@ -523,7 +522,7 @@ const ImageList = () => {
           gap: 2 
         }}>
           <Typography variant="h6" component="div">
-            {t('images:imageManagement.imageList')} ({images.length})
+            {t('imageManagement:common.imageList')} ({images.length})
           </Typography>
           <Box sx={{ 
             display: 'flex', 
@@ -535,7 +534,7 @@ const ImageList = () => {
           }}>
             <TextField
               size="small"
-              placeholder={t('images:imageManagement.searchImages')}
+              placeholder={t('imageManagement:message.searchImages')}
               value={searchTerm}
               onChange={(e) => handleSearch(e.target.value)}
               sx={{ flex: 1 }}
@@ -596,7 +595,7 @@ const ImageList = () => {
                     </TableSortLabel>
                   </TableCell>
                 ))}
-                <TableCell align="center">{t('images:imageManagement.table.actions')}</TableCell>
+                <TableCell align="center">{t('imageManagement:actions.close')}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -626,7 +625,7 @@ const ImageList = () => {
                       </TableCell>
                       <TableCell>
                         <Chip 
-                          label={t(`images:imageManagement.status.${image.status}`)}
+                          label={t(image.status)}
                           color={getStatusColor(image.status)}
                           size="small"
                         />
@@ -648,7 +647,7 @@ const ImageList = () => {
                 <TableRow>
                   <TableCell colSpan={7} align="center">
                     <Typography color="textSecondary">
-                      {error ? t('images:imageManagement.errorLoadingImages') : t('images:imageManagement.noImagesFound')}
+                      {error ? t('imageManagement:errorLoadingImages') : t('imageManagement:message.noImagesFound')}
                     </Typography>
                   </TableCell>
                 </TableRow>
@@ -675,7 +674,7 @@ const ImageList = () => {
                   startIcon={<DeleteIcon />}
                   onClick={handleBulkDelete}
                 >
-                  {t('images:imageManagement.actions.delete')} ({selected.length})  
+                  {t('imageManagement:actions.delete')} ({selected.length})
                 </Button>
                 <Button
                   variant="contained"
@@ -684,7 +683,7 @@ const ImageList = () => {
                   onClick={handlePackage}
                   disabled={packagingStatus.loading}
                 >
-                  {packagingStatus.loading ? t('images:imageManagement.actions.packaging') : t('images:imageManagement.actions.package')} ({selected.length})
+                  {packagingStatus.loading ? t('imageManagement:actions.packaging') : t('imageManagement:actions.package')} ({selected.length})
                 </Button>
               </>
             )}
@@ -695,7 +694,7 @@ const ImageList = () => {
             startIcon={<UploadIcon />}
             onClick={() => setUploadOpen(true)}
           >
-            {t('images:imageManagement.actions.upload')}
+            {t('imageManagement:actions.upload')}
           </Button>
         </Box>
       </Paper>
@@ -731,7 +730,7 @@ const ImageList = () => {
       {!loading && !error && images.length === 0 && (
         <Box sx={{ p: 3, textAlign: 'center' }}>
           <Typography color="textSecondary">
-            {t('images:images.imageManagement.noImagesFound')}
+            {t('imageManagement:message.noImagesFound')}
           </Typography>
         </Box>
       )}
@@ -743,6 +742,7 @@ const ImageList = () => {
     </Box>
   );
 };
+export default ImageList;
 
 // MUI 的排序輔助函數
 function descendingComparator(a, b, orderBy) {
@@ -777,4 +777,3 @@ function stableSort(array, comparator) {
   return stabilizedThis.map((el) => el[0]);
 }
 
-export default ImageList;

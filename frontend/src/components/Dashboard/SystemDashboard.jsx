@@ -14,7 +14,7 @@ const SystemDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState(null);
   const refreshTimerRef = useRef(null);
-  const { t } = useTranslation();
+  const { t } = useAppTranslation();
 
   // 檢查頁面是否活躍
   const usePageVisibility = () => {
@@ -149,7 +149,7 @@ const SystemDashboard = () => {
                 <Tab
                   key={node}
                   value={node}
-                  label={node === 'cluster' ? t('common:common.cluster') : node}
+                  label={node === 'cluster' ? t('dashboard:common.cluster') : node}
                 />
               ))}
             </Tabs>
@@ -168,7 +168,7 @@ const SystemDashboard = () => {
                 color: 'text.secondary',
                 whiteSpace: 'nowrap'
               }}>
-                {t('common:common.lastUpdate')}: {lastUpdate.toLocaleTimeString()}
+                {t('dashboard:common.lastUpdate')}: {lastUpdate.toLocaleTimeString()}
               </Box>
             )}
             <Tooltip title={t('common:common.refresh')}>

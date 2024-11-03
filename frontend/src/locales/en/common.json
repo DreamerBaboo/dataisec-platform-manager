@@ -62,6 +62,14 @@
       "error": "Error",
       "warning": "Warning",
       "info": "Information"
+    },
+    "sideMenu": {
+      "podManagement": "Pod Management",
+      "dashboard": "Dashboard",
+      "podDashboard": "Pod Dashboard",
+      "imageManagement": "Image Management",
+      "logs": "Logs",
+      "profile": "Profile"
     }
   }
 } 

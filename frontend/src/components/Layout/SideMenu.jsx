@@ -25,9 +25,11 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@mui/material/styles';
+import { useAppTranslation } from '../../hooks/useAppTranslation';
+
 
 const SideMenu = ({ open, toggleDrawer }) => {
-  const { t } = useTranslation();
+  const { t } = useAppTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const [imageMenuOpen, setImageMenuOpen] = React.useState(false);
@@ -35,32 +37,32 @@ const SideMenu = ({ open, toggleDrawer }) => {
 
   const menuItems = [
     {
-      text: 'dashboard',
+      text: t('common:components.sideMenu.dashboard'),
       icon: <DashboardIcon />,
       path: '/'
     },
     {
-      text: 'podDashboard',
+      text: t('common:components.sideMenu.podDashboard'),
       icon: <StorageIcon />,
       path: '/pod-dashboard'
     },
     {
-      text: 'podManagement',
+      text: t('common:components.sideMenu.podManagement'),
       icon: <StorageIcon />,
       path: '/pods'
     },
     {
-      text: 'imageManagement',
+      text: t('common:components.sideMenu.imageManagement'),
       icon: <ImageIcon />,
       path: '/images'
     },
     {
-      text: 'logs',
+      text: t('common:components.sideMenu.logs'),
       icon: <LogIcon />,
       path: '/logs'
     },
     {
-      text: 'profile',
+      text: t('common:components.sideMenu.profile'),
       icon: <PersonIcon />,
       path: '/profile'
     }

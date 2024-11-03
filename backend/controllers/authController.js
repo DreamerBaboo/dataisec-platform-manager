@@ -2,19 +2,32 @@ const jwt = require('jsonwebtoken');
 
 exports.login = async (req, res) => {
   const { username, password } = req.body;
-  console.log('Login attempt:', { username, password });
+  console.log('🔐 Login attempt:', { username });
+  
   try {
     if (username === 'testuser' && password === 'testpassword') {
-      const token = jwt.sign({ username }, process.env.JWT_SECRET, { expiresIn: '1h' });
-      console.log('Login successful:', { username, token });
-      res.json({ token, user: { username } });
+      const token = jwt.sign(
+        { username }, 
+        process.env.JWT_SECRET || 'your-secret-key',
+        { expiresIn: '1h' }
+      );
+      
+      console.log('✅ Login successful:', { username });
+      res.json({ 
+        token, 
+        user: { username } 
+      });
     } else {
-      console.log('Login failed: Invalid credentials');
-      res.status(401).json({ message: '無效的用戶名或密碼' });
+      console.log('❌ Login failed: Invalid credentials');
+      res.status(401).json({ 
+        message: '無效的用戶名或密碼' 
+      });
     }
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ message: '登錄過程中發生錯誤' });
+    console.error('❌ Login error:', error);
+    res.status(500).json({ 
+      message: '登錄過程中發生錯誤' 
+    });
   }
 };
 

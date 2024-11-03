@@ -1,39 +1,34 @@
 # Dependencies
-**/node_modules
-**/dist
+node_modules/
+.pnp/
+.pnp.js
 
-# Environment files
-**/.env
-**/.env.local
-**/.env.*.local
-
-# Logs
-**/logs
-**/*.log
-**/npm-debug.log*
-
-# Editor directories
-**/.idea
-**/.vscode
-**/*.swp
-**/*.swo
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# Build outputs
-**/build
-**/dist
-**/.next
-**/.nuxt
-**/out/
+# Production
+/backend/dist/
+/backend/public/
+/frontend/build/
 
 # Testing
-**/coverage
+/coverage/
 
-# Optional npm cache directory
-.npm
+# Environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
-# Optional eslint cache
-.eslintcache
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

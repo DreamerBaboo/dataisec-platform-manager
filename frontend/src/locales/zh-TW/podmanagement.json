@@ -1,12 +1,48 @@
 {
-    "podManagement": {
-        "title": "Pod 管理",
+    "pods": {
+        "management": {
+            "title": "Pod 管理",
+            "create": "建立 Pod",
+            "delete": "刪除 Pod",
+            "refresh": "重新整理",
+            "search": "搜尋 Pod",
+            "noPodsFound": "未找到 Pod",
+            "columns": {
+                "name": "名稱",
+                "namespace": "命名空間",
+                "status": "狀態",
+                "restarts": "重啟次數",
+                "age": "運行時間",
+                "actions": "操作"
+            },
+            "status": {
+                "running": "運行中",
+                "pending": "等待中",
+                "failed": "失敗",
+                "succeeded": "成功",
+                "unknown": "未知"
+            },
+            "actions": {
+                "view": "查看",
+                "edit": "編輯",
+                "delete": "刪除",
+                "logs": "日誌",
+                "shell": "終端機"
+            }
+        },
+        "details": {
+            "title": "Pod 詳情",
+            "basic": "基本資訊",
+            "status": "狀態資訊",
+            "events": "事件",
+            "logs": "日誌"
+        },
         "table": {
             "name": "名稱",
             "namespace": "命名空間",
             "status": "狀態",
             "restarts": "重啟次數",
-            "age": "年齡"
+            "age": "運行時間"
         }
     }
 }

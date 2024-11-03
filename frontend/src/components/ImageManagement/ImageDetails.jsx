@@ -19,7 +19,7 @@ import {
   CircularProgress,
   Alert
 } from '@mui/material';
-import { useTranslation } from 'react-i18next';
+import { useAppTranslation } from '../../hooks/useAppTranslation';
 
 // Tab Panel 組件
 function TabPanel({ children, value, index, ...other }) {
@@ -36,7 +36,7 @@ function TabPanel({ children, value, index, ...other }) {
 }
 
 const ImageDetails = ({ image, open, onClose }) => {
-  const { t } = useTranslation();
+  const { t } = useAppTranslation("imageManagement");
   const [tabValue, setTabValue] = useState(0);
 
   const handleTabChange = (event, newValue) => {
@@ -60,16 +60,16 @@ const ImageDetails = ({ image, open, onClose }) => {
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
         <Typography variant="h6">
-          {t('imageDetails')}
+          {t('imageManagement:imageManagement.imageDetails.title')}
         </Typography>
       </DialogTitle>
       <DialogContent>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <Tabs value={tabValue} onChange={handleTabChange}>
-            <Tab label={t('basicInfo')} />
-            <Tab label={t('tags')} />
-            <Tab label={t('layers')} />
-            <Tab label={t('config')} />
+            <Tab label={t('imageManagement:imageManagement.imageDetails.basicInfo')} />
+            <Tab label={t('imageManagement:imageManagement.imageDetails.tags')} />
+            <Tab label={t('imageManagement:imageManagement.imageDetails.layers')} />
+            <Tab label={t('imageManagement:imageManagement.imageDetails.config')} />
           </Tabs>
         </Box>
 
@@ -77,7 +77,7 @@ const ImageDetails = ({ image, open, onClose }) => {
           <Grid2 container spacing={2}>
             <Grid2 item xs={12}>
               <Typography variant="subtitle2" color="textSecondary">
-                {t('id')}
+                {t('imageManagement:imageManagement.imageDetails.id')}
               </Typography>
               <Typography variant="body1" gutterBottom>
                 {image.id}
@@ -85,7 +85,7 @@ const ImageDetails = ({ image, open, onClose }) => {
             </Grid2>
             <Grid2 item xs={12} sm={6}>
               <Typography variant="subtitle2" color="textSecondary">
-                {t('size')}
+                {t('imageManagement:imageManagement.imageDetails.size')}
               </Typography>
               <Typography variant="body1" gutterBottom>
                 {formatSize(image.size)}
@@ -93,7 +93,7 @@ const ImageDetails = ({ image, open, onClose }) => {
             </Grid2>
             <Grid2 item xs={12} sm={6}>
               <Typography variant="subtitle2" color="textSecondary">
-                {t('created')}
+                {t('imageManagement:imageManagement.imageDetails.created')}
               </Typography>
               <Typography variant="body1" gutterBottom>
                 {formatDate(image.createdAt)}
@@ -103,7 +103,7 @@ const ImageDetails = ({ image, open, onClose }) => {
               <>
                 <Grid2 item xs={12} sm={6}>
                   <Typography variant="subtitle2" color="textSecondary">
-                    {t('architecture')}
+                    {t('imageManagement:imageManagement.imageDetails.architecture')}
                   </Typography>
                   <Typography variant="body1" gutterBottom>
                     {image.details.platform.architecture}
@@ -111,7 +111,7 @@ const ImageDetails = ({ image, open, onClose }) => {
                 </Grid2>
                 <Grid2 item xs={12} sm={6}>
                   <Typography variant="subtitle2" color="textSecondary">
-                    {t('os')}
+                    {t('imageManagement:imageManagement.imageDetails.os')}
                   </Typography>
                   <Typography variant="body1" gutterBottom>
                     {image.details.platform.os}
@@ -131,7 +131,7 @@ const ImageDetails = ({ image, open, onClose }) => {
                     primary={
                       <Typography variant="body1">
                         <Chip 
-                          label={tag}
+                          label={typeof tag === 'object' ? `${tag.repository}:${tag.tag}` : tag}
                           size="small"
                           color="primary"
                           sx={{ maxWidth: '100%' }}
@@ -146,7 +146,7 @@ const ImageDetails = ({ image, open, onClose }) => {
                 <ListItemText
                   primary={
                     <Typography variant="body1" color="textSecondary">
-                      {t('noTags')}
+                      {t('imageManagement:imageManagement.imageDetails.noTags')}
                     </Typography>
                   }
                 />
@@ -177,7 +177,9 @@ const ImageDetails = ({ image, open, onClose }) => {
         <TabPanel value={tabValue} index={3}>
           {image.details?.config && (
             <Box>
-              <Typography variant="h6" gutterBottom>環境變量</Typography>
+              <Typography variant="h6" gutterBottom>
+                {t('imageManagement:imageManagement.imageDetails.environmentVariables')}
+              </Typography>
               <Paper sx={{ p: 2, mb: 2, bgcolor: 'grey.50' }}>
                 {image.details.config.env?.map((env, index) => (
                   <Typography key={index} variant="body2" sx={{ fontFamily: 'monospace' }}>
@@ -186,21 +188,27 @@ const ImageDetails = ({ image, open, onClose }) => {
                 ))}
               </Paper>
 
-              <Typography variant="h6" gutterBottom>命令</Typography>
+              <Typography variant="h6" gutterBottom>
+                {t('imageManagement:imageManagement.imageDetails.command')}
+              </Typography>
               <Paper sx={{ p: 2, mb: 2, bgcolor: 'grey.50' }}>
                 <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                   {image.details.config.cmd?.join(' ') || '-'}
                 </Typography>
               </Paper>
 
-              <Typography variant="h6" gutterBottom>工作目錄</Typography>
+              <Typography variant="h6" gutterBottom>
+                {t('imageManagement:imageManagement.imageDetails.workdir')}
+              </Typography>
               <Paper sx={{ p: 2, mb: 2, bgcolor: 'grey.50' }}>
                 <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                   {image.details.config.workdir || '-'}
                 </Typography>
               </Paper>
 
-              <Typography variant="h6" gutterBottom>暴露端口</Typography>
+              <Typography variant="h6" gutterBottom>
+                {t('imageManagement:imageManagement.imageDetails.exposedPorts')}
+              </Typography>
               <Paper sx={{ p: 2, mb: 2, bgcolor: 'grey.50' }}>
                 {Object.keys(image.details.config.exposedPorts || {}).map((port, index) => (
                   <Typography key={index} variant="body2" sx={{ fontFamily: 'monospace' }}>
@@ -214,7 +222,7 @@ const ImageDetails = ({ image, open, onClose }) => {
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} color="primary">
-          {t('close')}
+          {t('imageManagement:actions.close')}
         </Button>
       </DialogActions>
     </Dialog>

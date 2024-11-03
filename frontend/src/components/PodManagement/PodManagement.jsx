@@ -76,7 +76,7 @@ const PodManagement = () => {
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>
-        {t('podManagement:podManagement.title')}
+        {t('podManagement:pods.management.title')}
       </Typography>
       <TableContainer component={Paper} sx={{ maxHeight: 400, overflow: 'auto' }}>
         <Table stickyHeader>
@@ -89,11 +89,11 @@ const PodManagement = () => {
                   onChange={handleSelectAllClick}
                 />
               </TableCell>
-              <TableCell sx={{ bgcolor: 'background.paper' }}>{t('podManagement:podManagement.table.name')}</TableCell>
-              <TableCell sx={{ bgcolor: 'background.paper' }}>{t('podManagement:podManagement.table.namespace')}</TableCell>
-              <TableCell sx={{ bgcolor: 'background.paper' }}>{t('podManagement:podManagement.table.status')}</TableCell>
-              <TableCell align="right" sx={{ bgcolor: 'background.paper' }}>{t('podManagement:podManagement.table.restarts')}</TableCell>
-              <TableCell align="right" sx={{ bgcolor: 'background.paper' }}>{t('podManagement:podManagement.table.age')}</TableCell>
+              <TableCell sx={{ bgcolor: 'background.paper' }}>{t('podManagement:pods.table.name')}</TableCell>
+              <TableCell sx={{ bgcolor: 'background.paper' }}>{t('podManagement:pods.table.namespace')}</TableCell>
+              <TableCell sx={{ bgcolor: 'background.paper' }}>{t('podManagement:pods.table.status')}</TableCell>
+              <TableCell align="right" sx={{ bgcolor: 'background.paper' }}>{t('podManagement:pods.table.restarts')}</TableCell>
+              <TableCell align="right" sx={{ bgcolor: 'background.paper' }}>{t('podManagement:pods.table.age')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
