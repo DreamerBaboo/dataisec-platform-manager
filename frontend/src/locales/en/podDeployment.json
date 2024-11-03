@@ -1,0 +1,214 @@
+{
+  "podDeployment": {
+    "title": "Pod Deployment Management",
+    "createNew": "Create New Deployment",
+    "steps": {
+      "basicSetup": "Basic Setup",
+      "resourceAllocation": "Resource Allocation",
+      "affinity": "Affinity",
+      "storageConfiguration": "Storage Configuration",
+      "configurationMapping": "Configuration Mapping",
+      "preview": "Preview"
+    },      
+    "filter": {
+      "namespace": "Namespace",
+      "allNamespaces": "All Namespaces",
+      "search": "Search"
+    },
+    "tabs": {
+      "basic": "Basic",
+      "resources": "Resources",
+      "affinity": "Affinity",
+      "volumes": "Volumes",
+      "configMaps": "ConfigMaps",
+      "secrets": "Secrets"
+    },
+    "basic": {
+      "name": "Deployment Name",
+      "namespace": "Namespace",
+      "type": "Deployment Type",
+      "replicas": "Replicas",
+      "repository": "Image Repository",
+      "tag": "Image Tag",
+      "pullPolicy": "Pull Policy"
+    },
+    "table": {
+      "name": "Name",
+      "namespace": "Namespace",
+      "replicas": "Replicas",
+      "status": "Status",
+      "actions": "Actions",
+      "edit": "Edit",
+      "delete": "Delete",
+      "ready": "Ready",
+      "restarts": "Restart",
+      "age": "Age",
+      "node": "Node",
+      "metrics": "Metrics",
+      "ip": "IP"
+    },
+    "actions": {
+      "edit": "Edit",
+      "delete": "Delete",
+      "configure": "Configure",
+      "preview": "Preview",
+      "progress": "Progress",
+      "logs": "Logs",
+      "performAction": "Perform Action"
+    },
+    "create": {
+      "title": "Create New Deployment"
+    },
+    "edit": {
+      "title": "Edit Deployment"
+    },
+    "form": {
+      "name": "Deployment Name",
+      "namespace": "Namespace",
+      "type": "Deployment Type",
+      "replicas": "Replicas",
+      "imageRepository": "Image Repository",
+      "imageTag": "Image Tag"
+    },
+    "resources": {
+      "requests": "Resource Requests",
+      "limits": "Resource Limits",
+      "cpu": "CPU",
+      "memory": "Memory"
+    },
+    "affinity": {
+      "nodeAffinity": "Node Affinity",
+      "podAffinity": "Pod Affinity",
+      "podAntiAffinity": "Pod Anti-Affinity"
+    },
+    "volumes": {
+      "title": "Storage Volumes",
+      "add": "Add Storage Volume"
+    },
+    "configMaps": {
+      "title": "Configuration Maps",
+      "add": "Add Configuration Map"
+    },
+    "secrets": {
+      "title": "Secrets",
+      "add": "Add Secret"
+    },
+    "preview": {
+      "title": "Preview",
+      "field": "Field",
+      "value": "Value",
+      "name": "Name",
+      "namespace": "Namespace",
+      "type": "Type",
+      "image": "Image"
+    },
+    "logs": {
+      "title": "Container Logs",
+      "tailLines": "Tail Lines",
+      "autoRefresh": "Auto Refresh",
+      "stopRefresh": "Stop Refresh",
+      "noLogs": "No Logs",
+      "downloadLogs": "Download Logs",
+      "clearLogs": "Clear Logs"
+    },
+    "progress": {
+      "title": "Deployment Progress",
+      "status": "Current Status",
+      "replicas": "{{available}}/{{total}} replicas ready",
+      "events": "Deployment Events",
+      "conditions": {
+        "Available": "Available",
+        "Progressing": "Progressing",
+        "ReplicaFailure": "Replica Failure"
+      } 
+    },
+    "validation": {
+      "errors": "Configuration Validation Errors",
+      "name": {
+        "required": "Deployment name is required",
+        "format": "Deployment name must start and end with a letter or number, and can only contain lowercase letters, numbers, and hyphens"
+      },
+      "namespace": {
+        "required": "Namespace is required"
+      },
+      "image": {
+        "repository": "Image repository is required",
+        "tag": "Image tag is required"
+      },
+      "resources": {
+        "cpu": {
+          "format": "Invalid CPU format (e.g., 100m or 0.1)",
+          "limit": "CPU requests cannot be greater than limits"
+        },
+        "memory": {
+          "format": "Invalid memory format (e.g., 128Mi)",
+          "limit": "Memory requests cannot be greater than limits"
+        }
+      },
+      "volume": {
+        "name": "Storage volume name is required",
+        "mountPath": "Mount path is required",
+        "source": "Storage volume source is required"
+      },
+      "configMap": {
+        "name": "ConfigMap name is required",
+        "mountPath": "Mount path is required",
+        "data": "At least one configuration item is required"
+      },    
+      "secret": {
+        "name": "Secret name is required",
+        "mountPath": "Mount path is required",
+        "data": "At least one configuration item is required"
+      }
+    },
+    "templates": {
+      "title": "Deployment Templates Management",
+      "save": "Save New Template",
+      "browse": "Browse Templates",
+      "name": "Template Name",
+      "description": "Template Description",
+      "category": "Template Category",
+      "filterByCategory": "Filter by Category",
+      "saveButton": "Save Template",
+      "loadButton": "Load Template",
+      "loadTemplate": "Load Template",
+      "saveAsTemplate": "Save as Template",
+      "categories": {
+        "application": "Application",
+        "database": "Database",
+        "middleware": "Middleware",
+        "monitoring": "Monitoring",
+        "custom": "Custom"
+      },
+      "nameRequired": "Template name is required",
+      "loadError": "Failed to load template",
+      "saveError": "Failed to save template",
+      "deleteError": "Failed to delete template",
+      "confirmDelete": "Are you sure you want to delete this template?"
+    },
+    "config": {
+      "import": "Import Configuration",
+      "export": "Export Configuration",
+      "importSuccess": "Configuration imported successfully",
+      "exportSuccess": "Configuration exported successfully",
+      "importError": "Failed to import configuration",
+      "exportError": "Failed to export configuration",
+      "invalidFile": "Invalid configuration file",
+      "selectFile": "Select configuration file",
+      "fileType": "YAML file"
+    },
+    "diff": {
+      "title": "Configuration Diff",
+      "summary": "Change Summary",
+      "totalChanges": "Total {{count}} changes detected",
+      "modified": "Modified",
+      "deleted": "Deleted",
+      "viewChanges": "View Changes",
+      "majorChanges": "Warning: Major changes detected",
+      "noChanges": "No changes detected",
+      "field": "Field",
+      "oldValue": "Old Value",
+      "newValue": "New Value"
+    }
+  }
+}

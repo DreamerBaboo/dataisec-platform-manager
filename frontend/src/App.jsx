@@ -9,6 +9,7 @@ import { I18nextProvider } from 'react-i18next';
 import { i18n } from './i18n';
 import { SnackbarProvider } from 'notistack';
 import { useAppTranslation } from './hooks/useAppTranslation';
+import PodDeploymentManagement from './components/PodDeployment/PodDeploymentManagement';
 
 export const ColorModeContext = React.createContext({ 
   toggleColorMode: () => {},
@@ -116,6 +117,14 @@ function AppContent() {
                         <MainPage />
                       </PrivateRoute>
                     }
+                  />
+                  <Route 
+                    path="/pod-deployments" 
+                    element={
+                      <PrivateRoute>
+                        <PodDeploymentManagement />
+                      </PrivateRoute>
+                    } 
                   />
                 </Routes>
               </Router>

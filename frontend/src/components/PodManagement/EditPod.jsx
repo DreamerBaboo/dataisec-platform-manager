@@ -14,10 +14,10 @@ import {
   Alert,
   CircularProgress
 } from '@mui/material';
-import { useTranslation } from 'react-i18next';
+import { useAppTranslation } from '../../hooks/useAppTranslation';
 
 const EditPod = () => {
-  const { t } = useTranslation();
+  const { t } = useAppTranslation();
   const navigate = useNavigate();
   const { id } = useParams();
   const location = useLocation();
@@ -140,7 +140,7 @@ const EditPod = () => {
     <Box sx={{ maxWidth: 800, mx: 'auto', mt: 4 }}>
       <Paper elevation={3} sx={{ p: 4 }}>
         <Typography variant="h5" gutterBottom>
-          {t('editPod')}
+          {t('podManagement:edit.title')}
         </Typography>
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         <form onSubmit={handleSubmit}>
@@ -150,7 +150,7 @@ const EditPod = () => {
                 required
                 fullWidth
                 name="name"
-                label={t('podName')}
+                label={t('podManagement:form.name')}
                 value={formData.name}
                 onChange={handleChange}
                 disabled
@@ -158,11 +158,11 @@ const EditPod = () => {
             </Grid2>
             <Grid2 item xs={12} sm={6}>
               <FormControl fullWidth>
-                <InputLabel>{t('namespace')}</InputLabel>
+                <InputLabel>{t('podManagement:form.namespace')}</InputLabel>
                 <Select
                   name="namespace"
                   value={formData.namespace}
-                  label={t('namespace')}
+                  label={t('podManagement:form.namespace')}
                   onChange={handleChange}
                   disabled
                 >
@@ -176,17 +176,17 @@ const EditPod = () => {
             </Grid2>
             <Grid2 item xs={12} sm={6}>
               <FormControl fullWidth>
-                <InputLabel>{t('podType')}</InputLabel>
+                <InputLabel>{t('podManagement:form.type')}</InputLabel>
                 <Select
                   name="type"
                   value={formData.type}
-                  label={t('podType')}
+                  label={t('podManagement:form.type')}
                   onChange={handleChange}
                   disabled
                 >
-                  <MenuItem value="deployment">{t('deployment')}</MenuItem>
-                  <MenuItem value="statefulset">{t('statefulSet')}</MenuItem>
-                  <MenuItem value="daemonset">{t('daemonSet')}</MenuItem>
+                  <MenuItem value="deployment">{t('podManagement:form.deployment')}</MenuItem>
+                  <MenuItem value="statefulset">{t('podManagement:form.statefulSet')}</MenuItem>
+                  <MenuItem value="daemonset">{t('podManagement:form.daemonSet')}</MenuItem>
                 </Select>
               </FormControl>
             </Grid2>
@@ -195,7 +195,7 @@ const EditPod = () => {
                 required
                 fullWidth
                 name="image"
-                label={t('containerImage')}
+                label={t('podManagement:form.image')}
                 value={formData.image}
                 onChange={handleChange}
                 disabled
@@ -207,7 +207,7 @@ const EditPod = () => {
                 fullWidth
                 type="number"
                 name="replicas"
-                label={t('replicas')}
+                label={t('podManagement:form.replicas')}
                 value={formData.replicas}
                 onChange={handleChange}
                 inputProps={{ min: 1 }}
@@ -218,7 +218,7 @@ const EditPod = () => {
                 required
                 fullWidth
                 name="cpuRequest"
-                label={t('cpuRequest')}
+                label={t('podManagement:form.cpuRequest')}
                 value={formData.cpuRequest}
                 onChange={handleChange}
               />
@@ -228,7 +228,7 @@ const EditPod = () => {
                 required
                 fullWidth
                 name="cpuLimit"
-                label={t('cpuLimit')}
+                label={t('podManagement:form.cpuLimit')}
                 value={formData.cpuLimit}
                 onChange={handleChange}
               />
@@ -238,7 +238,7 @@ const EditPod = () => {
                 required
                 fullWidth
                 name="memoryRequest"
-                label={t('memoryRequest')}
+                label={t('podManagement:form.memoryRequest')}
                 value={formData.memoryRequest}
                 onChange={handleChange}
               />
@@ -248,7 +248,7 @@ const EditPod = () => {
                 required
                 fullWidth
                 name="memoryLimit"
-                label={t('memoryLimit')}
+                label={t('podManagement:form.memoryLimit')}
                 value={formData.memoryLimit}
                 onChange={handleChange}
               />
@@ -257,7 +257,7 @@ const EditPod = () => {
               <TextField
                 fullWidth
                 name="affinity"
-                label={t('affinity')}
+                label={t('podManagement:form.affinity')}
                 value={formData.affinity}
                 onChange={handleChange}
                 helperText="K8s 親和性條件"
@@ -269,14 +269,14 @@ const EditPod = () => {
                   variant="outlined" 
                   onClick={() => navigate('/pods')}
                 >
-                  {t('cancel')}
+                  {t('common:common.cancel')}
                 </Button>
                 <Button 
                   type="submit" 
                   variant="contained" 
                   color="primary"
                 >
-                  {t('save')}
+                  {t('common:common.save')}
                 </Button>
               </Box>
             </Grid2>

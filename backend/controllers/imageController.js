@@ -583,6 +583,35 @@ const retagImages = async (req, res) => {
   }
 };
 
+// 獲取本地倉庫中的鏡像列表
+const getRepositories = async (req, res) => {
+  try {
+    const { stdout } = await execPromise('docker images --format "{{.Repository}}"');
+    const repositories = [...new Set(stdout.trim().split('\n'))];
+    res.json(repositories);
+  } catch (error) {
+    console.error('❌ Error getting repositories:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// 獲取指定倉庫的標籤列表
+const getTags = async (req, res) => {
+  try {
+    const { repository } = req.query;
+    if (!repository) {
+      return res.status(400).json({ error: 'Repository parameter is required' });
+    }
+    
+    const { stdout } = await execPromise(`docker images ${repository} --format "{{.Tag}}"`);
+    const tags = stdout.trim().split('\n').filter(tag => tag !== '<none>');
+    res.json(tags);
+  } catch (error) {
+    console.error('❌ Error getting tags:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   getImages,
   getImageDetails,
@@ -592,5 +621,7 @@ module.exports = {
   packageImages,
   extractImages,
   loadImages,
-  retagImages
+  retagImages,
+  getRepositories,
+  getTags
 }; 

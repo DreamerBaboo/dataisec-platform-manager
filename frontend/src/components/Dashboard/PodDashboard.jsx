@@ -379,7 +379,7 @@ const PodDashboard = () => {
                 label={t('dashboard:dashboard.namespace')}
               >
                 <MenuItem value="all">{t('dashboard:dashboard.allNamespaces')}</MenuItem>
-                {namespaces.map(ns => (
+                {Array.isArray(namespaces) && namespaces.map(ns => (
                   <MenuItem key={ns} value={ns}>{ns}</MenuItem>
                 ))}
               </Select>

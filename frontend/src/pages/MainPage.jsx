@@ -8,6 +8,7 @@ import PodDashboard from '../components/Dashboard/PodDashboard';
 import PodManagement from '../components/PodManagement/PodManagement';
 import CreatePod from '../components/PodManagement/CreatePod';
 import EditPod from '../components/PodManagement/EditPod';
+import PodDeploymentManagement from '../components/PodDeployment/PodDeploymentManagement';
 import LogViewer from '../components/SystemLogs/LogViewer';
 import UserProfile from '../components/UserProfile/UserProfile';
 import ImageList from '../components/ImageManagement/ImageList';
@@ -65,6 +66,7 @@ function MainPage() {
           <Route path="/profile" element={<UserProfile />} />
           <Route path="/images" element={<ImageList />} />
           <Route path="/images/upload" element={<ImageUpload standalone />} />
+          <Route path="/pod-deployment/*" element={<PodDeploymentManagement />} />
         </Routes>
       </Box>
     </Box>

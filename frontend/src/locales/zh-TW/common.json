@@ -17,14 +17,38 @@
     "view": "查看",
     "cluster": "叢集",
     "refresh": "重新整理",
-    "lastUpdate": "最後更新"
+    "lastUpdate": "最後更新",
+    "next": "下一步",
+    "back": "返回"
   },
   "errors": {
     "generalError": "發生錯誤",
     "loadingError": "載入資料時發生錯誤",
     "networkError": "網路錯誤",
     "permissionDenied": "權限不足",
-    "unauthorized": "未授權的存取"
+    "unauthorized": "未授權的存取",
+    "types": {
+      "validation": "驗證錯誤",
+      "network": "網絡錯誤",
+      "kubernetes": "Kubernetes 錯誤",
+      "permission": "權限錯誤",
+      "unknown": "未知錯誤"
+    },
+    "messages": {
+      "networkError": "網絡請求失敗，請檢查網絡連接",
+      "serverError": "服務器內部錯誤",
+      "unauthorized": "未授權訪問",
+      "forbidden": "權限不足",
+      "notFound": "資源不存在",
+      "conflict": "資源衝突",
+      "validation": "請檢查輸入內容",
+      "unknown": "發生未知錯誤"
+    },
+    "actions": {
+      "retry": "重試",
+      "close": "關閉",
+      "details": "查看詳情"
+    }
   },
   "status": {
     "active": "啟用",
@@ -65,6 +89,7 @@
     },
     "sideMenu": {
       "podManagement": "容器組管理",  
+      "podDeployment": "容器組部署",
       "dashboard": "儀表板",
       "podDashboard": "容器組儀表板",
       "imageManagement": "映像檔管理",

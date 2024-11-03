@@ -83,6 +83,8 @@ const handleErrors = (err, req, res, next) => {
 };
 
 // 路由
+router.get('/repositories', authenticateToken, imageController.getRepositories);
+router.get('/tags', authenticateToken, imageController.getTags);
 router.get('/', authenticateToken, imageController.getImages);
 router.get('/:name/:tag?', authenticateToken, imageController.getImageDetails);
 router.post('/upload', authenticateToken, upload.single('image'), handleErrors, imageController.uploadImage);

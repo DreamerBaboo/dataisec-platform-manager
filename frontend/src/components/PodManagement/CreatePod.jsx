@@ -15,11 +15,11 @@ import {
   IconButton,
   Tooltip
 } from '@mui/material';
-import { useTranslation } from 'react-i18next';
+import { useAppTranslation } from '../../hooks/useAppTranslation';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 
 const CreatePod = () => {
-  const { t } = useTranslation();
+  const { t } = useAppTranslation();
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: '',
@@ -133,7 +133,7 @@ const CreatePod = () => {
     <Box sx={{ maxWidth: 800, mx: 'auto', mt: 4 }}>
       <Paper elevation={3} sx={{ p: 4 }}>
         <Typography variant="h5" gutterBottom>
-          {t('createPod')}
+          {t('podManagement:create.title')}
         </Typography>
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         <form onSubmit={handleSubmit}>
@@ -144,18 +144,18 @@ const CreatePod = () => {
                 required
                 fullWidth
                 name="name"
-                label={t('podName')}
+                label={t('podManagement:form.name')}
                 value={formData.name}
                 onChange={handleChange}
               />
             </Grid2>
             <Grid2 item xs={12} sm={6}>
               <FormControl fullWidth>
-                <InputLabel>{t('namespace')}</InputLabel>
+                <InputLabel>{t('podManagement:form.namespace')}</InputLabel>
                 <Select
                   name="namespace"
                   value={formData.namespace}
-                  label={t('namespace')}
+                  label={t('podManagement:form.namespace')}
                   onChange={handleChange}
                 >
                   {availableNamespaces.map(namespace => (
@@ -170,16 +170,16 @@ const CreatePod = () => {
             {/* Pod 類型和副本數 */}
             <Grid2 item xs={12} sm={6}>
               <FormControl fullWidth>
-                <InputLabel>{t('podType')}</InputLabel>
+                <InputLabel>{t('podManagement:form.type')}</InputLabel>
                 <Select
                   name="type"
                   value={formData.type}
-                  label={t('podType')}
+                  label={t('podManagement:form.type')}
                   onChange={handleChange}
                 >
-                  <MenuItem value="deployment">{t('deployment')}</MenuItem>
-                  <MenuItem value="statefulset">{t('statefulSet')}</MenuItem>
-                  <MenuItem value="daemonset">{t('daemonSet')}</MenuItem>
+                  <MenuItem value="deployment">{t('podManagement:form.deployment')}</MenuItem>
+                  <MenuItem value="statefulset">{t('podManagement:form.statefulSet')}</MenuItem>
+                  <MenuItem value="daemonset">{t('podManagement:form.daemonSet')}</MenuItem>
                 </Select>
               </FormControl>
             </Grid2>
@@ -189,7 +189,7 @@ const CreatePod = () => {
                 fullWidth
                 type="number"
                 name="replicas"
-                label={t('replicas')}
+                label={t('podManagement:form.replicas')}
                 value={formData.replicas}
                 onChange={handleChange}
                 inputProps={{ min: 1 }}
@@ -204,7 +204,7 @@ const CreatePod = () => {
                   component="label"
                   startIcon={<CloudUploadIcon />}
                 >
-                  {t('uploadImage')}
+                  {t('podManagement:form.uploadImage')}
                   <input
                     type="file"
                     hidden
@@ -222,7 +222,7 @@ const CreatePod = () => {
                 <TextField
                   fullWidth
                   margin="normal"
-                  label={t('imageTag')}
+                  label={t('podManagement:form.imageTag')}
                   value={formData.imageTag}
                   disabled
                 />
@@ -235,10 +235,10 @@ const CreatePod = () => {
                 required
                 fullWidth
                 name="cpuRequest"
-                label={t('cpuRequest')}
+                label={t('podManagement:form.cpuRequest')}
                 value={formData.cpuRequest}
                 onChange={handleChange}
-                helperText={t('cpuRequestHelp')}
+                helperText={t('podManagement:form.cpuRequestHelp')}
               />
             </Grid2>
             <Grid2 item xs={12} sm={6}>
@@ -246,10 +246,10 @@ const CreatePod = () => {
                 required
                 fullWidth
                 name="cpuLimit"
-                label={t('cpuLimit')}
+                label={t('podManagement:form.cpuLimit')}
                 value={formData.cpuLimit}
                 onChange={handleChange}
-                helperText={t('cpuLimitHelp')}
+                helperText={t('podManagement:form.cpuLimitHelp')}
               />
             </Grid2>
             <Grid2 item xs={12} sm={6}>
@@ -257,10 +257,10 @@ const CreatePod = () => {
                 required
                 fullWidth
                 name="memoryRequest"
-                label={t('memoryRequest')}
+                label={t('podManagement:form.memoryRequest')}
                 value={formData.memoryRequest}
                 onChange={handleChange}
-                helperText={t('memoryRequestHelp')}
+                helperText={t('podManagement:form.memoryRequestHelp')}
               />
             </Grid2>
             <Grid2 item xs={12} sm={6}>
@@ -268,27 +268,27 @@ const CreatePod = () => {
                 required
                 fullWidth
                 name="memoryLimit"
-                label={t('memoryLimit')}
+                label={t('podManagement:form.memoryLimit')}
                 value={formData.memoryLimit}
                 onChange={handleChange}
-                helperText={t('memoryLimitHelp')}
+                helperText={t('podManagement:form.memoryLimitHelp')}
               />
             </Grid2>
 
             {/* 親和性設置 - 更新後的版本 */}
             <Grid2 item xs={12}>
               <Typography variant="subtitle1" gutterBottom>
-                {t('affinitySettings')}
+                {t('podManagement:form.affinitySettings')}
               </Typography>
               <TextField
                 fullWidth
                 multiline
                 rows={3}
                 name="affinity.nodeAffinity"
-                label={t('nodeAffinity')}
+                label={t('podManagement:form.nodeAffinity')}
                 value={formData.affinity.nodeAffinity}
                 onChange={handleChange}
-                helperText={t('nodeAffinityHelp')}
+                helperText={t('podManagement:form.nodeAffinityHelp')}
                 sx={{ mb: 2 }}
               />
               <TextField
@@ -296,10 +296,10 @@ const CreatePod = () => {
                 multiline
                 rows={3}
                 name="affinity.podAffinity"
-                label={t('podAffinity')}
+                label={t('podManagement:form.podAffinity')}
                 value={formData.affinity.podAffinity}
                 onChange={handleChange}
-                helperText={t('podAffinityHelp')}
+                helperText={t('podManagement:form.podAffinityHelp')}
                 sx={{ mb: 2 }}
               />
               <TextField
@@ -307,10 +307,10 @@ const CreatePod = () => {
                 multiline
                 rows={3}
                 name="affinity.podAntiAffinity"
-                label={t('podAntiAffinity')}
+                label={t('podManagement:form.podAntiAffinity')}
                 value={formData.affinity.podAntiAffinity}
                 onChange={handleChange}
-                helperText={t('podAntiAffinityHelp')}
+                helperText={t('podManagement:form.podAntiAffinityHelp')}
               />
             </Grid2>
 
@@ -321,14 +321,14 @@ const CreatePod = () => {
                   variant="outlined" 
                   onClick={() => navigate('/pods')}
                 >
-                  {t('cancel')}
+                  {t('podManagement:form.cancel')}
                 </Button>
                 <Button 
                   type="submit" 
                   variant="contained" 
                   color="primary"
                 >
-                  {t('create')}
+                  {t('podManagement:form.create')}
                 </Button>
               </Box>
             </Grid2>

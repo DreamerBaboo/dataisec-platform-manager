@@ -31,11 +31,11 @@ import {
   Search as SearchIcon,
   FilterList as FilterListIcon
 } from '@mui/icons-material';
-import { useTranslation } from 'react-i18next';
+import { useAppTranslation } from '../../hooks/useAppTranslation';
 
 // 命名空間行組件
 const NamespaceRow = ({ namespace, pods, onToggle, isOpen }) => {
-  const { t } = useTranslation();
+  const { t } = useAppTranslation();
   
   // 計算命名空間的摘要信息
   const summary = {
@@ -70,19 +70,19 @@ const NamespaceRow = ({ namespace, pods, onToggle, isOpen }) => {
         </TableCell>
         <TableCell align="right">
           <Chip 
-            label={`${t('total')}: ${summary.total}`}
+            label={`${t('podManagement:podList.total')}: ${summary.total}`}
             size="small"
             sx={{ mr: 1 }}
           />
           <Chip 
-            label={`${t('running')}: ${summary.running}`}
+            label={`${t('podManagement:podList.running')}: ${summary.running}`}
             size="small"
             color="success"
             sx={{ mr: 1 }}
           />
           {summary.pending > 0 && (
             <Chip 
-              label={`${t('pending')}: ${summary.pending}`}
+              label={`${t('podManagement:podList.pending')}: ${summary.pending}`}
               size="small"
               color="warning"
               sx={{ mr: 1 }}
@@ -90,7 +90,7 @@ const NamespaceRow = ({ namespace, pods, onToggle, isOpen }) => {
           )}
           {summary.failed > 0 && (
             <Chip 
-              label={`${t('failed')}: ${summary.failed}`}
+              label={`${t('podManagement:podList.failed')}: ${summary.failed}`}
               size="small"
               color="error"
             />
@@ -105,11 +105,11 @@ const NamespaceRow = ({ namespace, pods, onToggle, isOpen }) => {
                 <TableHead>
                   <TableRow>
                     <TableCell>{t('podName')}</TableCell>
-                    <TableCell align="right">{t('status')}</TableCell>
-                    <TableCell align="right">{t('cpu')}</TableCell>
-                    <TableCell align="right">{t('memory')}</TableCell>
-                    <TableCell align="right">{t('restarts')}</TableCell>
-                    <TableCell align="right">{t('age')}</TableCell>
+                    <TableCell align="right">{t('podManagement:podList.status')}</TableCell>
+                    <TableCell align="right">{t('podManagement:podList.cpu')}</TableCell>
+                    <TableCell align="right">{t('podManagement:podList.memory')}</TableCell>
+                    <TableCell align="right">{t('podManagement:podList.restarts')}</TableCell>
+                    <TableCell align="right">{t('podManagement:podList.age')}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -195,7 +195,7 @@ const PodList = () => {
     search: ''
   });
   const [availableNamespaces, setAvailableNamespaces] = useState([]);
-  const { t } = useTranslation();
+  const { t } = useAppTranslation();
 
   // 獲取可用的命名空間
   const fetchNamespaces = async () => {

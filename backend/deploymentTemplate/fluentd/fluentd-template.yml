@@ -1,0 +1,172 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: fluentd
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: fluentd
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - namespaces
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: fluentd
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: fluentd
+subjects:
+- kind: ServiceAccount
+  name: fluentd
+  namespace: kube-system
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluentd-config
+  namespace: kube-system
+data:
+  fluent.conf: |
+    # Capture logs from all Docker containers
+    <source>
+      @type tail
+      path /var/log/containers/*.log
+      pos_file /var/log/fluentd-containers.log.pos
+      tag kubernetes.*
+      read_from_head false
+      <parse>
+        @type none
+      </parse>
+    </source>
+
+    # Filter logs from pods starting with "decoder"
+    <filter kubernetes.**>
+      @type kubernetes_metadata
+    </filter>
+
+    <filter kubernetes.**>
+      @type grep
+      <regexp>
+        key $.kubernetes.pod_name
+        pattern ^decoder.*
+      </regexp>
+    </filter>
+
+    # Output logs to OpenSearch without parsing
+    <match kubernetes.**>
+      @type opensearch
+      host "#{ENV['FLUENT_OPENSEARCH_HOST']}"
+      port "#{ENV['FLUENT_OPENSEARCH_PORT']}"
+      scheme "#{ENV['FLUENT_OPENSEARCH_SCHEME']}"
+      ssl_verify "#{ENV['FLUENT_OPENSEARCH_SSL_VERIFY']}"
+      ssl_version "#{ENV['FLUENT_OPENSEARCH_SSL_VERSION']}"
+      user "#{ENV['FLUENT_OPENSEARCH_USER']}"
+      password "#{ENV['FLUENT_OPENSEARCH_PASSWORD']}"
+      logstash_format true
+      logstash_prefix decoder-logs
+      logstash_dateformat %Y.%m.%d
+      time_key "@timestamp"
+      include_tag_key true
+      tag_key "@log_name"
+      <buffer tag, time>
+        @type file
+        path /var/log/fluentd-buffers/kubernetes.system.buffer
+        timekey 1d
+        timekey_use_utc true
+        timekey_wait 10m
+        flush_mode interval
+        flush_interval 5s
+      </buffer>
+      log_os_400_reason true
+      with_transporter_log true
+      @log_level debug
+    </match>
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: fluentd
+  namespace: kube-system
+  labels:
+    k8s-app: fluentd-logging
+    version: v1
+spec:
+  selector:
+    matchLabels:
+      k8s-app: fluentd-logging
+      version: v1
+  template:
+    metadata:
+      labels:
+        k8s-app: fluentd-logging
+        version: v1
+    spec:
+      serviceAccountName: fluentd
+      tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        effect: NoSchedule
+      - key: node-role.kubernetes.io/master
+        effect: NoSchedule
+      containers:
+      - name: fluentd
+        image: {REPOSITORY}:{REPOSITORY_PORT}/fluentd-kubernetes-daemonset:v1.17.1-debian-opensearch-amd64-1.0
+        env:
+          - name: K8S_NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+          - name: FLUENT_OPENSEARCH_HOST
+            value: "opensearch-cluster-master.opensearch.svc.cluster.local"
+          - name: FLUENT_OPENSEARCH_PORT
+            value: "9200"
+          - name: FLUENT_OPENSEARCH_SCHEME
+            value: "https"
+          - name: FLUENT_OPENSEARCH_SSL_VERIFY
+            value: "false"
+          - name: FLUENT_OPENSEARCH_SSL_VERSION
+            value: "TLSv1_2"
+          - name: FLUENT_OPENSEARCH_USER
+            value: "admin"
+          - name: FLUENT_OPENSEARCH_PASSWORD
+            value: "Cobr@8029@@123D"
+          - name: FLUENT_CONTAINER_TAIL_PARSER_TYPE
+            value: "cri"
+        resources:
+          limits:
+            cpu: 200m
+            memory: 500Mi
+          requests:
+            cpu: 100m
+            memory: 200Mi
+        volumeMounts:
+        - name: varlog
+          mountPath: /var/log
+        - name: dockercontainerlogdirectory
+          mountPath: /var/lib/docker/containers
+          readOnly: true
+        - name: config-volume
+          mountPath: /fluentd/etc
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: varlog
+        hostPath:
+          path: /var/log
+      - name: dockercontainerlogdirectory
+        hostPath:
+          path: /var/lib/docker/containers
+      - name: config-volume
+        configMap:
+          name: fluentd-config

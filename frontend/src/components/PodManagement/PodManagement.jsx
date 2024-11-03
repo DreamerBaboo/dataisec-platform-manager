@@ -132,7 +132,7 @@ const PodManagement = () => {
           sx={{ mt: 2 }}
           onClick={() => console.log('Selected Pods:', selectedPods)}
         >
-          {t('performAction')} ({selectedPods.length})
+          {t('podManagement:actions.performAction')} ({selectedPods.length})
         </Button>
       )}
     </Box>

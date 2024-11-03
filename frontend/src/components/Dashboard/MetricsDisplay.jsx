@@ -1,6 +1,5 @@
 import React, { useState, useCallback } from 'react';
 import { Grid, Paper, Typography, Box } from '@mui/material';
-import { useTranslation } from 'react-i18next';
 import ReactECharts from 'echarts-for-react';
 import RGL, { WidthProvider } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";

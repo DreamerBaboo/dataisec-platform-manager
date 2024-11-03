@@ -20,10 +20,10 @@ import {
   Image as ImageIcon,
   CloudUpload as UploadIcon,
   ChevronLeft as ChevronLeftIcon,
-  ChevronRight as ChevronRightIcon
+  ChevronRight as ChevronRightIcon,
+  Dns as DeploymentIcon
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { useTheme } from '@mui/material/styles';
 import { useAppTranslation } from '../../hooks/useAppTranslation';
 
@@ -46,10 +46,15 @@ const SideMenu = ({ open, toggleDrawer }) => {
       icon: <StorageIcon />,
       path: '/pod-dashboard'
     },
+    // {
+    //   text: t('common:components.sideMenu.podManagement'),
+    //   icon: <StorageIcon />,
+    //   path: '/pods'
+    // },
     {
-      text: t('common:components.sideMenu.podManagement'),
-      icon: <StorageIcon />,
-      path: '/pods'
+      text: t('common:components.sideMenu.podDeployment'),
+      icon: <DeploymentIcon />,
+      path: '/pod-deployment'
     },
     {
       text: t('common:components.sideMenu.imageManagement'),
