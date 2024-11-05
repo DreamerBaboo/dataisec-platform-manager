@@ -26,7 +26,8 @@
       "secretConfig": "密鑰",
       "affinityConfig": "親和性",
       "review": "審核",
-      "deploy": "部署"
+      "deploy": "部署",
+      "uploadTemplate": "上傳模板"
     },
     "filter": {
       "namespace": "命名空間",
@@ -45,12 +46,29 @@
       "name": "部署名稱",
       "namespace": "命名空間",
       "type": "部署類型",
-      "replicas": "副本數",
-      "repository": "鏡像倉庫",
-      "tag": "鏡像標籤",
+      "replicas": "副本數量",
+      "repository": "映像倉庫",
+      "tag": "映像標籤",
       "pullPolicy": "拉取策略",
-      "image": "鏡像",
-      "version": "版本"
+      "image": "映像",
+      "version": "版本",
+      "enableResourceQuota": "啟用命名空間資源配額",
+      "resourceQuota": "資源配額設定",
+      "requestsCpu": "CPU 請求",
+      "requestsMemory": "記憶體請求",
+      "limitsCpu": "CPU 限制",
+      "limitsMemory": "記憶體限制",
+      "pods": "最大 Pod 數量",
+      "configmaps": "最大 ConfigMap 數量",
+      "pvcs": "最大 PVC 數量",
+      "services": "最大服務數量",
+      "secrets": "最大 Secret 數量",
+      "deployments": "最大部署數量",
+      "replicasets": "最大副本集數量",
+      "statefulsets": "最大有狀態集數量",
+      "jobs": "最大作業數量",
+      "cronjobs": "最大定時作業數量",
+      "resourceQuotaPreview": "資源配額預覽"
     },
     "table": {
       "name": "名稱",
@@ -99,6 +117,7 @@
       "memoryHelp": "例如: 128Mi, 1Gi"
     },
     "affinity": {
+      "title": "親和性",
       "nodeAffinity": "節點親和性",
       "podAffinity": "Pod 親和性",
       "podAntiAffinity": "Pod 反親和性",
@@ -108,6 +127,7 @@
       "topologySpreadConstraint": "拓撲擴散約束",
       "nodeSelector": "節點選擇器",
       "labelSelector": "標籤選擇器"
+      
     },
     "volumes": {
       "title": "存儲卷",
@@ -116,7 +136,17 @@
       "type": "類型",
       "path": "路徑",
       "claimName": "PVC 名稱",
-      "mountPath": "掛載路徑"
+      "mountPath": "掛載路徑",
+      "preview": "預覽",
+      "hostPath": "主機路徑",
+      "nfs": "NFS",
+      "iscsi": "ISCSI",
+      "glusterfs": "GlusterFS",
+      "rbd": "RBD",
+      "cephfs": "CephFS",
+      "csi": "CSI",
+      "secretName": "密鑰名稱",
+      "configMapName": "配置映射名稱"
     },
     "configMaps": {
       "title": "配置映射",
@@ -126,7 +156,9 @@
       "data": "數據",
       "key": "鍵",
       "value": "值",
-      "addData": "添加數據"
+      "addData": "添加數據",
+      "preview": "預覽",
+      "addItem": "添加項目" 
     },
     "secrets": {
       "title": "密鑰",
@@ -136,23 +168,28 @@
       "data": "數據",
       "key": "鍵",
       "value": "值",
-      "addData": "添加數據"
+      "addData": "添加數據",
+      "preview": "預覽",
+      "addItem": "添加項目"
     },
     "preview": {
       "title": "部署預覽",
-      "field": "欄位",
-      "value": "值",
-      "name": "名稱",
-      "namespace": "命名空間",
-      "type": "類型",
-      "image": "鏡像",
-      "replicas": "副本數",
-      "yaml": "YAML 配置",
-      "showYaml": "顯示 YAML",
-      "defaultValues": "默認值",
-      "placeholders": "佔位符",
-      "currentValue": "當前值",
-      "hideYaml": "隱藏 YAML"
+      "info": "請在繼續之前檢查您的部署配置。",
+      "basicInfo": "基本資訊",
+      "resources": "資源配置",
+      "volumes": "儲存配置",
+      "configurations": "其他配置",
+      "saveSuccess": "配置儲存成功",
+      "saveError": "配置儲存失敗",
+      "categories": {
+        "basic": "基本資訊",
+        "image": "映像配置",
+        "service": "服務配置",
+        "resources": "資源配置",
+        "deployment": "部署配置",
+        "node": "節點配置",
+        "misc": "其他配置"
+      }
     },
     "logs": {
       "title": "容器日誌",
@@ -277,7 +314,10 @@
       "saveSuccess": "YAML 模板保存成功",
       "saveError": "保存 YAML 模板失敗",
       "editTemplate": "編輯原始模板",
-      "searchPlaceholders": "搜索佔位符..."
+      "searchPlaceholders": "搜索佔位符...",
+      "templateUploaded": "模板上傳成功",
+      "uploadTemplate": "上傳模板",
+      "close": "關閉預覽"
     }
   }
 } 

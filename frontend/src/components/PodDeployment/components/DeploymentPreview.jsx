@@ -10,10 +10,10 @@ import {
 import Editor from '@monaco-editor/react';
 import { useAppTranslation } from '../../../hooks/useAppTranslation';
 import { useSnackbar } from 'notistack';
-import yaml from 'js-yaml'; // Add yaml parser
+import yaml from 'js-yaml';
 
-// Add placeholder categories
 const PLACEHOLDER_CATEGORIES = {
+  basic: ['name', 'namespace', 'version'],
   image: ['repository', 'repository_port', 'tag'],
   service: ['service_port', 'target_service_port', 'node_port', 'web_port'],
   resources: ['cpu_limit', 'memory_limit', 'cpu_request', 'memory_request'],
@@ -42,7 +42,7 @@ const DeploymentPreview = ({ config, onDeploy, onBack }) => {
     if (!config.yamlTemplate?.content) return '';
 
     let preview = config.yamlTemplate.content;
-    Object.entries(config.yamlTemplate.placeholders).forEach(([key, value]) => {
+    Object.entries(config.yamlTemplate.placeholders || {}).forEach(([key, value]) => {
       const regex = new RegExp(`\\$\\{${key}\\}`, 'gi');
       preview = preview.replace(regex, value || '');
     });

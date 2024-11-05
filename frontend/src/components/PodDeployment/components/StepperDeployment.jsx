@@ -18,6 +18,7 @@ import VolumeConfig from '../steps/VolumeConfig';
 import ConfigMapEditor from '../steps/ConfigMapEditor';
 import SecretEditor from '../steps/SecretEditor';
 import DeploymentPreview from './DeploymentPreview';
+import NamespaceQuotaConfig from '../steps/NamespaceQuotaConfig';
 
 const steps = [
   'basicSetup',
@@ -27,6 +28,7 @@ const steps = [
   'volumeConfig',
   'configMapConfig',
   'secretConfig',
+  'namespaceQuota',
   'preview'
 ];
 
@@ -42,7 +44,9 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
     affinity: {},
     volumes: [],
     configMaps: [],
-    secrets: []
+    secrets: [],
+    enableResourceQuota: false,
+    resourceQuota: null
   });
   const [errors, setErrors] = useState({});
 
@@ -146,6 +150,14 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
           />
         );
       case 7:
+        return deploymentConfig.enableResourceQuota ? (
+          <NamespaceQuotaConfig
+            config={deploymentConfig}
+            onChange={handleConfigChange}
+            errors={errors}
+          />
+        ) : handleNext();
+      case 8:
         return (
           <DeploymentPreview
             config={deploymentConfig}
@@ -182,7 +194,7 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
         </Paper>
       </Box>
 
-      {activeStep !== 7 && (
+      {activeStep !== 8 && (
         <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
           <Button onClick={onCancel}>
             {t('common:common.cancel')}

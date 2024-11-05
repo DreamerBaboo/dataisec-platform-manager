@@ -25,7 +25,8 @@
       "configMapConfig": "ConfigMap Configuration",
       "secretConfig": "Secret Configuration",
       "affinityConfig": "Affinity Configuration",
-      "review": "Review"
+      "review": "Review",
+      "uploadTemplate": "Upload Template"
     },      
     "filter": {
       "namespace": "Namespace",
@@ -50,8 +51,24 @@
       "tag": "Image Tag",
       "pullPolicy": "Pull Policy",
       "image": "Image",
-      "version": "Version"
-
+      "version": "Version",
+      "enableResourceQuota": "Enable Namespace Resource Quota",
+      "resourceQuota": "Resource Quota Configuration",
+      "requestsCpu": "CPU Requests",
+      "requestsMemory": "Memory Requests",
+      "limitsCpu": "CPU Limits",
+      "limitsMemory": "Memory Limits",
+      "pods": "Maximum Pods",
+      "configmaps": "Maximum ConfigMaps",
+      "pvcs": "Maximum PVCs",
+      "services": "Maximum Services",
+      "secrets": "Maximum Secrets",
+      "deployments": "Maximum Deployments",
+      "replicasets": "Maximum ReplicaSets",
+      "statefulsets": "Maximum StatefulSets",
+      "jobs": "Maximum Jobs",
+      "cronjobs": "Maximum CronJobs",
+      "resourceQuotaPreview": "Resource Quota Preview"
     },
     "table": {
       "name": "Name",
@@ -118,30 +135,62 @@
     },
     "volumes": {
       "title": "Storage Volumes",
-      "add": "Add Storage Volume"
+      "add": "Add Storage Volume",
+      "preview": "Preview",
+      "name": "Name",
+      "type": "Type",
+      "path": "Path",
+      "claimName": "PVC Name",
+      "mountPath": "Mount Path",
+      "hostPath": "Host Path",
+      "nfs": "NFS",
+      "iscsi": "ISCSI",
+      "glusterfs": "GlusterFS",
+      "rbd": "RBD",
+      "cephfs": "CephFS",
+      "csi": "CSI",
+      "secretName": "Secret Name",
+      "configMapName": "ConfigMap Name"
     },
     "configMaps": {
       "title": "Configuration Maps",
-      "add": "Add Configuration Map"
+      "add": "Add Configuration Map",
+      "preview": "Preview",
+      "field": "Field",
+      "value": "Value",
+      "key": "Key",
+      "addData": "Add Data",
+      "data": "Data",
+      "addItem": "Add Item"
     },
     "secrets": {
       "title": "Secrets",
-      "add": "Add Secret"
-    },
-    "preview": {
-      "title": "Preview",
+      "add": "Add Secret",
+      "preview": "Preview",
       "field": "Field",
       "value": "Value",
-      "name": "Name",
-      "namespace": "Namespace",
-      "type": "Type",
-      "image": "Image",
-      "version": "Version",
-      "showYaml": "Show YAML",
-      "defaultValues": "Default Values",
-      "placeholders": "Placeholders",
-      "currentValue": "Current Value",
-      "hideYaml": "Hide YAML"
+      "key": "Key",
+      "addData": "Add Data",
+      "addItem": "Add Item"
+    },
+    "preview": {
+      "title": "Deployment Preview",
+      "info": "Please review your deployment configuration before proceeding.",
+      "basicInfo": "Basic Information",
+      "resources": "Resource Configuration",
+      "volumes": "Volume Configuration",
+      "configurations": "Additional Configurations",
+      "saveSuccess": "Configuration saved successfully",
+      "saveError": "Failed to save configuration",
+      "categories": {
+        "basic": "Basic Information",
+        "image": "Image Configuration",
+        "service": "Service Configuration",
+        "resources": "Resource Configuration",
+        "deployment": "Deployment Configuration",
+        "node": "Node Configuration",
+        "misc": "Other Configuration"
+      }
     },
     "logs": {
       "title": "Container Logs",
@@ -263,12 +312,15 @@
       "parseError": "Failed to parse YAML template",
       "editor": "YAML Editor",
       "save": "Save Changes",
-      "saveSuccess": "YAML template saved successfully",
-      "saveError": "Failed to save YAML template",
+      "saveSuccess": "Template saved successfully",
+      "saveError": "Failed to save template",
       "editTemplate": "Edit Original Template",
       "searchPlaceholders": "Search placeholders...",
       "reload": "Reload",
-      "defaultValues": "Default Values"
+      "defaultValues": "Default Values",
+      "templateUploaded": "Template uploaded successfully",
+      "uploadTemplate": "Upload Template",
+      "close": "Close Preview"
     },
     "basicSetup": {
       "title": "Basic Setup"

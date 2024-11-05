@@ -305,7 +305,7 @@ metadata:
 type: Opaque
 data:
 ${Object.entries(secret.data || {}).map(([key, value]) => 
-  `  ${key}: ${Buffer.from(value || '').toString('base64')}`
+  `  ${key}: ${btoa(value || '')}`
 ).join('\n')}
 
 ---

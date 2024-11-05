@@ -5,7 +5,10 @@ import {
   Grid,
   Typography,
   Button,
-  Alert
+  Alert,
+  FormControlLabel,
+  Checkbox,
+  Paper
 } from '@mui/material';
 import { Upload as UploadIcon } from '@mui/icons-material';
 import { useAppTranslation } from '../../../hooks/useAppTranslation';
@@ -13,6 +16,43 @@ import { useAppTranslation } from '../../../hooks/useAppTranslation';
 const BasicSetup = ({ config, onChange, errors: propErrors }) => {
   const { t } = useAppTranslation();
   const [localErrors, setLocalErrors] = useState({});
+  const [showResourceQuota, setShowResourceQuota] = useState(false);
+
+  const handleResourceQuotaChange = (field, value) => {
+    onChange({
+      ...config,
+      resourceQuota: {
+        ...config.resourceQuota,
+        [field]: value
+      }
+    });
+  };
+
+  const generateResourceQuotaPreview = () => {
+    if (!showResourceQuota || !config.resourceQuota) return '';
+
+    return `apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: ${config.name}-quota
+  namespace: ${config.namespace}
+spec:
+  hard:
+    requests.cpu: ${config.resourceQuota?.requestsCpu || '1'}
+    requests.memory: ${config.resourceQuota?.requestsMemory || '1Gi'}
+    limits.cpu: ${config.resourceQuota?.limitsCpu || '2'}
+    limits.memory: ${config.resourceQuota?.limitsMemory || '2Gi'}
+    pods: ${config.resourceQuota?.pods || '10'}
+    configmaps: ${config.resourceQuota?.configmaps || '10'}
+    persistentvolumeclaims: ${config.resourceQuota?.pvcs || '5'}
+    services: ${config.resourceQuota?.services || '10'}
+    secrets: ${config.resourceQuota?.secrets || '10'}
+    count/deployments.apps: ${config.resourceQuota?.deployments || '5'}
+    count/replicasets.apps: ${config.resourceQuota?.replicasets || '10'}
+    count/statefulsets.apps: ${config.resourceQuota?.statefulsets || '5'}
+    count/jobs.batch: ${config.resourceQuota?.jobs || '10'}
+    count/cronjobs.batch: ${config.resourceQuota?.cronjobs || '5'}`;
+  };
 
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
@@ -124,6 +164,21 @@ const BasicSetup = ({ config, onChange, errors: propErrors }) => {
             error={!!allErrors.namespace}
             helperText={allErrors.namespace}
             required
+          />
+        </Grid>
+
+        <Grid item xs={12}>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={config.enableResourceQuota}
+                onChange={(e) => onChange({
+                  ...config,
+                  enableResourceQuota: e.target.checked
+                })}
+              />
+            }
+            label={t('podDeployment:podDeployment.basic.enableResourceQuota')}
           />
         </Grid>
 
