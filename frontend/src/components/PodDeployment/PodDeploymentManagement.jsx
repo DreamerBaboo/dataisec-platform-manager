@@ -1,18 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import {
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  IconButton,
-  Tooltip,
-  Button,
-  Dialog,
-  DialogContent,
   Box,
   CircularProgress,
   Alert,
@@ -23,7 +11,19 @@ import {
   MenuItem,
   Grid,
   Chip,
-  InputAdornment
+  InputAdornment,
+  IconButton,
+  Tooltip,
+  Button,
+  Dialog,
+  DialogContent,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper
 } from '@mui/material';
 import {
   Settings as SettingsIcon,
@@ -32,15 +32,27 @@ import {
   Article as LogIcon,
   Add as AddIcon,
   Delete as DeleteIcon,
-  Refresh as RefreshIcon,
   Search as SearchIcon,
   Clear as ClearIcon
 } from '@mui/icons-material';
 import { useAppTranslation } from '../../hooks/useAppTranslation';
-import DeploymentForm from './DeploymentForm';
+
+// Import step components
+import StepperDeployment from './components/StepperDeployment';
+import BasicSetup from './steps/BasicSetup';
+import TemplateConfig from './steps/TemplateConfig';
+import ResourceConfig from './steps/ResourceConfig';
+import AffinityConfig from './steps/AffinityConfig';
+import VolumeConfig from './steps/VolumeConfig';
+import ConfigMapEditor from './steps/ConfigMapEditor';
+import SecretEditor from './steps/SecretEditor';
+
+// Import other components
 import DeploymentPreview from './components/DeploymentPreview';
 import DeploymentProgress from './components/DeploymentProgress';
 import LogViewer from './components/LogViewer';
+import ImportConfig from './components/ImportConfig';
+import ExportConfig from './components/ExportConfig';
 
 axios.defaults.baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 axios.defaults.headers.common['Content-Type'] = 'application/json';
@@ -60,6 +72,9 @@ const PodDeploymentManagement = () => {
   const [progressDialog, setProgressDialog] = useState({ open: false, pod: null });
   const [logDialog, setLogDialog] = useState({ open: false, pod: null });
   const [createDialog, setCreateDialog] = useState(false);
+
+  // Add new state for stepper
+  const [deploymentConfig, setDeploymentConfig] = useState(null);
 
   const fetchNamespaces = async () => {
     try {
@@ -124,6 +139,7 @@ const PodDeploymentManagement = () => {
     }
   };
 
+  // Modify handleConfigSave to use new config format
   const handleConfigSave = async (config) => {
     try {
       console.log('💾 Saving pod configuration:', config);
@@ -141,6 +157,18 @@ const PodDeploymentManagement = () => {
       fetchPods();
     } catch (err) {
       console.error('❌ Error saving configuration:', err);
+      setError(err.message);
+    }
+  };
+
+  // Add handler for deployment
+  const handleDeploy = async (config) => {
+    try {
+      const response = await axios.post('/api/pod-deployments/deploy', config, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setProgressDialog({ open: true, pod: response.data });
+    } catch (err) {
       setError(err.message);
     }
   };
@@ -168,6 +196,13 @@ const PodDeploymentManagement = () => {
   const formatMetrics = (metrics) => {
     if (!metrics) return '無數據';
     return `CPU: ${(metrics.cpu / 1000000).toFixed(2)}m | Memory: ${(metrics.memory / (1024 * 1024)).toFixed(2)}Mi`;
+  };
+
+  const handleImportConfig = (importedConfig) => {
+    setConfigDialog({ 
+      open: true, 
+      pod: importedConfig 
+    });
   };
 
   if (loading) {
@@ -228,22 +263,17 @@ const PodDeploymentManagement = () => {
         </Grid>
       </Grid>
 
-      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between' }}>
+      <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={() => setCreateDialog(true)}
+          onClick={() => {
+            setConfigDialog({ open: true, pod: null });
+          }}
         >
           {t('podDeployment:podDeployment.createNew')}
         </Button>
-        <Tooltip title={t('podDeployment:podDeployment.actions.refresh')}>
-          <IconButton 
-            onClick={handleRefresh}
-            disabled={loading}
-          >
-            <RefreshIcon />
-          </IconButton>
-        </Tooltip>
+        <ImportConfig onImport={handleImportConfig} />
       </Box>
 
       {error && (
@@ -257,14 +287,8 @@ const PodDeploymentManagement = () => {
           <CircularProgress />
         </Box>
       ) : (
-        <TableContainer 
-          component={Paper} 
-          sx={{ 
-            maxHeight: 'calc(100vh - 300px)',  // 設置最大高度
-            overflow: 'auto'                    // 啟用滾動
-          }}
-        >
-          <Table stickyHeader>  {/* 使表頭固定 */}
+        <TableContainer component={Paper}>
+          <Table stickyHeader>
             <TableHead>
               <TableRow>
                 <TableCell>{t('podDeployment:podDeployment.table.name')}</TableCell>
@@ -316,6 +340,7 @@ const PodDeploymentManagement = () => {
                         <LogIcon />
                       </IconButton>
                     </Tooltip>
+                    <ExportConfig config={pod} />
                     <Tooltip title={t('podDeployment:podDeployment.actions.delete')}>
                       <IconButton onClick={() => handleDelete(pod)}>
                         <DeleteIcon />
@@ -331,21 +356,26 @@ const PodDeploymentManagement = () => {
 
       {/* Dialogs */}
       <Dialog
-        open={configDialog.open || createDialog}
+        open={configDialog.open}
         onClose={() => {
           setConfigDialog({ open: false, pod: null });
-          setCreateDialog(false);
         }}
-        maxWidth="md"
+        maxWidth="lg"
         fullWidth
+        PaperProps={{
+          sx: {
+            minHeight: '90vh',
+            maxHeight: '90vh'
+          }
+        }}
       >
-        <DialogContent>
-          <DeploymentForm
+        <DialogContent sx={{ p: 3 }}>
+          <StepperDeployment
             deployment={configDialog.pod}
             onSave={handleConfigSave}
+            onDeploy={handleDeploy}
             onCancel={() => {
               setConfigDialog({ open: false, pod: null });
-              setCreateDialog(false);
             }}
           />
         </DialogContent>

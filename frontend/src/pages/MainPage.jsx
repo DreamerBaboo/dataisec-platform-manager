@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Outlet } from 'react-router-dom';
 import { Box, CssBaseline, useTheme } from '@mui/material';
 import TopBar from '../components/Layout/TopBar';
 import SideMenu from '../components/Layout/SideMenu';

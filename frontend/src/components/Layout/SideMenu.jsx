@@ -46,11 +46,6 @@ const SideMenu = ({ open, toggleDrawer }) => {
       icon: <StorageIcon />,
       path: '/pod-dashboard'
     },
-    // {
-    //   text: t('common:components.sideMenu.podManagement'),
-    //   icon: <StorageIcon />,
-    //   path: '/pods'
-    // },
     {
       text: t('common:components.sideMenu.podDeployment'),
       icon: <DeploymentIcon />,

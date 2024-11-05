@@ -8,7 +8,24 @@
       "affinity": "Affinity",
       "storageConfiguration": "Storage Configuration",
       "configurationMapping": "Configuration Mapping",
-      "preview": "Preview"
+      "preview": "Preview",
+      "upload": "Upload",
+      "uploadError": "Failed to upload template",
+      "parseError": "Failed to parse YAML template",
+      "save": "Save",
+      "saveSuccess": "YAML template saved successfully",
+      "saveError": "Failed to save YAML template",
+      "editTemplate": "Edit Template",
+      "searchPlaceholders": "Search placeholders...",
+      "templateContent": "Template Content",
+      "templateConfig": "Template Configuration",
+      "templatePreview": "Template Preview",
+      "resourceConfig": "Resource Configuration",
+      "volumeConfig": "Volume Configuration",
+      "configMapConfig": "ConfigMap Configuration",
+      "secretConfig": "Secret Configuration",
+      "affinityConfig": "Affinity Configuration",
+      "review": "Review"
     },      
     "filter": {
       "namespace": "Namespace",
@@ -21,7 +38,8 @@
       "affinity": "Affinity",
       "volumes": "Volumes",
       "configMaps": "ConfigMaps",
-      "secrets": "Secrets"
+      "secrets": "Secrets",
+      "yamlTemplate": "YAML Template"
     },
     "basic": {
       "name": "Deployment Name",
@@ -30,7 +48,10 @@
       "replicas": "Replicas",
       "repository": "Image Repository",
       "tag": "Image Tag",
-      "pullPolicy": "Pull Policy"
+      "pullPolicy": "Pull Policy",
+      "image": "Image",
+      "version": "Version"
+
     },
     "table": {
       "name": "Name",
@@ -79,7 +100,21 @@
     "affinity": {
       "nodeAffinity": "Node Affinity",
       "podAffinity": "Pod Affinity",
-      "podAntiAffinity": "Pod Anti-Affinity"
+      "podAntiAffinity": "Pod Anti-Affinity",
+      "topologySpreadConstraint": "Topology Spread Constraint",
+      "nodeSelector": "Node Selector",
+      "nodeSelectorKey": "Node Selector Key",
+      "nodeSelectorValue": "Node Selector Value",
+      "affinityType": "Affinity Type",
+      "matchExpressions": "Match Expressions",
+      "matchFields": "Match Fields",
+      "labelSelector": "Label Selector",
+      "labelSelectorKey": "Label Selector Key",
+      "labelSelectorValue": "Label Selector Value",
+      "topologySpreadKey": "Topology Spread Key",
+      "topologySpreadMaxSkew": "Topology Spread Max Skew",
+      "topologySpreadWhenUnsatisfiable": "Topology Spread When Unsatisfiable",
+      "siteNode": "Site Node"
     },
     "volumes": {
       "title": "Storage Volumes",
@@ -100,7 +135,13 @@
       "name": "Name",
       "namespace": "Namespace",
       "type": "Type",
-      "image": "Image"
+      "image": "Image",
+      "version": "Version",
+      "showYaml": "Show YAML",
+      "defaultValues": "Default Values",
+      "placeholders": "Placeholders",
+      "currentValue": "Current Value",
+      "hideYaml": "Hide YAML"
     },
     "logs": {
       "title": "Container Logs",
@@ -136,6 +177,7 @@
         "tag": "Image tag is required"
       },
       "resources": {
+        "title": "Resource Configuration",
         "cpu": {
           "format": "Invalid CPU format (e.g., 100m or 0.1)",
           "limit": "CPU requests cannot be greater than limits"
@@ -195,7 +237,9 @@
       "exportError": "Failed to export configuration",
       "invalidFile": "Invalid configuration file",
       "selectFile": "Select configuration file",
-      "fileType": "YAML file"
+      "fileType": "YAML file",
+      "confirmImport": "Confirm Import Configuration",
+      "selectedFile": "Selected File"
     },
     "diff": {
       "title": "Configuration Diff",
@@ -209,6 +253,25 @@
       "field": "Field",
       "oldValue": "Old Value",
       "newValue": "New Value"
+    },
+    "yamlTemplate": {
+      "upload": "Upload YAML Template",
+      "placeholders": "Template Placeholders",
+      "preview": "Template Preview",
+      "noTemplate": "No template uploaded",
+      "uploadError": "Failed to upload template",
+      "parseError": "Failed to parse YAML template",
+      "editor": "YAML Editor",
+      "save": "Save Changes",
+      "saveSuccess": "YAML template saved successfully",
+      "saveError": "Failed to save YAML template",
+      "editTemplate": "Edit Original Template",
+      "searchPlaceholders": "Search placeholders...",
+      "reload": "Reload",
+      "defaultValues": "Default Values"
+    },
+    "basicSetup": {
+      "title": "Basic Setup"
     }
   }
 }

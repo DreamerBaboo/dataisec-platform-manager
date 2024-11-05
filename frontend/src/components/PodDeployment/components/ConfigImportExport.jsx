@@ -1,88 +1,86 @@
-import React, { useRef } from 'react';
-import {
-  Box,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Alert
-} from '@mui/material';
-import {
+import React from 'react';
+import { Box, Button } from '@mui/material';
+import { 
   Upload as UploadIcon,
-  Download as DownloadIcon
+  Download as DownloadIcon 
 } from '@mui/icons-material';
 import { useAppTranslation } from '../../../hooks/useAppTranslation';
-import { downloadConfig, importFromYAML } from '../../../utils/configExporter';
 
 const ConfigImportExport = ({ config, onImport }) => {
   const { t } = useAppTranslation();
-  const fileInputRef = useRef(null);
-  const [error, setError] = React.useState(null);
 
   const handleExport = () => {
     try {
-      downloadConfig(config);
-      setError(null);
-    } catch (err) {
-      setError(err.message);
+      // 將配置轉換為 JSON 字符串
+      const configString = JSON.stringify(config, null, 2);
+      
+      // 創建 Blob 對象
+      const blob = new Blob([configString], { type: 'application/json' });
+      
+      // 創建下載鏈接
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${config.name || 'deployment'}-config.json`;
+      
+      // 觸發下載
+      document.body.appendChild(link);
+      link.click();
+      
+      // 清理
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Export failed:', error);
+      // 可以在這裡添加錯誤提示
     }
   };
 
-  const handleImportClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = (event) => {
-    const file = event.target.files?.[0];
+  const handleImport = (event) => {
+    const file = event.target.files[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = async (e) => {
+    reader.onload = (e) => {
       try {
-        const content = e.target?.result;
-        const importedConfig = importFromYAML(content);
+        const importedConfig = JSON.parse(e.target.result);
         onImport(importedConfig);
-        setError(null);
-      } catch (err) {
-        setError(err.message);
+      } catch (error) {
+        console.error('Import failed:', error);
+        // 可以在這裡添加錯誤提示
       }
     };
     reader.readAsText(file);
+    
+    // 重置 input 值以允許重複導入相同文件
+    event.target.value = '';
   };
 
   return (
-    <Box>
+    <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
       <input
         type="file"
-        ref={fileInputRef}
+        accept=".json"
         style={{ display: 'none' }}
-        accept=".yaml,.yml"
-        onChange={handleFileChange}
+        id="import-config"
+        onChange={handleImport}
       />
-      
-      <Box sx={{ display: 'flex', gap: 1 }}>
+      <label htmlFor="import-config">
         <Button
+          component="span"
           variant="outlined"
           startIcon={<UploadIcon />}
-          onClick={handleImportClick}
         >
           {t('podDeployment:podDeployment.config.import')}
         </Button>
-        <Button
-          variant="outlined"
-          startIcon={<DownloadIcon />}
-          onClick={handleExport}
-        >
-          {t('podDeployment:podDeployment.config.export')}
-        </Button>
-      </Box>
-
-      {error && (
-        <Alert severity="error" sx={{ mt: 2 }}>
-          {error}
-        </Alert>
-      )}
+      </label>
+      <Button
+        variant="outlined"
+        startIcon={<DownloadIcon />}
+        onClick={handleExport}
+      >
+        {t('podDeployment:podDeployment.config.export')}
+      </Button>
     </Box>
   );
 };

@@ -19,7 +19,8 @@
     "refresh": "Refresh",
     "lastUpdate": "Last Update",
     "next": "Next",
-    "back": "Back"
+    "back": "Back",
+    "deploy": "Deploy"
   },
   "errors": {
     "generalError": "An error occurred",

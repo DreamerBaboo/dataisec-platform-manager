@@ -262,6 +262,7 @@ data:
         - pod
         - container
         - volume
+        - state_node
       period: 5s
       host: ${NODE_NAME}
       hosts: ["https://${NODE_NAME}:10250"]

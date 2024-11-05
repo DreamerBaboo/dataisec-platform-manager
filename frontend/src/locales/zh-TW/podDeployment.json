@@ -3,12 +3,30 @@
     "title": "Pod 部署管理",
     "createNew": "創建新部署",
     "steps": {
-      "基本設置": "基本設置",
-      "資源配置": "資源配置",
-      "親和性": "親和性",
-      "存儲配置": "存儲配置",
-      "配置映射": "配置映射",
-      "預覽": "預覽"
+      "basicSetup": "基礎設定",
+      "resourceAllocation": "資源配置",
+      "affinity": "親和性",
+      "storageConfiguration": "存儲配置",
+      "configurationMapping": "配置映射",
+      "preview": "預覽",
+      "upload": "上傳",
+      "uploadError": "上傳模板失敗",
+      "parseError": "解析 YAML 模板失敗",
+      "save": "保存",
+      "saveSuccess": "YAML 模板保存成功",
+      "saveError": "保存 YAML 模板失敗",
+      "editTemplate": "編輯模板",
+      "searchPlaceholders": "搜索佔位符...",
+      "templateContent": "模板內容",
+      "templateConfig": "模板配置",
+      "templatePreview": "模板預覽",
+      "resourceConfig": "資源配置",
+      "volumeConfig": "存儲配置",
+      "configMapConfig": "配置映射",
+      "secretConfig": "密鑰",
+      "affinityConfig": "親和性",
+      "review": "審核",
+      "deploy": "部署"
     },
     "filter": {
       "namespace": "命名空間",
@@ -30,7 +48,9 @@
       "replicas": "副本數",
       "repository": "鏡像倉庫",
       "tag": "鏡像標籤",
-      "pullPolicy": "拉取策略"
+      "pullPolicy": "拉取策略",
+      "image": "鏡像",
+      "version": "版本"
     },
     "table": {
       "name": "名稱",
@@ -84,7 +104,10 @@
       "podAntiAffinity": "Pod 反親和性",
       "nodeAffinityPlaceholder": "輸入節點親和性規則...",
       "podAffinityPlaceholder": "輸入 Pod 親和性規則...",
-      "podAntiAffinityPlaceholder": "輸入 Pod 反親和性規則..."
+      "podAntiAffinityPlaceholder": "輸入 Pod 反親和性規則...",
+      "topologySpreadConstraint": "拓撲擴散約束",
+      "nodeSelector": "節點選擇器",
+      "labelSelector": "標籤選擇器"
     },
     "volumes": {
       "title": "存儲卷",
@@ -124,7 +147,12 @@
       "type": "類型",
       "image": "鏡像",
       "replicas": "副本數",
-      "yaml": "YAML 配置"
+      "yaml": "YAML 配置",
+      "showYaml": "顯示 YAML",
+      "defaultValues": "默認值",
+      "placeholders": "佔位符",
+      "currentValue": "當前值",
+      "hideYaml": "隱藏 YAML"
     },
     "logs": {
       "title": "容器日誌",
@@ -160,6 +188,7 @@
         "tag": "鏡像標籤不能為空"
       },
       "resources": {
+        "title": "資源配置",
         "cpu": {
           "format": "CPU 格式無效 (例如: 100m 或 0.1)",
           "limit": "CPU 請求不能大於限制"
@@ -182,7 +211,7 @@
       "secret": {
         "name": "Secret 名稱不能為空",
         "mountPath": "掛載路徑不能為空",
-        "data": "至少需要一個配置項"
+        "data": "至少需要一個配置項"    
       }
     },
     "templates": {
@@ -235,6 +264,20 @@
       "field": "欄位",
       "oldValue": "原值",
       "newValue": "新值"
+    },
+    "yamlTemplate": {
+      "upload": "上傳 YAML 模板",
+      "placeholders": "模板佔位符",
+      "preview": "模板預覽",
+      "noTemplate": "未上傳模板",
+      "uploadError": "上傳模板失敗",
+      "parseError": "解析 YAML 模板失敗",
+      "editor": "YAML 編輯器",
+      "save": "保存變更",
+      "saveSuccess": "YAML 模板保存成功",
+      "saveError": "保存 YAML 模板失敗",
+      "editTemplate": "編輯原始模板",
+      "searchPlaceholders": "搜索佔位符..."
     }
   }
 } 

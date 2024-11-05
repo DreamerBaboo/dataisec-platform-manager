@@ -35,6 +35,7 @@ const metricsRouter = require('./routes/metrics');
 const podsRouter = require('./routes/pods');
 const imagesRouter = require('./routes/images');
 const podDeploymentRouter = require('./routes/podDeployment');
+const deploymentTemplatesRouter = require('./routes/deploymentTemplates');
 
 // API routes
 app.use('/api/auth', authRouter);
@@ -42,6 +43,7 @@ app.use('/api/metrics', metricsRouter);
 app.use('/api/pods', podsRouter);
 app.use('/api/images', imagesRouter);
 app.use('/api/pod-deployments', podDeploymentRouter);
+app.use('/api/deployment-templates', deploymentTemplatesRouter);
 
 // 添加錯誤處理中間件
 app.use((err, req, res, next) => {

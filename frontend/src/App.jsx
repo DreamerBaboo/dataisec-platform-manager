@@ -117,15 +117,9 @@ function AppContent() {
                         <MainPage />
                       </PrivateRoute>
                     }
-                  />
-                  <Route 
-                    path="/pod-deployments" 
-                    element={
-                      <PrivateRoute>
-                        <PodDeploymentManagement />
-                      </PrivateRoute>
-                    } 
-                  />
+                  >
+                    <Route path="pod-deployment" element={<PodDeploymentManagement />} />
+                  </Route>
                 </Routes>
               </Router>
             </AuthProvider>
