@@ -142,7 +142,6 @@ spec:
     const deploymentName = newValue?.trim() || '';
     const isNew = !availableTemplates.includes(deploymentName);
     setIsNewDeployment(isNew);
-    setShowTemplateUpload(isNew && deploymentName !== '');
     
     onChange({
       ...config,
@@ -175,24 +174,12 @@ spec:
               />
             )}
           />
-          {showTemplateUpload && (
+          {isNewDeployment && config.name && (
             <Alert 
               severity="info" 
               sx={{ mt: 1 }}
-              action={
-                <Button
-                  color="inherit"
-                  size="small"
-                  onClick={() => {
-                    // Template upload button click handler
-                    // This will be handled by existing template upload functionality
-                  }}
-                >
-                  {t('podDeployment:podDeployment.steps.uploadTemplate')}
-                </Button>
-              }
             >
-              {t('podDeployment:podDeployment.steps.upload')}
+              {t('podDeployment:podDeployment.steps.uploadTemplateFile')}
             </Alert>
           )}
         </Grid>
@@ -233,7 +220,7 @@ spec:
           />
         </Grid>
 
-        {config.name && (
+        {isNewDeployment && config.name && (
           <Grid item xs={12}>
             <Box sx={{ mt: 2 }}>
               <input

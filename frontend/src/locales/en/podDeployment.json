@@ -26,7 +26,11 @@
       "secretConfig": "Secret Configuration",
       "affinityConfig": "Affinity Configuration",
       "review": "Review",
-      "uploadTemplate": "Upload Template"
+      "uploadTemplate": "Upload Template",
+      "uploadTemplateFile": "Please Upload Template File",
+      "uploadTemplateSuccess": "Template uploaded successfully",
+      "reload": "Reload",
+      "namespaceQuota": "Namespace Quota"
     },      
     "filter": {
       "namespace": "Namespace",

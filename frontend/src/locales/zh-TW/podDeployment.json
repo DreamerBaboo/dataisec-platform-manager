@@ -27,7 +27,11 @@
       "affinityConfig": "親和性",
       "review": "審核",
       "deploy": "部署",
-      "uploadTemplate": "上傳模板"
+      "uploadTemplate": "上傳模板",
+      "uploadTemplateFile": "請上傳模板文件",
+      "uploadTemplateSuccess": "模板上傳成功",
+      "reload": "重新加載",
+      "namespaceQuota": "命名空間配額"
     },
     "filter": {
       "namespace": "命名空間",
@@ -317,7 +321,8 @@
       "searchPlaceholders": "搜索佔位符...",
       "templateUploaded": "模板上傳成功",
       "uploadTemplate": "上傳模板",
-      "close": "關閉預覽"
+      "close": "關閉預覽",
+      "reload": "重新加載"
     }
   }
 } 
