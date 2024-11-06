@@ -257,16 +257,21 @@ const PodList = () => {
   const [availableNamespaces, setAvailableNamespaces] = useState([]);
   const { t } = useAppTranslation();
 
-  // Fetch namespaces using the unified service
+  // 獲取可用的命名空間
   const fetchNamespaces = async () => {
     try {
-      const result = await podService.getNamespaces();
-      if (result && result.namespaces) {
-        setAvailableNamespaces(result.namespaces);
+      const response = await fetch('http://localhost:3001/api/pods/namespaces', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch namespaces');
       }
+
+      const data = await response.json();
+      setAvailableNamespaces(data.namespaces);
     } catch (error) {
       console.error('Error fetching namespaces:', error);
-      // Handle error appropriately
     }
   };
 

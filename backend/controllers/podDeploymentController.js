@@ -1,5 +1,7 @@
 const k8sService = require('../services/k8sService');
 const opensearchClient = require('../utils/opensearchClient');
+const fs = require('fs').promises;
+const path = require('path');
 
 // 生成部署預覽
 const generatePreview = async (req, res) => {
@@ -186,6 +188,66 @@ const handleDeploymentProgress = (ws, req) => {
 };
 
 // 更新導出
+const getTemplateList = async (req, res) => {
+  try {
+    const TEMPLATE_DIR = path.join(__dirname, '../deploymentTemplate');
+    console.log('📂 Getting template list from:', TEMPLATE_DIR);
+    
+    // Check if directory exists
+    const exists = await fs.access(TEMPLATE_DIR)
+      .then(() => true)
+      .catch(() => false);
+    
+    if (!exists) {
+      console.log('❌ Template directory does not exist');
+      await fs.mkdir(TEMPLATE_DIR, { recursive: true });
+      console.log('✅ Created template directory');
+    }
+    
+    const templates = await fs.readdir(TEMPLATE_DIR);
+    console.log('📑 Found templates:', templates);
+    
+    // Filter out non-directory items and hidden files
+    const templateDirs = await Promise.all(templates
+      .filter(name => !name.startsWith('.'))
+      .map(async (name) => {
+        const templatePath = path.join(TEMPLATE_DIR, name);
+        const stats = await fs.stat(templatePath);
+        return stats.isDirectory() ? name : null;
+      }));
+
+    const validTemplates = templateDirs.filter(Boolean);
+    console.log('✅ Valid template directories:', validTemplates);
+    
+    // Get details for each template
+    const templateDetails = await Promise.all(validTemplates.map(async (name) => {
+      const templatePath = path.join(TEMPLATE_DIR, name);
+      const stats = await fs.stat(templatePath);
+      
+      // Look for template YAML file
+      const files = await fs.readdir(templatePath);
+      const templateFile = files.find(file => file.endsWith('-template.yaml') || file.endsWith('-template.yml'));
+      
+      return {
+        name,
+        path: templatePath,
+        templateFile: templateFile ? path.join(templatePath, templateFile) : null,
+        createdAt: stats.birthtime,
+        modifiedAt: stats.mtime
+      };
+    }));
+
+    console.log('✅ Template details:', templateDetails);
+    res.json(templateDetails);
+  } catch (error) {
+    console.error('❌ Error getting template list:', error);
+    res.status(500).json({ 
+      message: 'Failed to get template list',
+      error: error.message 
+    });
+  }
+};
+
 module.exports = {
   generatePreview,
   createDeployment,
@@ -195,5 +257,6 @@ module.exports = {
   getDeploymentLogs,
   getContainers,
   getDeploymentStatus,
-  handleDeploymentProgress
+  handleDeploymentProgress,
+  getTemplateList
 }; 

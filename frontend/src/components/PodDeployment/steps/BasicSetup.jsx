@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   TextField,
@@ -8,15 +8,20 @@ import {
   Alert,
   FormControlLabel,
   Checkbox,
-  Paper
+  Paper,
+  Autocomplete
 } from '@mui/material';
 import { Upload as UploadIcon } from '@mui/icons-material';
 import { useAppTranslation } from '../../../hooks/useAppTranslation';
+import { templateService } from '../../../services/templateService';
 
 const BasicSetup = ({ config, onChange, errors: propErrors }) => {
   const { t } = useAppTranslation();
   const [localErrors, setLocalErrors] = useState({});
   const [showResourceQuota, setShowResourceQuota] = useState(false);
+  const [availableTemplates, setAvailableTemplates] = useState([]);
+  const [showTemplateUpload, setShowTemplateUpload] = useState(false);
+  const [isNewDeployment, setIsNewDeployment] = useState(false);
 
   const handleResourceQuotaChange = (field, value) => {
     onChange({
@@ -119,31 +124,77 @@ spec:
 
   const allErrors = { ...propErrors, ...localErrors };
 
+  // Fetch available templates on component mount
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      try {
+        const templates = await templateService.getTemplateList();
+        setAvailableTemplates(templates.map(t => t.name));
+      } catch (error) {
+        console.error('Failed to fetch templates:', error);
+      }
+    };
+    fetchTemplates();
+  }, []);
+
+  // Handle deployment name change
+  const handleDeploymentNameChange = (event, newValue) => {
+    const deploymentName = newValue?.trim() || '';
+    const isNew = !availableTemplates.includes(deploymentName);
+    setIsNewDeployment(isNew);
+    setShowTemplateUpload(isNew && deploymentName !== '');
+    
+    onChange({
+      ...config,
+      name: deploymentName
+    });
+  };
+
   return (
     <Box>
       <Typography variant="h6" gutterBottom>
-        {t('podDeployment:podDeployment.steps.basicSetup')}
+        {t('podDeployment:podDeployment.basicSetup.title')}
       </Typography>
 
       <Grid container spacing={3}>
-        <Grid item xs={12} sm={6}>
-          <TextField
-            fullWidth
-            label={t('podDeployment:podDeployment.basic.name')}
-            value={config.name}
-            onChange={(e) => {
-              onChange({ ...config, name: e.target.value });
-              if (localErrors.name) {
-                setLocalErrors(prev => {
-                  const { name, ...rest } = prev;
-                  return rest;
-                });
-              }
-            }}
-            error={!!allErrors.name}
-            helperText={allErrors.name}
-            required
+        <Grid item xs={12}>
+          <Autocomplete
+            freeSolo
+            value={config.name || ''}
+            onChange={handleDeploymentNameChange}
+            onInputChange={(event, newValue) => handleDeploymentNameChange(event, newValue)}
+            options={availableTemplates}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                required
+                fullWidth
+                label={t('podDeployment:podDeployment.basic.name')}
+                error={!!allErrors.name}
+                helperText={allErrors.name}
+              />
+            )}
           />
+          {showTemplateUpload && (
+            <Alert 
+              severity="info" 
+              sx={{ mt: 1 }}
+              action={
+                <Button
+                  color="inherit"
+                  size="small"
+                  onClick={() => {
+                    // Template upload button click handler
+                    // This will be handled by existing template upload functionality
+                  }}
+                >
+                  {t('podDeployment:podDeployment.steps.uploadTemplate')}
+                </Button>
+              }
+            >
+              {t('podDeployment:podDeployment.steps.upload')}
+            </Alert>
+          )}
         </Grid>
         <Grid item xs={12} sm={6}>
           <TextField
