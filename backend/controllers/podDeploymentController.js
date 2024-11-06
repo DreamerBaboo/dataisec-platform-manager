@@ -3,6 +3,7 @@ const opensearchClient = require('../utils/opensearchClient');
 const fs = require('fs').promises;
 const path = require('path');
 const semver = require('semver');
+const YAML = require('yaml');
 
 // 生成部署預覽
 const generatePreview = async (req, res) => {
@@ -340,6 +341,96 @@ const getVersionConfig = async (req, res) => {
   }
 };
 
+// Add saveTemplateContent function
+const saveTemplateContent = async (req, res) => {
+  try {
+    const { deploymentName } = req.params;
+    // Get content from request body and ensure it's a string
+    const content = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+
+    console.log('💾 Saving template content for:', deploymentName);
+    console.log('📄 Content length:', content.length);
+    console.log('📄 Content type:', typeof content);
+    console.log('📄 Content preview:', content.substring(0, 100));
+    
+    // Ensure the deployment template directory exists
+    const templateDir = path.join(__dirname, '../deploymentTemplate', deploymentName);
+    try {
+      await fs.access(templateDir);
+    } catch (error) {
+      console.log('📁 Creating template directory:', templateDir);
+      await fs.mkdir(templateDir, { recursive: true });
+    }
+    
+    // Define template file path
+    const templatePath = path.join(templateDir, `${deploymentName}-template.yaml`);
+    
+    // Validate YAML content
+    try {
+      console.log('🔍 Validating YAML content');
+      // Parse the content to validate it's valid YAML
+      const yamlDoc = YAML.parse(content);
+      if (!yamlDoc) {
+        throw new Error('Empty or invalid YAML content');
+      }
+      console.log('✅ YAML validation successful');
+    } catch (yamlError) {
+      console.error('❌ Invalid YAML content:', yamlError);
+      return res.status(400).json({
+        message: 'Invalid YAML content',
+        error: yamlError.message
+      });
+    }
+    
+    // Save template content
+    console.log('💾 Writing template file:', templatePath);
+    await fs.writeFile(templatePath, content, 'utf8');
+    
+    // Update config.json
+    try {
+      const configPath = path.join(templateDir, 'config.json');
+      let config = {};
+      
+      try {
+        console.log('📖 Reading existing config:', configPath);
+        const existingConfig = await fs.readFile(configPath, 'utf8');
+        config = JSON.parse(existingConfig);
+      } catch (err) {
+        console.log('ℹ️ No existing config found, creating new one');
+        config = {
+          name: deploymentName,
+          versions: {},
+          latestVersion: '1.0.0'
+        };
+      }
+
+      // Add or update template content in config
+      config.template = {
+        content: content,
+        updatedAt: new Date().toISOString()
+      };
+
+      console.log('💾 Writing updated config:', configPath);
+      await fs.writeFile(configPath, JSON.stringify(config, null, 2), 'utf8');
+    } catch (configError) {
+      console.warn('⚠️ Failed to update config.json:', configError);
+      // Don't fail the whole operation if config update fails
+    }
+    
+    console.log('✅ Template content saved successfully');
+    res.json({
+      message: 'Template content saved successfully',
+      path: templatePath
+    });
+  } catch (error) {
+    console.error('❌ Error saving template content:', error);
+    res.status(500).json({
+      message: 'Failed to save template content',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   generatePreview,
   createDeployment,
@@ -353,5 +444,6 @@ module.exports = {
   getTemplateList,
   saveDeploymentConfig,
   getDeploymentVersions,
-  getVersionConfig
+  getVersionConfig,
+  saveTemplateContent
 }; 
