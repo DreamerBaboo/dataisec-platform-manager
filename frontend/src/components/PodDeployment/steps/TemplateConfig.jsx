@@ -236,6 +236,39 @@ const TemplateConfig = ({ config, onChange, errors }) => {
     </Box>
   );
 
+  const handleTemplateChange = async (templateData) => {
+    try {
+      const { content, placeholders, defaultValues, categories } = templateData;
+
+      // Update configuration with new placeholders and categories
+      onChange({
+        ...config,
+        yamlTemplate: {
+          ...config.yamlTemplate,
+          content,
+          placeholders: {
+            ...config.yamlTemplate?.placeholders,
+            ...Object.keys(placeholders).reduce((acc, key) => ({
+              ...acc,
+              [key]: placeholders[key] || config.yamlTemplate?.placeholders?.[key] || ''
+            }), {})
+          },
+          defaultValues: {
+            ...config.yamlTemplate?.defaultValues,
+            ...defaultValues
+          },
+          categories
+        }
+      });
+
+      // Refresh template content
+      setTemplateContent(content);
+    } catch (error) {
+      console.error('Template refresh error:', error);
+      setYamlError(error.message);
+    }
+  };
+
   return (
     <Box>
       <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between' }}>
@@ -324,6 +357,7 @@ const TemplateConfig = ({ config, onChange, errors }) => {
           }
         }}
         error={yamlError}
+        onTemplateChange={handleTemplateChange}
       />
     </Box>
   );

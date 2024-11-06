@@ -85,6 +85,24 @@ export const templateService = {
     }
   },
 
+  // Get template placeholders
+  async getTemplatePlaceholders(deploymentName) {
+    try {
+      console.log('Getting placeholders for deployment:', deploymentName);
+      const response = await axios.get(
+        `${API_URL}/api/pod-deployments/templates/${deploymentName}/placeholders`,
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        }
+      );
+      console.log('Placeholders response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to get template placeholders:', error);
+      throw error;
+    }
+  },
+
   // Extract values from final YAML
   async extractValuesFromFinal(templateYaml, finalYaml) {
     try {

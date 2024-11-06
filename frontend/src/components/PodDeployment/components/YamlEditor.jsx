@@ -5,16 +5,56 @@ import {
   DialogContent,
   DialogActions,
   Button,
-  Alert
+  Alert,
+  Box,
+  CircularProgress,
+  FormControl,
+  FormLabel
 } from '@mui/material';
 import Editor from '@monaco-editor/react';
 import { useAppTranslation } from '../../../hooks/useAppTranslation';
+import templateService from '../../../services/templateService';
 
-const YamlEditor = ({ open, onClose, content, deploymentName, templateFile, onSave, error }) => {
+// Custom Monaco Editor wrapper with default parameters
+const CustomMonacoEditor = ({
+  height = '100%',
+  language = 'yaml',
+  theme = 'vs-dark',
+  value = '',
+  onChange,
+  options = {
+    minimap: { enabled: false },
+    scrollBeyondLastLine: false,
+    wordWrap: 'on',
+    wrappingIndent: 'indent'
+  },
+  ...props
+}) => (
+  <Editor
+    height={height}
+    language={language}
+    theme={theme}
+    value={value}
+    onChange={onChange}
+    options={options}
+    {...props}
+  />
+);
+
+const YamlEditor = ({ 
+  open, 
+  onClose, 
+  content, 
+  deploymentName, 
+  templateFile,
+  onSave,
+  onTemplateChange,
+  error 
+}) => {
   const { t } = useAppTranslation();
   const [editedContent, setEditedContent] = useState(content);
-  const [saveError, setSaveError] = useState(null);
-  const [isSaving, setIsSaving] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [localError, setError] = useState(error);
 
   useEffect(() => {
     setEditedContent(content);
@@ -22,39 +62,43 @@ const YamlEditor = ({ open, onClose, content, deploymentName, templateFile, onSa
 
   const handleSave = async () => {
     try {
-      setIsSaving(true);
-      setSaveError(null);
+      setSaving(true);
+      setError(null);
 
-      console.log('Saving template:', {
+      // Save template content
+      await templateService.saveTemplateContent(
         deploymentName,
-        templateFile,
-        contentLength: editedContent.length
-      });
+        editedContent
+      );
 
-      // Save changes to the template file
-      const response = await fetch(`/api/deployment-templates/${deploymentName}/template`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'text/plain',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: editedContent
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to save template');
-      }
-
-      // Call the onSave callback with the new content
+      // Call onSave callback with the edited content
       await onSave(editedContent);
+      
+      // Analyze template for new placeholders
+      const { placeholders, defaultValues, categories } = 
+        await templateService.getTemplatePlaceholders(deploymentName);
+
+      // Trigger template refresh in parent component
+      if (onTemplateChange) {
+        await onTemplateChange({
+          content: editedContent,
+          placeholders,
+          defaultValues,
+          categories
+        });
+      }
+      
       onClose();
-    } catch (error) {
-      console.error('Failed to save template:', error);
-      setSaveError(error.message);
+    } catch (err) {
+      console.error('Failed to save template:', err);
+      setError(err.message);
     } finally {
-      setIsSaving(false);
+      setSaving(false);
     }
+  };
+
+  const handleEditorChange = (value) => {
+    setEditedContent(value);
   };
 
   return (
@@ -64,53 +108,69 @@ const YamlEditor = ({ open, onClose, content, deploymentName, templateFile, onSa
       maxWidth="lg"
       fullWidth
       PaperProps={{
-        sx: {
-          height: '80vh',
+        sx: { 
+          height: '90vh',
           display: 'flex',
           flexDirection: 'column'
         }
       }}
+      aria-labelledby="yaml-editor-title"
     >
-      <DialogTitle>
-        {t('podDeployment:podDeployment.yamlTemplate.editor')} - {templateFile}
+      <DialogTitle id="yaml-editor-title">
+        {t('podDeployment:podDeployment.yamlTemplate.editor')}
       </DialogTitle>
-
-      <DialogContent sx={{ flex: 1, overflow: 'hidden' }}>
-        {(error || saveError) && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error || saveError}
+      <DialogContent 
+        sx={{ 
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          p: 0
+        }}
+      >
+        <FormControl 
+          fullWidth 
+          sx={{ 
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column'
+          }}
+        >
+          <FormLabel 
+            id="yaml-editor-label"
+            sx={{ px: 3, py: 1 }}
+          >
+            {t('podDeployment:podDeployment.yamlTemplate.content')}
+          </FormLabel>
+          <Box sx={{ 
+            flex: 1,
+            minHeight: 0,
+            px: 3
+          }}>
+            <CustomMonacoEditor
+              value={editedContent}
+              onChange={handleEditorChange}
+              aria-labelledby="yaml-editor-label"
+            />
+          </Box>
+        </FormControl>
+        {(error || localError) && (
+          <Alert severity="error" sx={{ m: 3 }}>
+            {error || localError}
           </Alert>
         )}
-
-        <Editor
-          height="100%"
-          defaultLanguage="yaml"
-          value={editedContent}
-          onChange={setEditedContent}
-          options={{
-            minimap: { enabled: true },
-            scrollBeyondLastLine: false,
-            fontSize: 14,
-            lineNumbers: 'on',
-            wordWrap: 'on',
-            theme: 'vs-light'
-          }}
-        />
       </DialogContent>
-
-      <DialogActions>
+      <DialogActions sx={{ p: 2 }}>
         <Button onClick={onClose}>
-          {t('common:common.cancel')}
+          {t('podDeployment:podDeployment.yamlTemplate.close')}
         </Button>
         <Button
-          variant="contained"
           onClick={handleSave}
-          disabled={isSaving}
+          variant="contained"
+          disabled={saving}
+          startIcon={saving && <CircularProgress size={20} />}
         >
-          {isSaving 
-            ? t('common:common.saving')
-            : t('common:common.save')
-          }
+          {t('podDeployment:podDeployment.yamlTemplate.save')}
         </Button>
       </DialogActions>
     </Dialog>
