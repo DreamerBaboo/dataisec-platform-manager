@@ -20,18 +20,6 @@ import SecretEditor from '../steps/SecretEditor';
 import DeploymentPreview from './DeploymentPreview';
 import NamespaceQuotaConfig from '../steps/NamespaceQuotaConfig';
 
-const steps = [
-  'basicSetup',
-  'templateConfig',
-  'resourceConfig',
-  'affinityConfig',
-  'volumeConfig',
-  'configMapConfig',
-  'secretConfig',
-  'namespaceQuota',
-  'preview'
-];
-
 const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
   const { t } = useAppTranslation();
   const [activeStep, setActiveStep] = useState(0);
@@ -49,6 +37,29 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
     resourceQuota: null
   });
   const [errors, setErrors] = useState({});
+  const [visibleSteps, setVisibleSteps] = useState({
+    basicSetup: true,
+    templateConfig: true,
+    resourceConfig: true,
+    affinityConfig: true,
+    volumeConfig: true,
+    configMapConfig: true,
+    secretConfig: true,
+    namespaceQuota: false,
+    preview: true
+  });
+
+  const steps = [
+    'basicSetup',
+    'templateConfig',
+    'resourceConfig',
+    'affinityConfig',
+    'volumeConfig',
+    'configMapConfig',
+    'secretConfig',
+    'namespaceQuota',
+    'preview'
+  ];
 
   useEffect(() => {
     if (deployment) {
@@ -92,13 +103,15 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
   }, []);
 
   const renderStepContent = useCallback((step) => {
-    switch (step) {
+    const stepIndex = steps.indexOf(steps[step]);
+    switch (stepIndex) {
       case 0:
         return (
           <BasicSetup
             config={deploymentConfig}
             onChange={handleConfigChange}
             errors={errors}
+            onStepVisibilityChange={handleStepVisibilityChange}
           />
         );
       case 1:
@@ -176,14 +189,23 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
     }
   };
 
+  const handleStepVisibilityChange = (stepName, isVisible) => {
+    setVisibleSteps(prev => ({
+      ...prev,
+      [stepName]: isVisible
+    }));
+  };
+
+  const getVisibleSteps = useCallback(() => {
+    return steps.filter(step => visibleSteps[step]);
+  }, [visibleSteps]);
+
   return (
     <Box sx={{ width: '100%' }}>
-      <Stepper activeStep={activeStep} alternativeLabel>
-        {steps.map((label, index) => (
-          <Step key={label} onClick={() => handleStepClick(index)} sx={{ cursor: 'pointer' }}>
-            <StepLabel>
-              {t(`podDeployment:podDeployment.steps.${label}`)}
-            </StepLabel>
+      <Stepper activeStep={activeStep}>
+        {getVisibleSteps().map((step, index) => (
+          <Step key={step}>
+            <StepLabel>{t(`podDeployment:podDeployment.steps.${step}`)}</StepLabel>
           </Step>
         ))}
       </Stepper>

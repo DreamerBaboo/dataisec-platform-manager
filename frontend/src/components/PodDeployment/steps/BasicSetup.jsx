@@ -15,7 +15,7 @@ import { Upload as UploadIcon } from '@mui/icons-material';
 import { useAppTranslation } from '../../../hooks/useAppTranslation';
 import { templateService } from '../../../services/templateService';
 
-const BasicSetup = ({ config, onChange, errors: propErrors }) => {
+const BasicSetup = ({ config, onChange, errors: propErrors, onStepVisibilityChange }) => {
   const { t } = useAppTranslation();
   const [localErrors, setLocalErrors] = useState({});
   const [showResourceQuota, setShowResourceQuota] = useState(false);
@@ -23,14 +23,19 @@ const BasicSetup = ({ config, onChange, errors: propErrors }) => {
   const [showTemplateUpload, setShowTemplateUpload] = useState(false);
   const [isNewDeployment, setIsNewDeployment] = useState(false);
 
-  const handleResourceQuotaChange = (field, value) => {
+  const handleResourceQuotaChange = (event) => {
+    const isChecked = event.target.checked;
+    
+    // Update config
     onChange({
       ...config,
-      resourceQuota: {
-        ...config.resourceQuota,
-        [field]: value
-      }
+      enableResourceQuota: isChecked
     });
+
+    // Notify parent about step visibility change
+    if (onStepVisibilityChange) {
+      onStepVisibilityChange('namespaceQuota', isChecked);
+    }
   };
 
   const generateResourceQuotaPreview = () => {
@@ -209,11 +214,8 @@ spec:
           <FormControlLabel
             control={
               <Checkbox
-                checked={config.enableResourceQuota}
-                onChange={(e) => onChange({
-                  ...config,
-                  enableResourceQuota: e.target.checked
-                })}
+                checked={config.enableResourceQuota || false}
+                onChange={handleResourceQuotaChange}
               />
             }
             label={t('podDeployment:podDeployment.basic.enableResourceQuota')}
