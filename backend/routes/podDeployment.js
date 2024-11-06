@@ -15,7 +15,7 @@ router.get('/logs', authenticateToken, podDeploymentController.getDeploymentLogs
 router.get('/:name/containers', authenticateToken, podDeploymentController.getContainers);
 router.get('/:name/status', authenticateToken, podDeploymentController.getDeploymentStatus);
 
-// Add template listing route
+// Add template routes
 router.get('/templates/list', authenticateToken, async (req, res) => {
   try {
     console.log('🔍 Getting template list');
@@ -24,6 +24,48 @@ router.get('/templates/list', authenticateToken, async (req, res) => {
     console.error('❌ Error in template list route:', error);
     res.status(500).json({
       message: 'Failed to get template list',
+      error: error.message
+    });
+  }
+});
+
+// Add template upload route
+router.post('/templates/upload', authenticateToken, async (req, res) => {
+  try {
+    console.log('📤 Uploading template');
+    await podDeploymentController.uploadTemplate(req, res);
+  } catch (error) {
+    console.error('❌ Error in template upload route:', error);
+    res.status(500).json({
+      message: 'Failed to upload template',
+      error: error.message
+    });
+  }
+});
+
+// Add template configuration route
+router.get('/templates/:deploymentName/config', authenticateToken, async (req, res) => {
+  try {
+    console.log('🔍 Getting template configuration');
+    await podDeploymentController.getTemplateConfig(req, res);
+  } catch (error) {
+    console.error('❌ Error in template config route:', error);
+    res.status(500).json({
+      message: 'Failed to get template configuration',
+      error: error.message
+    });
+  }
+});
+
+// Add template content save route
+router.put('/templates/:deploymentName/template', authenticateToken, async (req, res) => {
+  try {
+    console.log('💾 Saving template content');
+    await podDeploymentController.saveTemplateContent(req, res);
+  } catch (error) {
+    console.error('❌ Error in template save route:', error);
+    res.status(500).json({
+      message: 'Failed to save template content',
       error: error.message
     });
   }
