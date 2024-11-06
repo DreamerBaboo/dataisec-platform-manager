@@ -2,6 +2,7 @@ const k8sService = require('../services/k8sService');
 const opensearchClient = require('../utils/opensearchClient');
 const fs = require('fs').promises;
 const path = require('path');
+const semver = require('semver');
 
 // 生成部署預覽
 const generatePreview = async (req, res) => {
@@ -248,6 +249,97 @@ const getTemplateList = async (req, res) => {
   }
 };
 
+// Save deployment configuration
+const saveDeploymentConfig = async (req, res) => {
+  try {
+    const { name, version, config } = req.body;
+    const configPath = path.join(__dirname, '../deploymentTemplate', name, 'config.json');
+
+    // Read existing config or create new one
+    let deploymentConfig;
+    try {
+      const existingConfig = await fs.readFile(configPath, 'utf8');
+      deploymentConfig = JSON.parse(existingConfig);
+    } catch (error) {
+      deploymentConfig = {
+        name,
+        versions: {},
+        latestVersion: version
+      };
+    }
+
+    // Add new version
+    deploymentConfig.versions[version] = {
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      config
+    };
+
+    // Update latest version if newer
+    if (!deploymentConfig.latestVersion || 
+        semver.gt(version, deploymentConfig.latestVersion)) {
+      deploymentConfig.latestVersion = version;
+    }
+
+    // Save configuration
+    await fs.writeFile(configPath, JSON.stringify(deploymentConfig, null, 2));
+
+    res.json({
+      message: 'Configuration saved successfully',
+      version
+    });
+  } catch (error) {
+    console.error('Failed to save deployment config:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Get deployment configuration versions
+const getDeploymentVersions = async (req, res) => {
+  try {
+    const { name } = req.params;
+    const configPath = path.join(__dirname, '../deploymentTemplate', name, 'config.json');
+
+    const configFile = await fs.readFile(configPath, 'utf8');
+    const config = JSON.parse(configFile);
+
+    const versions = Object.keys(config.versions).map(version => ({
+      version,
+      createdAt: config.versions[version].createdAt,
+      updatedAt: config.versions[version].updatedAt
+    }));
+
+    res.json({
+      name,
+      versions,
+      latestVersion: config.latestVersion
+    });
+  } catch (error) {
+    console.error('Failed to get deployment versions:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Get specific version configuration
+const getVersionConfig = async (req, res) => {
+  try {
+    const { name, version } = req.params;
+    const configPath = path.join(__dirname, '../deploymentTemplate', name, 'config.json');
+
+    const configFile = await fs.readFile(configPath, 'utf8');
+    const config = JSON.parse(configFile);
+
+    if (!config.versions[version]) {
+      return res.status(404).json({ error: 'Version not found' });
+    }
+
+    res.json(config.versions[version]);
+  } catch (error) {
+    console.error('Failed to get version config:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   generatePreview,
   createDeployment,
@@ -258,5 +350,8 @@ module.exports = {
   getContainers,
   getDeploymentStatus,
   handleDeploymentProgress,
-  getTemplateList
+  getTemplateList,
+  saveDeploymentConfig,
+  getDeploymentVersions,
+  getVersionConfig
 }; 

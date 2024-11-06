@@ -1,0 +1,48 @@
+{
+  "name": "dataisec-console",
+  "versions": {
+    "1.0.0": {
+      "createdAt": "2024-03-06T10:00:00Z",
+      "updatedAt": "2024-03-06T10:00:00Z",
+      "config": {
+        "basic": {
+          "name": "dataisec-console",
+          "namespace": "default",
+          "version": "1.0.0",
+          "enableResourceQuota": false
+        },
+        "template": {
+          "content": "...",
+          "placeholders": {},
+          "defaultValues": {}
+        },
+        "resources": {
+          "requests": {
+            "cpu": "100m",
+            "memory": "128Mi"
+          },
+          "limits": {
+            "cpu": "500m",
+            "memory": "512Mi"
+          }
+        },
+        "affinity": {
+          "nodeSelector": {},
+          "nodeAffinity": {},
+          "podAffinity": {}
+        },
+        "volumes": [],
+        "configMaps": [],
+        "secrets": [],
+        "namespaceQuota": null
+      }
+    },
+    "1.0.1": {
+      "createdAt": "2024-03-07T14:30:00Z",
+      "updatedAt": "2024-03-07T14:30:00Z",
+      "config": {
+      }
+    }
+  },
+  "latestVersion": "1.0.1"
+} 

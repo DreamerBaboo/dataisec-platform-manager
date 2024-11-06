@@ -14,7 +14,7 @@ fullnameOverride: "dataisec-console"
 
 
 service:
-  type: NodePort
+  type: ${service-type} #[NodePort, ClusterIP]
   port: ${SERVICE_PORT} #[3000]
   targetPort: ${TARGET_SERVICE_PORT} #[3000]
   nodePort: ${NODE_PORT} #[32000]

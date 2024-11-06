@@ -14,6 +14,7 @@ import {
 import { Upload as UploadIcon } from '@mui/icons-material';
 import { useAppTranslation } from '../../../hooks/useAppTranslation';
 import { templateService } from '../../../services/templateService';
+import { podDeploymentService } from '../../../services/podDeploymentService';
 
 const BasicSetup = ({ config, onChange, errors: propErrors, onStepVisibilityChange }) => {
   const { t } = useAppTranslation();
@@ -22,6 +23,7 @@ const BasicSetup = ({ config, onChange, errors: propErrors, onStepVisibilityChan
   const [availableTemplates, setAvailableTemplates] = useState([]);
   const [showTemplateUpload, setShowTemplateUpload] = useState(false);
   const [isNewDeployment, setIsNewDeployment] = useState(false);
+  const [versions, setVersions] = useState([]);
 
   const handleResourceQuotaChange = (event) => {
     const isChecked = event.target.checked;
@@ -154,6 +156,49 @@ spec:
     });
   };
 
+  // Fetch versions when deployment name changes
+  useEffect(() => {
+    const fetchVersions = async () => {
+      if (!config.name || isNewDeployment) return;
+      
+      try {
+        const response = await podDeploymentService.getDeploymentVersions(config.name);
+        setVersions(response.versions);
+        
+        // Auto-select latest version if none selected
+        if (!config.version) {
+          onChange({
+            ...config,
+            version: response.latestVersion
+          });
+        }
+      } catch (error) {
+        console.error('Failed to fetch versions:', error);
+      }
+    };
+
+    fetchVersions();
+  }, [config.name, isNewDeployment]);
+
+  // Load version configuration when version changes
+  useEffect(() => {
+    const loadVersionConfig = async () => {
+      if (!config.name || !config.version || isNewDeployment) return;
+      
+      try {
+        const versionConfig = await podDeploymentService.getVersionConfig(
+          config.name,
+          config.version
+        );
+        onChange(versionConfig.config);
+      } catch (error) {
+        console.error('Failed to load version config:', error);
+      }
+    };
+
+    loadVersionConfig();
+  }, [config.name, config.version]);
+
   return (
     <Box>
       <Typography variant="h6" gutterBottom>
@@ -189,13 +234,24 @@ spec:
           )}
         </Grid>
         <Grid item xs={12} sm={6}>
-          <TextField
-            fullWidth
-            label={t('podDeployment:podDeployment.basic.version')}
+          <Autocomplete
+            freeSolo
             value={config.version || ''}
-            onChange={(e) => onChange({ ...config, version: e.target.value })}
-            placeholder="1.0.0"
-            required
+            onChange={(event, newValue) => {
+              onChange({
+                ...config,
+                version: newValue
+              });
+            }}
+            options={versions.map(v => v.version)}
+            disabled={isNewDeployment}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label={t('podDeployment:podDeployment.basic.version')}
+                required
+              />
+            )}
           />
         </Grid>
         <Grid item xs={12} sm={6}>
