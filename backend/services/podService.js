@@ -1,5 +1,5 @@
 const k8s = require('@kubernetes/client-node');
-const opensearchClient = require('../utils/opensearchClient');
+const { client } = require('../utils/opensearchClient');
 
 class PodService {
   constructor() {
@@ -8,13 +8,35 @@ class PodService {
     this.k8sApi = this.kc.makeApiClient(k8s.CoreV1Api);
   }
 
-  // 獲取所有命名空間
+  // Unified namespace fetching method
   async getNamespaces() {
     try {
+      console.log('Fetching namespaces...');
       const response = await this.k8sApi.listNamespace();
-      return response.body.items.map(ns => ns.metadata.name);
+      
+      if (!response || !response.body || !response.body.items) {
+        console.error('Invalid response structure:', response);
+        throw new Error('Invalid response from Kubernetes API');
+      }
+
+      const namespaces = response.body.items
+        .filter(ns => !ns.metadata.name.startsWith('kube-'))  // Filter out system namespaces
+        .map(ns => ns.metadata.name);
+
+      console.log('Found namespaces:', namespaces);
+
+      return {
+        namespaces,
+        total: namespaces.length
+      };
     } catch (error) {
       console.error('Failed to get namespaces:', error);
+      if (error.response) {
+        console.error('API Response:', {
+          status: error.response.statusCode,
+          body: error.response.body
+        });
+      }
       throw error;
     }
   }
@@ -67,7 +89,7 @@ class PodService {
   async getPodMetrics(podName, namespace) {
     try {
       console.log(`Fetching metrics for pod: ${podName} in namespace: ${namespace}`);
-      const response = await opensearchClient.search({
+      const response = await client.search({
         index: process.env.OPENSEARCH_POD_METRICS_INDEX || 'metricbeat-*',
         body: {
           size: 1,
@@ -142,7 +164,7 @@ class PodService {
       console.log(`Successfully deleted pod: ${name}`);
       
       // 記錄刪除操作
-      await opensearchClient.index({
+      await client.index({
         index: process.env.OPENSEARCH_AUDIT_LOG_INDEX,
         body: {
           action: 'DELETE_POD',
@@ -156,7 +178,7 @@ class PodService {
       console.error(`Failed to delete pod ${name}:`, error);
       
       // 記錄錯誤
-      await opensearchClient.index({
+      await client.index({
         index: process.env.OPENSEARCH_AUDIT_LOG_INDEX,
         body: {
           action: 'DELETE_POD',
@@ -169,6 +191,130 @@ class PodService {
       });
       
       throw error;
+    }
+  }
+
+  // Calculate pod resources from OpenSearch metrics
+  async calculatePodResources(podName, namespace, timeRange = '15m') {
+    try {
+      console.log('開始計算資源使用情況:', { podName, namespace, timeRange });
+      
+      const searchQuery = {
+        index: process.env.OPENSEARCH_POD_METRICS_INDEX || 'metricbeat-*',
+        body: {
+          size: 0,
+          query: {
+            bool: {
+              must: [
+                {
+                  match: {
+                    'kubernetes.pod.name': podName
+                  }
+                },
+                {
+                  match: {
+                    'kubernetes.namespace': namespace
+                  }
+                },
+                {
+                  range: {
+                    '@timestamp': {
+                      gte: `now-${timeRange}`
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          aggs: {
+            cpu_usage: {
+              avg: {
+                field: 'kubernetes.pod.cpu.usage.nanocores'
+              }
+            },
+            memory_usage: {
+              avg: {
+                field: 'kubernetes.pod.memory.usage.bytes'
+              }
+            },
+            cpu_requests: {
+              avg: {
+                field: 'kubernetes.pod.cpu.request.cores'
+              }
+            },
+            cpu_limits: {
+              avg: {
+                field: 'kubernetes.pod.cpu.limit.cores'
+              }
+            },
+            memory_requests: {
+              avg: {
+                field: 'kubernetes.pod.memory.request.bytes'
+              }
+            },
+            memory_limits: {
+              avg: {
+                field: 'kubernetes.pod.memory.limit.bytes'
+              }
+            }
+          }
+        }
+      };
+      
+      console.log('OpenSearch 查詢:', JSON.stringify(searchQuery, null, 2));
+      
+      const response = await client.search(searchQuery);
+      
+      console.log('OpenSearch 響應狀態:', {
+        total_hits: response.body.hits.total.value,
+        took: response.body.took,
+        timed_out: response.body.timed_out
+      });
+
+      const aggs = response.body.aggregations;
+      
+      console.log('聚合結果:', {
+        cpu_usage: aggs.cpu_usage.value,
+        memory_usage: aggs.memory_usage.value,
+        cpu_requests: aggs.cpu_requests.value,
+        cpu_limits: aggs.cpu_limits.value,
+        memory_requests: aggs.memory_requests.value,
+        memory_limits: aggs.memory_limits.value
+      });
+      
+      const result = {
+        cpu: {
+          usage: aggs.cpu_usage.value || 0,
+          requests: aggs.cpu_requests.value || 0,
+          limits: aggs.cpu_limits.value || 0
+        },
+        memory: {
+          usage: aggs.memory_usage.value || 0,
+          requests: aggs.memory_requests.value || 0,
+          limits: aggs.memory_limits.value || 0
+        }
+      };
+      
+      console.log('最終計算結果:', result);
+      return result;
+      
+    } catch (error) {
+      console.error('計算資源使用時發生錯誤:', error);
+      console.error('錯誤堆疊:', error.stack);
+      throw error;
+    }
+  }
+
+  // Helper function to parse time range
+  parseTimeRange(timeRange) {
+    const unit = timeRange.slice(-1);
+    const value = parseInt(timeRange.slice(0, -1));
+    
+    switch (unit) {
+      case 'm': return value * 60 * 1000;        // minutes
+      case 'h': return value * 60 * 60 * 1000;   // hours
+      case 'd': return value * 24 * 60 * 60 * 1000; // days
+      default: return 15 * 60 * 1000;  // default 15 minutes
     }
   }
 }

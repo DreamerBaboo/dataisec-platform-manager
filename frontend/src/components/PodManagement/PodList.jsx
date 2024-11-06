@@ -20,7 +20,8 @@ import {
   Grid2,
   TextField,
   InputAdornment,
-  Autocomplete
+  Autocomplete,
+  CircularProgress
 } from '@mui/material';
 import {
   KeyboardArrowDown as KeyboardArrowDownIcon,
@@ -32,6 +33,7 @@ import {
   FilterList as FilterListIcon
 } from '@mui/icons-material';
 import { useAppTranslation } from '../../hooks/useAppTranslation';
+import { podService } from '../../services/podService';
 
 // 命名空間行組件
 const NamespaceRow = ({ namespace, pods, onToggle, isOpen }) => {
@@ -114,47 +116,7 @@ const NamespaceRow = ({ namespace, pods, onToggle, isOpen }) => {
                 </TableHead>
                 <TableBody>
                   {pods.map((pod) => (
-                    <TableRow key={pod.name}>
-                      <TableCell component="th" scope="row">
-                        <Tooltip title={pod.name} placement="top-start">
-                          <Typography variant="body2" noWrap sx={{ maxWidth: 200 }}>
-                            {pod.name}
-                          </Typography>
-                        </Tooltip>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Chip
-                          icon={
-                            pod.status === 'Running' ? <CheckCircleIcon /> :
-                            pod.status === 'Failed' ? <ErrorIcon /> :
-                            <WarningIcon />
-                          }
-                          label={pod.status}
-                          size="small"
-                          color={
-                            pod.status === 'Running' ? 'success' :
-                            pod.status === 'Failed' ? 'error' :
-                            'warning'
-                          }
-                        />
-                      </TableCell>
-                      <TableCell align="right">
-                        {`${(pod.metrics?.cpu || 0).toFixed(2)} cores`}
-                      </TableCell>
-                      <TableCell align="right">
-                        {formatBytes(pod.metrics?.memory || 0)}
-                      </TableCell>
-                      <TableCell align="right">
-                        <Chip
-                          label={pod.restarts}
-                          size="small"
-                          color={pod.restarts > 0 ? 'warning' : 'default'}
-                        />
-                      </TableCell>
-                      <TableCell align="right">
-                        {formatAge(pod.startTime)}
-                      </TableCell>
-                    </TableRow>
+                    <PodRow key={pod.name} pod={pod} />
                   ))}
                 </TableBody>
               </Table>
@@ -187,6 +149,104 @@ const formatAge = (startTime) => {
   return `${Math.floor(diff / 86400)}d`;
 };
 
+const PodRow = ({ pod }) => {
+  const [metrics, setMetrics] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const loadPodMetrics = async () => {
+    try {
+      setLoading(true);
+      const resources = await podService.calculatePodResources(
+        pod.name,
+        pod.namespace
+      );
+      setMetrics(resources);
+    } catch (error) {
+      console.error('Error fetching pod metrics:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Convert millicores to cores
+  const formatCPU = (millicores) => {
+    if (!millicores && millicores !== 0) return '0';
+    return (millicores / 1000).toFixed(3);
+  };
+
+  return (
+    <TableRow 
+      key={pod.name}
+      onClick={loadPodMetrics}
+      sx={{ cursor: 'pointer' }}
+    >
+      <TableCell component="th" scope="row">
+        <Tooltip title={pod.name} placement="top-start">
+          <Typography variant="body2" noWrap sx={{ maxWidth: 200 }}>
+            {pod.name}
+          </Typography>
+        </Tooltip>
+      </TableCell>
+      <TableCell align="right">
+        <Chip
+          icon={
+            pod.status === 'Running' ? <CheckCircleIcon /> :
+            pod.status === 'Failed' ? <ErrorIcon /> :
+            <WarningIcon />
+          }
+          label={pod.status}
+          size="small"
+          color={
+            pod.status === 'Running' ? 'success' :
+            pod.status === 'Failed' ? 'error' :
+            'warning'
+          }
+        />
+      </TableCell>
+      <TableCell align="right">
+        {loading ? (
+          <CircularProgress size={20} />
+        ) : (
+          metrics ? (
+            <Tooltip title={`Requests: ${formatCPU(metrics.cpu.requests)} cores, Limits: ${formatCPU(metrics.cpu.limits)} cores`}>
+              <Typography variant="body2">
+                {`${formatCPU(metrics.cpu.usage)} cores`}
+              </Typography>
+            </Tooltip>
+          ) : (
+            `${formatCPU(pod.metrics?.cpu || 0)} cores`
+          )
+        )}
+      </TableCell>
+      <TableCell align="right">
+        {loading ? (
+          <CircularProgress size={20} />
+        ) : (
+          metrics ? (
+            <Tooltip title={`Requests: ${formatBytes(metrics.memory.requests)}, Limits: ${formatBytes(metrics.memory.limits)}`}>
+              <Typography variant="body2">
+                {formatBytes(metrics.memory.usage)}
+              </Typography>
+            </Tooltip>
+          ) : (
+            formatBytes(pod.metrics?.memory || 0)
+          )
+        )}
+      </TableCell>
+      <TableCell align="right">
+        <Chip
+          label={pod.restarts}
+          size="small"
+          color={pod.restarts > 0 ? 'warning' : 'default'}
+        />
+      </TableCell>
+      <TableCell align="right">
+        {formatAge(pod.startTime)}
+      </TableCell>
+    </TableRow>
+  );
+};
+
 const PodList = () => {
   const [namespaces, setNamespaces] = useState({});
   const [openNamespace, setOpenNamespace] = useState(null);
@@ -197,21 +257,16 @@ const PodList = () => {
   const [availableNamespaces, setAvailableNamespaces] = useState([]);
   const { t } = useAppTranslation();
 
-  // 獲取可用的命名空間
+  // Fetch namespaces using the unified service
   const fetchNamespaces = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/pods/namespaces', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch namespaces');
+      const result = await podService.getNamespaces();
+      if (result && result.namespaces) {
+        setAvailableNamespaces(result.namespaces);
       }
-
-      const data = await response.json();
-      setAvailableNamespaces(data.namespaces);
     } catch (error) {
       console.error('Error fetching namespaces:', error);
+      // Handle error appropriately
     }
   };
 

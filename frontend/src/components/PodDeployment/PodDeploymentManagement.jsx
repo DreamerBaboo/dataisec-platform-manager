@@ -54,6 +54,8 @@ import LogViewer from './components/LogViewer';
 import ImportConfig from './components/ImportConfig';
 import ExportConfig from './components/ExportConfig';
 
+import { podService } from '../../services/podService';
+
 axios.defaults.baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 axios.defaults.headers.common['Content-Type'] = 'application/json';
 
@@ -78,17 +80,13 @@ const PodDeploymentManagement = () => {
 
   const fetchNamespaces = async () => {
     try {
-      console.log('🔍 Fetching namespaces...');
-      const response = await axios.get('/api/pods/namespaces', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      console.log('✅ Namespaces fetched:', response.data);
-      const namespacesArray = Array.isArray(response.data) ? response.data : [];
-      setNamespaces(namespacesArray);
-    } catch (err) {
-      console.error('❌ Error fetching namespaces:', err);
-      setError(err.message);
-      setNamespaces([]);
+      const result = await podService.getNamespaces();
+      if (result && result.namespaces) {
+        setNamespaces(result.namespaces);
+      }
+    } catch (error) {
+      console.error('Error fetching namespaces:', error);
+      // Handle error appropriately
     }
   };
 

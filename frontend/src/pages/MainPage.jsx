@@ -58,8 +58,8 @@ function MainPage() {
       >
         <Routes>
           <Route path="/" element={<SystemDashboard />} />
-          <Route path="/pod-dashboard" element={<PodDashboard />} />
-          <Route path="/pods" element={<PodManagement />} />
+          <Route path="/pod-dashboard/*" element={<PodDashboard />} />
+          <Route path="/pods/*" element={<PodManagement />} />
           <Route path="/pods/create" element={<CreatePod />} />
           <Route path="/pods/edit/:id" element={<EditPod />} />
           <Route path="/logs" element={<LogViewer />} />

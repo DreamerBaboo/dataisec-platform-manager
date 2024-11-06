@@ -65,15 +65,17 @@ const PodDashboard = () => {
   useEffect(() => {
     const fetchNamespaces = async () => {
       try {
+        console.log('開始獲取命名空間...');
         const response = await fetch('http://localhost:3001/api/pods/namespaces', {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         });
         if (response.ok) {
           const data = await response.json();
+          console.log('獲取到的命名空間:', data.namespaces);
           setNamespaces(data.namespaces);
         }
       } catch (error) {
-        console.error('Error fetching namespaces:', error);
+        console.error('獲取命名空間時發生錯誤:', error);
       }
     };
     fetchNamespaces();
@@ -83,6 +85,7 @@ const PodDashboard = () => {
   useEffect(() => {
     const fetchPods = async () => {
       try {
+        console.log('開始獲取 Pod 列表，過濾條件:', filters);
         setLoading(true);
         const queryParams = new URLSearchParams();
         if (filters.namespace !== 'all') queryParams.append('namespace', filters.namespace);
@@ -94,10 +97,11 @@ const PodDashboard = () => {
         
         if (response.ok) {
           const data = await response.json();
+          console.log('獲取到的 Pod 數量:', data.length);
           setPods(data);
         }
       } catch (error) {
-        console.error('Error fetching pods:', error);
+        console.error('獲取 Pod 列表時發生錯誤:', error);
       } finally {
         setLoading(false);
       }
@@ -111,11 +115,13 @@ const PodDashboard = () => {
   // Fetch metrics for selected pods
   const fetchSelectedPodsMetrics = useCallback(async () => {
     if (selectedPods.length === 0) {
+      console.log('沒有選中的 Pod，清空指標數據');
       setPodMetrics(null);
       return;
     }
 
     try {
+      console.log('開始獲取選中 Pod 的指標，選中的 Pod:', selectedPods);
       const response = await fetch('http://localhost:3001/api/pods/calculate-resources', {
         method: 'POST',
         headers: {
@@ -127,10 +133,11 @@ const PodDashboard = () => {
 
       if (response.ok) {
         const data = await response.json();
+        console.log('獲取到的 Pod 指標:', data);
         setPodMetrics(data);
       }
     } catch (error) {
-      console.error('Error fetching pod metrics:', error);
+      console.error('獲取 Pod 指標時發生錯誤:', error);
     }
   }, [selectedPods]);
 
