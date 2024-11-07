@@ -30,7 +30,11 @@
       "uploadTemplateFile": "Please Upload Template File",
       "uploadTemplateSuccess": "Template uploaded successfully",
       "reload": "Reload",
-      "namespaceQuota": "Namespace Quota"
+      "namespaceQuota": "Namespace Quota",
+      "repository": "Repository",
+      "tag": "Tag",
+      "repositoryConfig": "Repository Configuration",
+      "port": "Port"  
     },      
     "filter": {
       "namespace": "Namespace",

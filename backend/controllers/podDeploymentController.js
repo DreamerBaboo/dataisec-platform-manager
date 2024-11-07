@@ -435,6 +435,23 @@ const saveTemplateContent = async (req, res) => {
   }
 };
 
+const validateRepositoryConfig = (config) => {
+  const errors = {};
+  
+  if (!config.yamlTemplate?.placeholders?.repository) {
+    errors.repository = 'Repository is required';
+  }
+  
+  if (!config.yamlTemplate?.placeholders?.tag) {
+    errors.tag = 'Tag is required';
+  }
+  
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors
+  };
+};
+
 module.exports = {
   generatePreview,
   createDeployment,
@@ -449,5 +466,6 @@ module.exports = {
   saveDeploymentConfig,
   getDeploymentVersions,
   getVersionConfig,
-  saveTemplateContent
+  saveTemplateContent,
+  validateRepositoryConfig
 }; 

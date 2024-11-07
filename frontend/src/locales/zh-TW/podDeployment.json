@@ -31,7 +31,11 @@
       "uploadTemplateFile": "請上傳模板文件",
       "uploadTemplateSuccess": "模板上傳成功",
       "reload": "重新加載",
-      "namespaceQuota": "命名空間配額"
+      "namespaceQuota": "命名空間配額",
+      "repository": "映像倉庫",
+      "tag": "映像標籤",
+      "repositoryConfig": "映像倉庫配置",
+      "port": "端口"  
     },
     "filter": {
       "namespace": "命名空間",
@@ -323,6 +327,14 @@
       "uploadTemplate": "上傳模板",
       "close": "關閉預覽",
       "reload": "重新加載"
+    },
+    "repository": {
+      "errors": {
+        "unauthorized": "未授權訪問，請重新登入",
+        "fetchFailed": "獲取倉庫列表失敗",
+        "tagsFetchFailed": "獲取標籤列表失敗",
+        "searchFailed": "搜索映像失敗"
+      }
     }
   }
 } 

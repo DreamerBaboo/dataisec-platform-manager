@@ -19,6 +19,7 @@ import ConfigMapEditor from '../steps/ConfigMapEditor';
 import SecretEditor from '../steps/SecretEditor';
 import DeploymentPreview from './DeploymentPreview';
 import NamespaceQuotaConfig from '../steps/NamespaceQuotaConfig';
+import RepositoryConfig from '../steps/RepositoryConfig';
 
 const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
   const { t } = useAppTranslation();
@@ -40,6 +41,7 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
   const [visibleSteps, setVisibleSteps] = useState({
     basicSetup: true,
     templateConfig: true,
+    repositoryConfig: true,
     resourceConfig: true,
     affinityConfig: true,
     volumeConfig: true,
@@ -52,6 +54,7 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
   const steps = [
     'basicSetup',
     'templateConfig',
+    'repositoryConfig',
     'resourceConfig',
     'affinityConfig',
     'volumeConfig',
@@ -76,6 +79,15 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
           newErrors.name = t('podDeployment:podDeployment.validation.name.required');
         } else if (!/^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(deploymentConfig.name)) {
           newErrors.name = t('podDeployment:podDeployment.validation.name.format');
+        }
+        break;
+        
+      case 2: // Repository Config
+        if (!deploymentConfig.repository) {
+          newErrors.repository = t('podDeployment:podDeployment.validation.repository.required');
+        }
+        if (!deploymentConfig.tag) {
+          newErrors.tag = t('podDeployment:podDeployment.validation.tag.required');
         }
         break;
         
@@ -134,7 +146,7 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
         );
       case 2:
         return (
-          <ResourceConfig
+          <RepositoryConfig
             config={deploymentConfig}
             onChange={handleConfigChange}
             errors={errors}
@@ -142,7 +154,7 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
         );
       case 3:
         return (
-          <AffinityConfig
+          <ResourceConfig
             config={deploymentConfig}
             onChange={handleConfigChange}
             errors={errors}
@@ -150,7 +162,7 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
         );
       case 4:
         return (
-          <VolumeConfig
+          <AffinityConfig
             config={deploymentConfig}
             onChange={handleConfigChange}
             errors={errors}
@@ -158,7 +170,7 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
         );
       case 5:
         return (
-          <ConfigMapEditor
+          <VolumeConfig
             config={deploymentConfig}
             onChange={handleConfigChange}
             errors={errors}
@@ -166,13 +178,21 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
         );
       case 6:
         return (
-          <SecretEditor
+          <ConfigMapEditor
             config={deploymentConfig}
             onChange={handleConfigChange}
             errors={errors}
           />
         );
       case 7:
+        return (
+          <SecretEditor
+            config={deploymentConfig}
+            onChange={handleConfigChange}
+            errors={errors}
+          />
+        );
+      case 8:
         return deploymentConfig.enableResourceQuota ? (
           <NamespaceQuotaConfig
             config={deploymentConfig}
@@ -180,7 +200,7 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
             errors={errors}
           />
         ) : handleNext();
-      case 8:
+      case 9:
         return (
           <DeploymentPreview
             config={deploymentConfig}
@@ -226,7 +246,7 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
         </Paper>
       </Box>
 
-      {activeStep !== 8 && (
+      {activeStep !== 9 && (
         <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
           <Button onClick={onCancel}>
             {t('common:common.cancel')}
