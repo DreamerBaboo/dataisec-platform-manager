@@ -13,26 +13,30 @@ import {
 import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { useAppTranslation } from '../../../hooks/useAppTranslation';
 
-const AffinityConfig = ({ affinity, onChange }) => {
+const AffinityConfig = ({ config, onChange }) => {
   const { t } = useAppTranslation();
 
+  const handleAffinityChange = async (newAffinity) => {
+    await onChange('affinity', newAffinity);
+  };
+
   const handleNodeAffinityChange = (value) => {
-    onChange({
-      ...affinity,
+    handleAffinityChange({
+      ...config.affinity,
       nodeAffinity: value
     });
   };
 
   const handlePodAffinityChange = (value) => {
-    onChange({
-      ...affinity,
+    handleAffinityChange({
+      ...config.affinity,
       podAffinity: value
     });
   };
 
   const handlePodAntiAffinityChange = (value) => {
-    onChange({
-      ...affinity,
+    handleAffinityChange({
+      ...config.affinity,
       podAntiAffinity: value
     });
   };
@@ -46,7 +50,7 @@ const AffinityConfig = ({ affinity, onChange }) => {
         fullWidth
         multiline
         rows={4}
-        value={affinity.nodeAffinity || ''}
+        value={config.affinity.nodeAffinity || ''}
         onChange={(e) => handleNodeAffinityChange(e.target.value)}
         placeholder={t('podDeployment:podDeployment.affinity.nodeAffinityPlaceholder')}
         sx={{ mb: 3 }}
@@ -59,7 +63,7 @@ const AffinityConfig = ({ affinity, onChange }) => {
         fullWidth
         multiline
         rows={4}
-        value={affinity.podAffinity || ''}
+        value={config.affinity.podAffinity || ''}
         onChange={(e) => handlePodAffinityChange(e.target.value)}
         placeholder={t('podDeployment:podDeployment.affinity.podAffinityPlaceholder')}
         sx={{ mb: 3 }}
@@ -72,7 +76,7 @@ const AffinityConfig = ({ affinity, onChange }) => {
         fullWidth
         multiline
         rows={4}
-        value={affinity.podAntiAffinity || ''}
+        value={config.affinity.podAntiAffinity || ''}
         onChange={(e) => handlePodAntiAffinityChange(e.target.value)}
         placeholder={t('podDeployment:podDeployment.affinity.podAntiAffinityPlaceholder')}
       />

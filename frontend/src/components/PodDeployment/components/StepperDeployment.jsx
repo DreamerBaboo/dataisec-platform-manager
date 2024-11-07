@@ -69,27 +69,37 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
 
   const validateStep = useCallback((step) => {
     const newErrors = {};
+    
     switch (step) {
       case 0: // Basic Setup
-        if (deploymentConfig.name && !/^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(deploymentConfig.name)) {
+        if (!deploymentConfig.name) {
+          newErrors.name = t('podDeployment:podDeployment.validation.name.required');
+        } else if (!/^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(deploymentConfig.name)) {
           newErrors.name = t('podDeployment:podDeployment.validation.name.format');
         }
         break;
-      case 7: // Preview - Only validate required fields in final step
-        if (!deploymentConfig.name || !deploymentConfig.namespace || !deploymentConfig.templatePath) {
-          return false;
+        
+      case 7: // Namespace Quota
+        if (visibleSteps.namespaceQuota && !deploymentConfig.resourceQuota) {
+          newErrors.resourceQuota = t('podDeployment:podDeployment.validation.resourceQuota.required');
         }
         break;
     }
+    
     setErrors(newErrors);
-    return true; // Always return true except for final validation
-  }, [deploymentConfig, t]);
+    return Object.keys(newErrors).length === 0;
+  }, [deploymentConfig, visibleSteps, t]);
 
-  const handleNext = useCallback(() => {
+  const handleNext = () => {
     if (validateStep(activeStep)) {
-      setActiveStep(prev => prev + 1);
+      let nextStep = activeStep + 1;
+      // 跳過隱藏的步驟
+      while (nextStep < steps.length && !visibleSteps[steps[nextStep]]) {
+        nextStep++;
+      }
+      setActiveStep(nextStep);
     }
-  }, [activeStep, validateStep]);
+  };
 
   const handleBack = useCallback(() => {
     setActiveStep(prev => prev - 1);

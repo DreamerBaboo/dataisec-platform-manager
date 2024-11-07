@@ -129,6 +129,25 @@ export const templateService = {
       console.error('Failed to extract values:', error);
       throw error;
     }
+  },
+
+  async saveTemplateConfig(deploymentName, data) {
+    try {
+      const response = await axios.post(
+        `${API_URL}/api/pod-deployment/templates/${deploymentName}/config`,
+        data,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Failed to save template config:', error);
+      throw error;
+    }
   }
 };
 

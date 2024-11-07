@@ -57,6 +57,7 @@ const DeploymentConfigurator = ({ onBack, deployment = null }) => {
   const [showTemplates, setShowTemplates] = useState(false);
   const [showDiff, setShowDiff] = useState(false);
   const [originalConfig, setOriginalConfig] = useState(null);
+  const [config, setConfig] = useState(null);
 
   useEffect(() => {
     if (deployment) {
@@ -75,6 +76,55 @@ const DeploymentConfigurator = ({ onBack, deployment = null }) => {
     }
   }, [deployment]);
 
+  // 初始化時讀取配置
+  useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        if (deployment?.name) {
+          const response = await templateService.getTemplateConfig(deployment.name);
+          setConfig(response.data.config);
+        } else {
+          // 創建新的配置文件
+          const newConfig = {
+            name: '',
+            namespace: '',
+            version: '',
+            image: {},
+            resources: {},
+            affinity: {},
+            volumes: [],
+            configMaps: [],
+            secrets: []
+          };
+          await templateService.saveTemplateConfig('new', { config: newConfig });
+          setConfig(newConfig);
+        }
+      } catch (error) {
+        console.error('Failed to load config:', error);
+      }
+    };
+    loadConfig();
+  }, [deployment]);
+
+  // 處理配置更新
+  const handleConfigUpdate = async (section, data) => {
+    try {
+      const updatedConfig = {
+        ...config,
+        [section]: data
+      };
+      setConfig(updatedConfig);
+      
+      // 保存到 config.json
+      await templateService.saveTemplateConfig(
+        config.name || 'new',
+        { config: updatedConfig }
+      );
+    } catch (error) {
+      console.error('Failed to save config:', error);
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -84,10 +134,26 @@ const DeploymentConfigurator = ({ onBack, deployment = null }) => {
   };
 
   const handleNestedChange = (section, data) => {
-    setFormData(prev => ({
-      ...prev,
+    const updatedConfig = {
+      ...formData,
       [section]: data
-    }));
+    };
+    
+    setFormData(updatedConfig);
+    
+    // 保存到 config.json
+    saveConfigToFile(updatedConfig);
+  };
+
+  const saveConfigToFile = async (config) => {
+    try {
+      await templateService.saveTemplateConfig(config.name, {
+        config,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Failed to save config:', error);
+    }
   };
 
   const handleNext = async () => {

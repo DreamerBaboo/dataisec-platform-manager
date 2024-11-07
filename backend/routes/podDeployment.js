@@ -239,4 +239,48 @@ router.get('/templates/:deploymentName/placeholders', authenticateToken, async (
   }
 });
 
+router.post('/templates/:name/config', authenticateToken, async (req, res) => {
+  try {
+    const { name } = req.params;
+    const configPath = path.join(
+      __dirname,
+      '../deploymentTemplate',
+      name,
+      'config.json'
+    );
+    
+    // 確保目錄存在
+    await fs.mkdir(path.dirname(configPath), { recursive: true });
+    
+    // 寫入配置
+    await fs.writeFile(
+      configPath,
+      JSON.stringify(req.body, null, 2)
+    );
+    
+    res.json({ message: 'Configuration saved successfully' });
+  } catch (error) {
+    console.error('Failed to save config:', error);
+    res.status(500).json({ error: 'Failed to save configuration' });
+  }
+});
+
+router.get('/templates/:name/config', authenticateToken, async (req, res) => {
+  try {
+    const { name } = req.params;
+    const configPath = path.join(
+      __dirname,
+      '../deploymentTemplate',
+      name,
+      'config.json'
+    );
+    
+    const config = await fs.readFile(configPath, 'utf8');
+    res.json(JSON.parse(config));
+  } catch (error) {
+    console.error('Failed to read config:', error);
+    res.status(500).json({ error: 'Failed to read configuration' });
+  }
+});
+
 module.exports = router; 
