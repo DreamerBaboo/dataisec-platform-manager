@@ -93,7 +93,14 @@ const RepositoryConfig = ({ config, onChange, errors }) => {
     onChange({
       ...config,
       repository: newValue,
-      tag: ''
+      tag: '',
+      yamlTemplate: {
+        ...config.yamlTemplate,
+        placeholders: {
+          ...config.yamlTemplate.placeholders,
+          repository: newValue
+        }
+      }
     });
   };
 
@@ -101,7 +108,14 @@ const RepositoryConfig = ({ config, onChange, errors }) => {
     const newTag = event.target.value;
     onChange({
       ...config,
-      tag: newTag
+      tag: newTag,
+      yamlTemplate: {
+        ...config.yamlTemplate,
+        placeholders: {
+          ...config.yamlTemplate.placeholders,
+          tag: newTag
+        }
+      }
     });
     // 重新驗證當前步驟
     validateStep(2, { ...config, tag: newTag });

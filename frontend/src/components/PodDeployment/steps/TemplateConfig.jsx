@@ -212,8 +212,8 @@ const TemplateConfig = ({ config, onChange, errors }) => {
           .filter(key => {
             const matchesFilter = key.toLowerCase().includes(placeholderFilter.toLowerCase());
             const placeholderCategory = getPlaceholderCategory(key);
-            // Only show placeholders that belong to this category and aren't handled by other steps
-            return matchesFilter && placeholderCategory === category;
+            // 過濾掉 repository 和 tag 佔位符
+            return matchesFilter && placeholderCategory === category && key !== 'repository' && key !== 'tag';
           });
 
         if (categoryPlaceholders.length === 0) return null;

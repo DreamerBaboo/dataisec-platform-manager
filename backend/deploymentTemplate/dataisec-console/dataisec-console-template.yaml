@@ -3,7 +3,7 @@ name: dataisec-console
 replicaCount: ${REPLICA_COUNT} #[1, 2, 3, 4, 5, 6]
 
 image:
-  repository: ${REPOSITORY}:${REPOSITORY_PORT}/dataisec-console #[localhost] #[5000, 5001]
+  repository: ${REPOSITORY} #[localhost] #[5000, 5001]
   tag: ${TAG} #[latest]
   pullPolicy: IfNotPresent
   insecureRegistry: true
