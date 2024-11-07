@@ -345,47 +345,36 @@ const getVersionConfig = async (req, res) => {
 const saveTemplateContent = async (req, res) => {
   try {
     const { deploymentName } = req.params;
-    // Get content from request body and ensure it's a string
-    const content = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+    
+    // 直接使用接收到的內容，不進行 YAML 解析和重新格式化
+    let content = req.body.content;
 
-    console.log('💾 Saving template content for:', deploymentName);
-    console.log('📄 Content length:', content.length);
-    console.log('📄 Content type:', typeof content);
-    console.log('📄 Content preview:', content.substring(0, 100));
-    
-    // Ensure the deployment template directory exists
-    const templateDir = path.join(__dirname, '../deploymentTemplate', deploymentName);
-    try {
-      await fs.access(templateDir);
-    } catch (error) {
-      console.log('📁 Creating template directory:', templateDir);
-      await fs.mkdir(templateDir, { recursive: true });
+    if (!content || content.trim() === '') {
+      console.error('❌ 沒有提供有效的內容');
+      return res.status(400).json({
+        message: 'Empty content received',
+        receivedBody: req.body
+      });
     }
-    
-    // Define template file path
-    const templatePath = path.join(templateDir, `${deploymentName}-template.yaml`);
-    
-    // Validate YAML content
+
+    // 只驗證 YAML 是否有效，但不使用解析後的結果
     try {
-      console.log('🔍 Validating YAML content');
-      // Parse the content to validate it's valid YAML
-      const yamlDoc = YAML.parse(content);
-      if (!yamlDoc) {
-        throw new Error('Empty or invalid YAML content');
-      }
-      console.log('✅ YAML validation successful');
+      YAML.parse(content);
     } catch (yamlError) {
-      console.error('❌ Invalid YAML content:', yamlError);
+      console.error('❌ YAML 解析錯誤:', yamlError);
       return res.status(400).json({
         message: 'Invalid YAML content',
         error: yamlError.message
       });
     }
+
+    // 保存原始內容
+    const templateDir = path.join(__dirname, '../deploymentTemplate', deploymentName);
+    await fs.mkdir(templateDir, { recursive: true });
     
-    // Save template content
-    console.log('💾 Writing template file:', templatePath);
+    const templatePath = path.join(templateDir, `${deploymentName}-template.yaml`);
     await fs.writeFile(templatePath, content, 'utf8');
-    
+
     // Update config.json
     try {
       const configPath = path.join(templateDir, 'config.json');
@@ -404,6 +393,15 @@ const saveTemplateContent = async (req, res) => {
         };
       }
 
+      // 保存格式化後的內容
+      await fs.writeFile(templatePath, content, 'utf8');
+        
+      // 驗證保存的內容
+      const savedContent = await fs.readFile(templatePath, 'utf8');
+      if (!savedContent || savedContent.trim() === '') {
+        throw new Error('Content was not saved correctly');
+      }
+
       // Add or update template content in config
       config.template = {
         content: content,
@@ -412,18 +410,24 @@ const saveTemplateContent = async (req, res) => {
 
       console.log('💾 Writing updated config:', configPath);
       await fs.writeFile(configPath, JSON.stringify(config, null, 2), 'utf8');
+
+      console.log('✅ Template saved successfully:', {
+        path: templatePath,
+        contentLength: savedContent.length
+      });
+
+      res.json({
+        message: 'Template content saved successfully',
+        path: templatePath,
+        contentLength: savedContent.length,
+        content: savedContent
+      });
     } catch (configError) {
-      console.warn('⚠️ Failed to update config.json:', configError);
-      // Don't fail the whole operation if config update fails
+      console.error('❌ Failed to update config:', configError);
+      throw configError;
     }
-    
-    console.log('✅ Template content saved successfully');
-    res.json({
-      message: 'Template content saved successfully',
-      path: templatePath
-    });
   } catch (error) {
-    console.error('❌ Error saving template content:', error);
+    console.error('❌ 保存模板時出錯:', error);
     res.status(500).json({
       message: 'Failed to save template content',
       error: error.message

@@ -72,26 +72,40 @@ const YamlEditor = ({
       );
 
       // Call onSave callback with the edited content
-      await onSave(editedContent);
+      if (onSave) {
+        await onSave(editedContent);
+      }
       
-      // Analyze template for new placeholders
-      const { placeholders, defaultValues, categories } = 
-        await templateService.getTemplatePlaceholders(deploymentName);
+      try {
+        console.log('正在獲取預設值，deploymentName:', deploymentName);
+        // Analyze template for new placeholders
+        const { placeholders, defaultValues, categories } = 
+          await templateService.getTemplatePlaceholders(deploymentName);
 
-      // Trigger template refresh in parent component
-      if (onTemplateChange) {
-        await onTemplateChange({
-          content: editedContent,
-          placeholders,
-          defaultValues,
-          categories
+        console.log('獲取到的預設值:', { placeholders, defaultValues, categories });
+
+        // Trigger template refresh in parent component
+        if (onTemplateChange) {
+          await onTemplateChange({
+            content: editedContent,
+            placeholders,
+            defaultValues,
+            categories
+          });
+        }
+      } catch (placeholderError) {
+        console.warn('無法獲取預設值，但模板已保存:', {
+          error: placeholderError,
+          deploymentName,
+          status: placeholderError.response?.status,
+          data: placeholderError.response?.data
         });
       }
       
       onClose();
     } catch (err) {
-      console.error('Failed to save template:', err);
-      setError(err.message);
+      console.error('保存模板失敗:', err);
+      setError(err.message || '保存模板時發生錯誤');
     } finally {
       setSaving(false);
     }

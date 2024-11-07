@@ -60,7 +60,7 @@ router.get('/templates/:deploymentName/config', authenticateToken, async (req, r
 });
 
 // Add template content save route
-router.put('/templates/:deploymentName/template', authenticateToken, async (req, res) => {
+router.post('/templates/:deploymentName/template', authenticateToken, async (req, res) => {
   try {
     console.log('💾 Saving template content');
     await podDeploymentController.saveTemplateContent(req, res);
@@ -164,6 +164,78 @@ router.get('/:name/versions/:version', authenticateToken, async (req, res) => {
         details: error.message
       });
     }
+  }
+});
+
+// Add template placeholders route
+router.get('/templates/:deploymentName/placeholders', authenticateToken, async (req, res) => {
+  try {
+    const { deploymentName } = req.params;
+    console.log('🔍 Getting placeholders for deployment:', deploymentName);
+    
+    // 讀取模板文件
+    const templatePath = path.join(__dirname, '../deploymentTemplate', deploymentName, `${deploymentName}-template.yaml`);
+    console.log('📂 Template path:', templatePath);
+    
+    // 檢查文件是否存在
+    try {
+      await fs.access(templatePath);
+    } catch (error) {
+      console.error('❌ Template file not found:', templatePath);
+      return res.status(404).json({
+        message: 'Template file not found',
+        path: templatePath
+      });
+    }
+    
+    const content = await fs.readFile(templatePath, 'utf8');
+    console.log('📄 Template content length:', content.length);
+    
+    // 解析預設值和分類
+    const placeholders = [];
+    const defaultValues = {};
+    const categories = new Set();
+    
+    // 使用正則表達式查找註釋中的預設值
+    const lines = content.split('\n');
+    lines.forEach((line, index) => {
+      // 匹配形如 #[category:key=value] 或 #[key=value] 的註釋
+      const match = line.match(/#\[([\w-]+:)?([\w-]+)=([^\]]+)\]/);
+      if (match) {
+        const category = match[1] ? match[1].slice(0, -1) : 'default';
+        const key = match[2];
+        const value = match[3];
+        
+        console.log(`📌 Found placeholder at line ${index + 1}:`, { category, key, value });
+        
+        placeholders.push({
+          key,
+          category,
+          defaultValue: value
+        });
+        
+        defaultValues[key] = value;
+        categories.add(category);
+      }
+    });
+
+    console.log('✅ Parsed placeholders:', {
+      count: placeholders.length,
+      categories: Array.from(categories)
+    });
+
+    res.json({
+      placeholders,
+      defaultValues,
+      categories: Array.from(categories)
+    });
+    
+  } catch (error) {
+    console.error('❌ Error getting template placeholders:', error);
+    res.status(500).json({
+      message: 'Failed to get template placeholders',
+      error: error.message
+    });
   }
 });
 

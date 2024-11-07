@@ -68,16 +68,24 @@ export const templateService = {
   // Save template content
   async saveTemplateContent(deploymentName, content) {
     try {
-      const response = await axios.put(
+      console.log('Saving template content:', {
+        deploymentName,
+        contentLength: content.length,
+        contentPreview: content.substring(0, 100)
+      });
+
+      const response = await axios.post(
         `${API_URL}/api/pod-deployments/templates/${deploymentName}/template`,
-        content,
+        { content },
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'text/plain'
+            'Content-Type': 'application/json'
           }
         }
       );
+
+      console.log('Save response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Failed to save template content:', error);
@@ -90,7 +98,7 @@ export const templateService = {
     try {
       console.log('Getting placeholders for deployment:', deploymentName);
       const response = await axios.get(
-        `${API_URL}/api/pod-deployments/templates/${deploymentName}/placeholders`,
+        `${API_URL}/api/pod-deployment/templates/${deploymentName}/placeholders`,
         {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         }

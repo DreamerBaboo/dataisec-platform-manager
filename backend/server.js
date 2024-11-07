@@ -15,6 +15,7 @@ const fs = require('fs');
 const WebSocket = require('ws');
 const http = require('http');
 
+
 const app = express();
 
 // Middleware
@@ -44,6 +45,7 @@ app.use('/api/pods', podsRouter);
 app.use('/api/images', imagesRouter);
 app.use('/api/pod-deployments', podDeploymentRouter);
 app.use('/api/deployment-templates', deploymentTemplatesRouter);
+app.use('/api/pod-deployment', podDeploymentRouter);  // 確保路徑匹配 
 
 // 添加錯誤處理中間件
 app.use((err, req, res, next) => {
