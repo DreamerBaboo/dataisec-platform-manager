@@ -70,29 +70,29 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
     }
   }, [deployment]);
 
-  const validateStep = useCallback((step) => {
+  const validateStep = useCallback((step, config = deploymentConfig) => {
     const newErrors = {};
     
     switch (step) {
       case 0: // Basic Setup
-        if (!deploymentConfig.name) {
+        if (!config.name) {
           newErrors.name = t('podDeployment:podDeployment.validation.name.required');
-        } else if (!/^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(deploymentConfig.name)) {
+        } else if (!/^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(config.name)) {
           newErrors.name = t('podDeployment:podDeployment.validation.name.format');
         }
         break;
         
       case 2: // Repository Config
-        if (!deploymentConfig.repository) {
+        if (!config.repository) {
           newErrors.repository = t('podDeployment:podDeployment.validation.repository.required');
         }
-        if (!deploymentConfig.tag) {
+        if (!config.tag) {
           newErrors.tag = t('podDeployment:podDeployment.validation.tag.required');
         }
         break;
         
       case 7: // Namespace Quota
-        if (visibleSteps.namespaceQuota && !deploymentConfig.resourceQuota) {
+        if (visibleSteps.namespaceQuota && !config.resourceQuota) {
           newErrors.resourceQuota = t('podDeployment:podDeployment.validation.resourceQuota.required');
         }
         break;
@@ -114,15 +114,25 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
   };
 
   const handleBack = useCallback(() => {
-    setActiveStep(prev => prev - 1);
-  }, []);
+  let prevStep = activeStep - 1;
+  // 跳過隱藏的步驟
+  while (prevStep >= 0 && !visibleSteps[steps[prevStep]]) {
+    prevStep--;
+  }
+  setActiveStep(prevStep);
+}, [activeStep, visibleSteps, steps]);
 
-  const handleConfigChange = useCallback((newConfig) => {
-    setDeploymentConfig(prev => ({
+ const handleConfigChange = useCallback((newConfig) => {
+  setDeploymentConfig(prev => {
+    const updatedConfig = {
       ...prev,
       ...newConfig
-    }));
-  }, []);
+    };
+    // 重新驗證當前步驟
+    validateStep(activeStep, updatedConfig);
+    return updatedConfig;
+  });
+}, [activeStep, validateStep]);
 
   const renderStepContent = useCallback((step) => {
     const stepIndex = steps.indexOf(steps[step]);
@@ -205,7 +215,7 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
           <DeploymentPreview
             config={deploymentConfig}
             onDeploy={onDeploy}
-            onBack={() => setActiveStep(prev => prev - 1)}
+            onBack={handleBack}
           />
         );
       default:

@@ -98,10 +98,13 @@ const RepositoryConfig = ({ config, onChange, errors }) => {
   };
 
   const handleTagChange = (event) => {
+    const newTag = event.target.value;
     onChange({
       ...config,
-      tag: event.target.value
+      tag: newTag
     });
+    // 重新驗證當前步驟
+    validateStep(2, { ...config, tag: newTag });
   };
 
   const handlePortChange = (event) => {
