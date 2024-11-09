@@ -117,8 +117,6 @@ const RepositoryConfig = ({ config, onChange, errors }) => {
         }
       }
     });
-    // 重新驗證當前步驟
-    validateStep(2, { ...config, tag: newTag });
   };
 
   const handlePortChange = (event) => {

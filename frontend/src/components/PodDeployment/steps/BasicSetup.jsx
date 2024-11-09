@@ -160,45 +160,128 @@ spec:
   // Fetch versions when deployment name changes
   useEffect(() => {
     const fetchVersions = async () => {
-      if (!config.name || isNewDeployment) return;
+      if (!config.name || isNewDeployment) {
+        console.log('⏭️ Skipping version fetch:', { 
+          name: config.name, 
+          isNewDeployment 
+        });
+        return;
+      }
       
       try {
-        const response = await podDeploymentService.getDeploymentVersions(config.name);
-        setVersions(response.versions);
+        console.log('🔄 Fetching versions for:', config.name);
+        const token = localStorage.getItem('token');
         
-        // Auto-select latest version if none selected
-        if (!config.version) {
-          onChange({
-            ...config,
-            version: response.latestVersion
-          });
+        if (!token) {
+          console.warn('⚠️ No auth token found');
+          setLocalErrors(prev => ({
+            ...prev,
+            version: t('podDeployment:podDeployment.errors.authenticationRequired')
+          }));
+          return;
+        }
+
+        const response = await podDeploymentService.getDeploymentVersions(
+          config.name,
+          token
+        );
+        
+        if (response?.versions && Array.isArray(response.versions)) {
+          console.log('✅ Fetched versions:', response.versions);
+          setVersions(response.versions);
+          
+          // Auto-select latest version if none selected
+          if (!config.version && response.latestVersion) {
+            console.log('📌 Auto-selecting latest version:', response.latestVersion);
+            onChange({
+              ...config,
+              version: response.latestVersion
+            });
+          }
+        } else {
+          console.warn('⚠️ Invalid response format:', response);
+          setLocalErrors(prev => ({
+            ...prev,
+            version: t('podDeployment:podDeployment.errors.invalidVersionFormat')
+          }));
         }
       } catch (error) {
-        console.error('Failed to fetch versions:', error);
+        console.error('❌ Failed to fetch versions:', error);
+        let errorMessage = t('podDeployment:podDeployment.errors.failedToFetchVersions');
+        
+        // 處理特定錯誤類型
+        if (error.response?.status === 401) {
+          errorMessage = t('podDeployment:podDeployment.errors.unauthorized');
+        } else if (error.response?.status === 404) {
+          errorMessage = t('podDeployment:podDeployment.errors.deploymentNotFound');
+        }
+        
+        setLocalErrors(prev => ({
+          ...prev,
+          version: errorMessage
+        }));
+        
+        // 清空版本列表
+        setVersions([]);
       }
     };
 
     fetchVersions();
-  }, [config.name, isNewDeployment]);
+  }, [config.name, isNewDeployment, t]);
 
   // Load version configuration when version changes
   useEffect(() => {
     const loadVersionConfig = async () => {
-      if (!config.name || !config.version || isNewDeployment) return;
+      if (!config.name || !config.version || isNewDeployment) {
+        console.log('⏭️ Skipping config load:', { 
+          name: config.name, 
+          version: config.version,
+          isNewDeployment 
+        });
+        return;
+      }
       
       try {
+        console.log('🔄 Loading config for:', {
+          name: config.name,
+          version: config.version
+        });
+        
         const versionConfig = await podDeploymentService.getVersionConfig(
           config.name,
           config.version
         );
-        onChange(versionConfig.config);
+
+        if (versionConfig?.config) {
+          console.log('✅ Loaded version config:', versionConfig);
+          onChange({
+            ...config,
+            ...versionConfig.config
+          });
+        } else {
+          console.warn('⚠️ Invalid config format:', versionConfig);
+          setLocalErrors(prev => ({
+            ...prev,
+            version: t('podDeployment:podDeployment.errors.invalidConfigFormat')
+          }));
+        }
       } catch (error) {
-        console.error('Failed to load version config:', error);
+        console.error('❌ Failed to load version config:', error);
+        let errorMessage = t('podDeployment:podDeployment.errors.failedToLoadConfig');
+        
+        if (error.response?.status === 404) {
+          errorMessage = t('podDeployment:podDeployment.errors.versionNotFound');
+        }
+        
+        setLocalErrors(prev => ({
+          ...prev,
+          version: errorMessage
+        }));
       }
     };
 
     loadVersionConfig();
-  }, [config.name, config.version]);
+  }, [config.name, config.version, isNewDeployment, t]);
 
   // Fetch namespaces on component mount
   useEffect(() => {

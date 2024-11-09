@@ -345,21 +345,76 @@ const getDeploymentVersions = async (req, res) => {
 
 // Get specific version configuration
 const getVersionConfig = async (req, res) => {
+  const { name, version } = req.params;
+  console.log(`🔍 Getting config for deployment: ${name}, version: ${version}`);
+
   try {
-    const { name, version } = req.params;
-    const configPath = path.join(__dirname, '../deploymentTemplate', name, 'config.json');
+    // 1. 確保基礎目錄存在
+    const baseDir = path.join(__dirname, '../deploymentTemplate');
+    const deploymentDir = path.join(baseDir, name);
+    
+    // 檢查並創建必要的目錄
+    await fs.mkdir(baseDir, { recursive: true });
+    await fs.mkdir(deploymentDir, { recursive: true });
 
-    const configFile = await fs.readFile(configPath, 'utf8');
-    const config = JSON.parse(configFile);
+    const configPath = path.join(deploymentDir, 'config.json');
+    console.log(`📂 Looking for config at: ${configPath}`);
 
-    if (!config.versions[version]) {
-      return res.status(404).json({ error: 'Version not found' });
+    // 2. 檢查配置文件是否存在
+    let config;
+    try {
+      const configData = await fs.readFile(configPath, 'utf8');
+      config = JSON.parse(configData);
+      console.log('📄 Found existing config file');
+    } catch (error) {
+      // 如果配置文件不存在，創建一個基本配置
+      console.log('ℹ️ No existing config found, creating default config');
+      config = {
+        name,
+        versions: {
+          [version]: {
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            config: {
+              name,
+              version,
+              // 其他默認配置項
+            }
+          }
+        },
+        latestVersion: version
+      };
+
+      // 保存新配置
+      await fs.writeFile(configPath, JSON.stringify(config, null, 2));
+      console.log('✅ Created new config file');
     }
 
-    res.json(config.versions[version]);
+    // 3. 檢查版本是否存在
+    if (!config.versions || !config.versions[version]) {
+      console.log(`❌ Version ${version} not found in config`);
+      return res.status(404).json({
+        error: 'Version not found',
+        details: `Version ${version} not found for deployment ${name}`,
+        availableVersions: Object.keys(config.versions || {})
+      });
+    }
+
+    // 4. 返回版本配置
+    console.log(`✅ Successfully retrieved config for version ${version}`);
+    res.json({
+      name,
+      version,
+      config: config.versions[version]
+    });
+
   } catch (error) {
-    console.error('Failed to get version config:', error);
-    res.status(500).json({ error: error.message });
+    console.error('❌ Error getting version config:', error);
+    res.status(500).json({
+      error: 'Failed to get version configuration',
+      details: error.message,
+      path: req.path
+    });
   }
 };
 

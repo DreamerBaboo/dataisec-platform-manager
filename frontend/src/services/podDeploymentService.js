@@ -2,21 +2,38 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
+// 改進 API 請求配置
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('token');
+  console.log('🔐 Getting auth token:', token ? '有效' : '未找到');
+  return {
+    headers: {
+      'Authorization': token ? `Bearer ${token}` : '',
+      'Content-Type': 'application/json'
+    }
+  };
+};
+
 export const podDeploymentService = {
   // Get deployment versions
   async getDeploymentVersions(name) {
     try {
-      console.log('Getting versions for deployment:', name);
+      console.log('📥 Getting versions for deployment:', name);
+      const config = getAuthHeaders();
+      
       const response = await axios.get(
         `${API_URL}/api/pod-deployments/${name}/versions`,
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        }
+        config
       );
-      console.log('Versions retrieved:', response.data);
+      
+      console.log('✅ Versions retrieved:', response.data);
       return response.data;
     } catch (error) {
-      console.error('Failed to get deployment versions:', error);
+      console.error('❌ Failed to get deployment versions:', {
+        name,
+        error: error.message,
+        status: error.response?.status
+      });
       throw error;
     }
   },
@@ -24,17 +41,29 @@ export const podDeploymentService = {
   // Get specific version configuration
   async getVersionConfig(name, version) {
     try {
-      console.log('Getting config for deployment:', name, 'version:', version);
+      console.log(`📥 Requesting config for ${name} version ${version}`);
+      const config = getAuthHeaders();
+      
       const response = await axios.get(
-        `${API_URL}/api/pod-deployments/${name}/versions/${version}`,
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        }
+        `${API_URL}/api/pod-deployments/${name}/versions/${version}/config`,
+        config
       );
-      console.log('Configuration retrieved:', response.data);
+      
+      // 驗證回應格式
+      if (!response.data?.config) {
+        console.warn('⚠️ Invalid response format:', response.data);
+        throw new Error('Invalid config format in response');
+      }
+      
+      console.log('✅ Successfully got version config:', response.data);
       return response.data;
     } catch (error) {
-      console.error('Failed to get version config:', error);
+      console.error('❌ Failed to get version config:', {
+        name,
+        version,
+        error: error.message,
+        response: error.response?.data
+      });
       throw error;
     }
   },
