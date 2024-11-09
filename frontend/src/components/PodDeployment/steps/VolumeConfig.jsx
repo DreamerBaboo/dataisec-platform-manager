@@ -17,8 +17,11 @@ import {
 import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { useAppTranslation } from '../../../hooks/useAppTranslation';
 import axios from 'axios';
+import YAML from 'yaml';
+import PropTypes from 'prop-types';
+import { podDeploymentService } from '../../../services/podDeploymentService';
 
-const VolumeConfig = ({ config, onChange, errors: propErrors = {} }) => {
+const VolumeConfig = ({ config, onChange, errors = {} }) => {
   const { t } = useAppTranslation();
   const [nodes, setNodes] = useState([]);
   const [persistentVolumes, setPersistentVolumes] = useState([]);
@@ -27,34 +30,94 @@ const VolumeConfig = ({ config, onChange, errors: propErrors = {} }) => {
   const [showStorageClass, setShowStorageClass] = useState(false);
   const [localErrors, setLocalErrors] = useState({});
 
-  // 初始化 PV 的默認值
-  const defaultPV = {
-    name: '',
-    labels: {
-      type: 'local'
-    },
-    capacity: {
-      storage: '1Gi'
-    },
-    volumeMode: 'Filesystem',
-    accessModes: ['ReadWriteOnce'],
-    persistentVolumeReclaimPolicy: 'Retain',
-    storageClassName: config?.name ? `${config.name}-${config.version}-storageclass` : '',
-    local: {
-      path: '/data'
-    },
-    nodeAffinity: {
-      required: {
-        nodeSelectorTerms: [{
-          matchExpressions: [{
-            key: 'kubernetes.io/hostname',
-            operator: 'In',
-            values: ['']
-          }]
-        }]
+  // 當組件掛載時加載現有配置
+  useEffect(() => {
+    const loadStorageConfig = async () => {
+      if (!config?.name || !config?.version) {
+        console.log('No deployment name or version provided');
+        return;
       }
+
+      try {
+        setLoading(true);
+        console.log('Loading storage configuration for:', config.name, config.version);
+        
+        const response = await podDeploymentService.getStorageConfig(config.name, config.version);
+        console.log('Loaded storage configuration:', response);
+
+        if (response.storageClassYaml) {
+          setShowStorageClass(true);
+        }
+
+        if (response.persistentVolumeYaml) {
+          const pvDocs = YAML.parseAllDocuments(response.persistentVolumeYaml);
+          const pvConfigs = pvDocs.map(doc => doc.toJSON()).filter(Boolean);
+          
+          const formattedPVs = pvConfigs.map(pv => ({
+            name: pv.metadata.name,
+            labels: pv.metadata.labels || { type: 'local' },
+            capacity: pv.spec.capacity,
+            volumeMode: pv.spec.volumeMode,
+            accessModes: pv.spec.accessModes,
+            persistentVolumeReclaimPolicy: pv.spec.persistentVolumeReclaimPolicy,
+            storageClassName: pv.spec.storageClassName,
+            local: pv.spec.local,
+            nodeAffinity: pv.spec.nodeAffinity
+          }));
+
+          setPersistentVolumes(formattedPVs);
+        }
+      } catch (error) {
+        console.error('Failed to load storage configuration:', error);
+        setError(t('podDeployment:errors.failedToLoadStorage'));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadStorageConfig();
+  }, [config?.name, config?.version]);
+
+  // 保存配置
+  const saveStorageConfig = async () => {
+    if (!config?.name || !config?.version) {
+      console.error('Missing deployment name or version');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      console.log('Saving storage configuration...');
+
+      const storageConfig = {
+        storageClassYaml: generateStorageClassYaml(),
+        persistentVolumeYaml: generatePersistentVolumeYaml()
+      };
+
+      console.log('Storage configuration to save:', storageConfig);
+
+      await podDeploymentService.saveStorageConfig(
+        config.name,
+        config.version,
+        storageConfig
+      );
+
+      console.log('Storage configuration saved successfully');
+      setError(null);
+    } catch (error) {
+      console.error('Failed to save storage configuration:', error);
+      setError(t('podDeployment:errors.failedToSaveStorage'));
+    } finally {
+      setLoading(false);
     }
   };
+
+  // 當配置改變時自動保存
+  useEffect(() => {
+    if (showStorageClass || persistentVolumes.length > 0) {
+      saveStorageConfig();
+    }
+  }, [showStorageClass, persistentVolumes]);
 
   // 獲取節點列表
   useEffect(() => {
@@ -227,10 +290,9 @@ const VolumeConfig = ({ config, onChange, errors: propErrors = {} }) => {
 
   // 生成 StorageClass YAML
   const generateStorageClassYaml = () => {
-    if (!config?.name || !config?.version) return '';
+    if (!showStorageClass) return '';
     
-    return `
-apiVersion: storage.k8s.io/v1
+    return `apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: ${config.name}-${config.version}-storageclass
@@ -238,6 +300,36 @@ provisioner: kubernetes.io/no-provisioner
 reclaimPolicy: Retain
 volumeBindingMode: WaitForFirstConsumer
 allowVolumeExpansion: false`;
+  };
+
+  // 生成 PersistentVolume YAML
+  const generatePersistentVolumeYaml = () => {
+    if (!persistentVolumes.length) return '';
+    
+    return persistentVolumes.map(pv => `apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: ${pv.name}
+  labels:
+    type: local
+spec:
+  capacity:
+    storage: ${pv.capacity.storage}
+  volumeMode: ${pv.volumeMode}
+  accessModes:
+    - ${pv.accessModes[0]}
+  persistentVolumeReclaimPolicy: ${pv.persistentVolumeReclaimPolicy}
+  storageClassName: ${config.name}-${config.version}-storageclass
+  local:
+    path: ${pv.local.path}
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - ${pv.nodeAffinity?.required?.nodeSelectorTerms?.[0]?.matchExpressions?.[0]?.values?.[0] || ''}`).join('\n---\n');
   };
 
   // 生成完整的預覽 YAML
@@ -453,6 +545,17 @@ spec:
       )}
     </Box>
   );
+};
+
+// 添加 propTypes
+VolumeConfig.propTypes = {
+  config: PropTypes.shape({
+    name: PropTypes.string,
+    version: PropTypes.string
+  }),
+  onChange: PropTypes.func.isRequired,
+  errors: PropTypes.object,
+  onNext: PropTypes.func
 };
 
 export default VolumeConfig; 

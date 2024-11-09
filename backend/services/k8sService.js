@@ -3,6 +3,9 @@ const yaml = require('js-yaml');
 const { exec } = require('child_process');
 const util = require('util');
 const execAsync = util.promisify(exec);
+const path = require('path');
+const fs = require('fs/promises');
+const YAML = require('yaml');
 
 class K8sService {
   constructor() {
@@ -339,24 +342,59 @@ class K8sService {
   }
 
   // Storage Class 相關方法
-  async createStorageClass(name, spec) {
+  async createStorageClass(yaml) {
     try {
-      const storageClass = {
-        apiVersion: 'storage.k8s.io/v1',
-        kind: 'StorageClass',
-        metadata: {
-          name
-        },
-        provisioner: spec.provisioner || 'kubernetes.io/no-provisioner',
-        reclaimPolicy: spec.reclaimPolicy || 'Retain',
-        volumeBindingMode: spec.volumeBindingMode || 'WaitForFirstConsumer',
-        allowVolumeExpansion: spec.allowVolumeExpansion || false
-      };
-
-      const response = await this.storageApi.createStorageClass(storageClass);
+      console.log('Creating StorageClass from YAML');
+      const storageClassObj = YAML.parse(yaml);
+      
+      const response = await this.storageApi.createStorageClass(storageClassObj);
+      console.log('StorageClass created successfully');
+      
       return response.body;
     } catch (error) {
-      console.error('Failed to create storage class:', error);
+      console.error('Failed to create StorageClass:', error);
+      throw error;
+    }
+  }
+
+  // 保存 StorageClass YAML
+  async saveStorageClassYaml(name, version, yaml) {
+    try {
+      console.log('Saving StorageClass YAML');
+      const deploymentDir = path.join(__dirname, '../deploymentTemplate', name);
+      const storageDir = path.join(deploymentDir, 'storage');
+      
+      // 確保目錄存在
+      await fs.mkdir(storageDir, { recursive: true });
+      
+      // 保存 YAML 文件
+      const filePath = path.join(storageDir, `${name}-${version}-storageClass.yaml`);
+      await fs.writeFile(filePath, yaml);
+      
+      console.log('StorageClass YAML saved to:', filePath);
+      return filePath;
+    } catch (error) {
+      console.error('Failed to save StorageClass YAML:', error);
+      throw error;
+    }
+  }
+
+  // 獲取 StorageClass YAML
+  async getStorageClassYaml(name, version) {
+    try {
+      console.log('Getting StorageClass YAML');
+      const filePath = path.join(
+        __dirname,
+        '../deploymentTemplate',
+        name,
+        'storage',
+        `${name}-${version}-storageClass.yaml`
+      );
+      
+      const yaml = await fs.readFile(filePath, 'utf8');
+      return yaml;
+    } catch (error) {
+      console.error('Failed to get StorageClass YAML:', error);
       throw error;
     }
   }
@@ -423,6 +461,72 @@ class K8sService {
       };
     } catch (error) {
       console.error('Failed to get storage status:', error);
+      throw error;
+    }
+  }
+
+  // 保存儲存配置
+  async saveStorageConfig(name, version, storageClassYaml, persistentVolumeYaml) {
+    try {
+      const deploymentDir = path.join(__dirname, '../deploymentTemplate', name);
+      const storageDir = path.join(deploymentDir, 'storage');
+      
+      // 確保目錄存在
+      await fs.mkdir(storageDir, { recursive: true });
+      
+      // 保存 YAML 文件
+      if (storageClassYaml) {
+        await fs.writeFile(
+          path.join(storageDir, `${name}-${version}-storageClass.yaml`),
+          storageClassYaml
+        );
+      }
+      
+      if (persistentVolumeYaml) {
+        await fs.writeFile(
+          path.join(storageDir, `${name}-${version}-persistentVolumes.yaml`),
+          persistentVolumeYaml
+        );
+      }
+      
+      return {
+        message: 'Storage configuration saved successfully',
+        name,
+        version
+      };
+    } catch (error) {
+      console.error('Failed to save storage configuration:', error);
+      throw error;
+    }
+  }
+
+  // 獲取儲存配置
+  async getStorageConfig(name, version) {
+    try {
+      const storageDir = path.join(
+        __dirname,
+        '../deploymentTemplate',
+        name,
+        'storage'
+      );
+      
+      const [storageClassYaml, persistentVolumeYaml] = await Promise.all([
+        fs.readFile(
+          path.join(storageDir, `${name}-${version}-storageClass.yaml`),
+          'utf8'
+        ).catch(() => ''),
+        fs.readFile(
+          path.join(storageDir, `${name}-${version}-persistentVolumes.yaml`),
+          'utf8'
+        ).catch(() => '')
+      ]);
+      
+      return {
+        storageClassYaml,
+        persistentVolumeYaml
+      };
+    } catch (error) {
+      console.error('Failed to get storage configuration:', error);
       throw error;
     }
   }
