@@ -55,6 +55,7 @@ import ImportConfig from './components/ImportConfig';
 import ExportConfig from './components/ExportConfig';
 
 import { podService } from '../../services/podService';
+import { podDeploymentService } from '../../services/podDeploymentService';
 
 axios.defaults.baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 axios.defaults.headers.common['Content-Type'] = 'application/json';
@@ -77,6 +78,11 @@ const PodDeploymentManagement = () => {
 
   // Add new state for stepper
   const [deploymentConfig, setDeploymentConfig] = useState(null);
+
+  const [storageConfig, setStorageConfig] = useState({
+    storageClasses: [],
+    persistentVolumes: []
+  });
 
   const fetchNamespaces = async () => {
     try {
@@ -201,6 +207,27 @@ const PodDeploymentManagement = () => {
       open: true, 
       pod: importedConfig 
     });
+  };
+
+  // 處理儲存配置更新
+  const handleStorageConfigChange = async (newConfig) => {
+    setStorageConfig(newConfig);
+    
+    if (config.name && config.version) {
+      try {
+        await podDeploymentService.saveStorageConfig(
+          config.name,
+          config.version,
+          {
+            storageClassYaml: generateStorageClassYaml(newConfig.storageClasses),
+            persistentVolumeYaml: generatePersistentVolumeYaml(newConfig.persistentVolumes)
+          }
+        );
+      } catch (error) {
+        console.error('Failed to save storage config:', error);
+        // 處理錯誤...
+      }
+    }
   };
 
   if (loading) {

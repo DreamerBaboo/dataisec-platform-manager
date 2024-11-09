@@ -1,235 +1,455 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
-  Grid,
-  Typography,
-  TextField,
-  Alert,
   Button,
+  TextField,
+  Typography,
+  Grid,
   IconButton,
-  Card,
-  CardContent,
-  CardActions,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
-  Paper
+  Paper,
+  CircularProgress,
+  Alert
 } from '@mui/material';
-import {
-  Add as AddIcon,
-  Delete as DeleteIcon
-} from '@mui/icons-material';
+import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { useAppTranslation } from '../../../hooks/useAppTranslation';
+import axios from 'axios';
 
-const VolumeConfig = ({ config, onChange, errors }) => {
+const VolumeConfig = ({ config, onChange, errors: propErrors = {} }) => {
   const { t } = useAppTranslation();
+  const [nodes, setNodes] = useState([]);
+  const [persistentVolumes, setPersistentVolumes] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [showStorageClass, setShowStorageClass] = useState(false);
+  const [localErrors, setLocalErrors] = useState({});
 
-  const handleAddVolume = () => {
-    onChange({
-      ...config,
-      yamlTemplate: {
-        ...config.yamlTemplate,
-        volumes: [
-          ...(config.yamlTemplate?.volumes || []),
-          {
-            name: '',
-            type: 'hostPath',
-            mountPath: '',
-            hostPath: '',
-            claimName: '',
-            configMapName: '',
-            secretName: ''
-          }
-        ]
+  // 初始化 PV 的默認值
+  const defaultPV = {
+    name: '',
+    labels: {
+      type: 'local'
+    },
+    capacity: {
+      storage: '1Gi'
+    },
+    volumeMode: 'Filesystem',
+    accessModes: ['ReadWriteOnce'],
+    persistentVolumeReclaimPolicy: 'Retain',
+    storageClassName: config?.name ? `${config.name}-${config.version}-storageclass` : '',
+    local: {
+      path: '/data'
+    },
+    nodeAffinity: {
+      required: {
+        nodeSelectorTerms: [{
+          matchExpressions: [{
+            key: 'kubernetes.io/hostname',
+            operator: 'In',
+            values: ['']
+          }]
+        }]
       }
-    });
+    }
   };
 
-  const handleRemoveVolume = (index) => {
-    const newVolumes = [...(config.yamlTemplate?.volumes || [])];
-    newVolumes.splice(index, 1);
-    onChange({
-      ...config,
-      yamlTemplate: {
-        ...config.yamlTemplate,
-        volumes: newVolumes
+  // 獲取節點列表
+  useEffect(() => {
+    const fetchNodes = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get('/api/k8s/nodes', {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        if (response.data && Array.isArray(response.data)) {
+          setNodes(response.data);
+        }
+        setError(null);
+      } catch (err) {
+        console.error('Failed to fetch nodes:', err);
+        setError(t('podDeployment:errors.failedToFetchNodes'));
+      } finally {
+        setLoading(false);
       }
-    });
-  };
-
-  const handleVolumeChange = (index, field, value) => {
-    const newVolumes = [...(config.yamlTemplate?.volumes || [])];
-    newVolumes[index] = {
-      ...newVolumes[index],
-      [field]: value
     };
-    onChange({
-      ...config,
-      yamlTemplate: {
-        ...config.yamlTemplate,
-        volumes: newVolumes
+    fetchNodes();
+  }, [t]);
+
+  // 添加 PV - 修改命名邏輯
+  const handleAddPersistentVolume = () => {
+    // 確保有部署名稱
+    if (!config?.name) {
+      console.error('Deployment name is required');
+      return;
+    }
+
+    // 生成新的 PV 序號
+    const pvIndex = persistentVolumes.length;
+    // 格式化序號為兩位數，例如：01, 02, 03...
+    const sequenceNumber = String(pvIndex).padStart(2, '0');
+    const newPvName = `${config.name}-pv${sequenceNumber}`;
+
+    console.log('Creating new PV:', newPvName); // 添加日誌
+
+    setPersistentVolumes(prev => [
+      ...prev,
+      {
+        name: newPvName,
+        labels: {
+          type: 'local'
+        },
+        capacity: {
+          storage: '1Gi'
+        },
+        volumeMode: 'Filesystem',
+        accessModes: ['ReadWriteOnce'],
+        persistentVolumeReclaimPolicy: 'Retain',
+        storageClassName: config?.name ? `${config.name}-${config.version}-storageclass` : '',
+        local: {
+          path: '/data'
+        },
+        nodeAffinity: {
+          required: {
+            nodeSelectorTerms: [{
+              matchExpressions: [{
+                key: 'kubernetes.io/hostname',
+                operator: 'In',
+                values: ['']
+              }]
+            }]
+          }
+        }
       }
+    ]);
+  };
+
+  // 移除 PV - 更新後續 PV 的命名
+  const handleRemovePV = (indexToRemove) => {
+    setPersistentVolumes(prev => {
+      const updatedPVs = prev.filter((_, index) => index !== indexToRemove);
+      
+      // 重新命名剩餘的 PV
+      return updatedPVs.map((pv, index) => {
+        const sequenceNumber = String(index).padStart(2, '0');
+        return {
+          ...pv,
+          name: `${config.name}-pv${sequenceNumber}`
+        };
+      });
     });
   };
 
-  const generateVolumePreview = (volumes) => {
-    if (!volumes?.length) return '';
+  // 處理 PV 變更
+  const handlePVChange = (index, field, value) => {
+    console.log('Updating PV:', { index, field, value });
 
-    return volumes.map(vol => {
-      let volumeSpec = '';
-      switch (vol.type) {
-        case 'hostPath':
-          volumeSpec = `  hostPath:\n    path: ${vol.hostPath}`;
-          break;
-        case 'persistentVolumeClaim':
-          volumeSpec = `  persistentVolumeClaim:\n    claimName: ${vol.claimName}`;
-          break;
-        case 'configMap':
-          volumeSpec = `  configMap:\n    name: ${vol.configMapName}`;
-          break;
-        case 'secret':
-          volumeSpec = `  secret:\n    secretName: ${vol.secretName}`;
-          break;
+    setPersistentVolumes(prev => prev.map((pv, i) => {
+      if (i === index) {
+        if (field.includes('.')) {
+          const parts = field.split('.');
+          let newPv = { ...pv };
+          let current = newPv;
+          
+          // 遍歷路徑直到倒數第二個部分
+          for (let i = 0; i < parts.length - 1; i++) {
+            if (!current[parts[i]]) {
+              current[parts[i]] = {};
+            }
+            current = current[parts[i]];
+          }
+          
+          // 設置最後一個屬性的值
+          current[parts[parts.length - 1]] = value;
+          
+          console.log('Updated PV:', newPv);
+          return newPv;
+        }
+        return { ...pv, [field]: value };
       }
+      return pv;
+    }));
+  };
 
-      return `- name: ${vol.name}
-${volumeSpec}
-  mountPath: ${vol.mountPath}`;
+  // 驗證容量格式的函數
+  const validateStorageCapacity = (value) => {
+    const regex = /^[1-9][0-9]*[KMGT]i$/;
+    if (!regex.test(value)) {
+      return 'Invalid format. Must be a number followed by Ki, Mi, Gi, or Ti (e.g., 1Gi, 500Mi)';
+    }
+
+    const size = parseInt(value.replace(/[KMGT]i$/, ''));
+    const unit = value.match(/[KMGT]i$/)[0];
+
+    const maxSizes = {
+      'Ki': 1024 * 1024,
+      'Mi': 1024,
+      'Gi': 1024,
+      'Ti': 100
+    };
+
+    if (size > maxSizes[unit]) {
+      return `Size too large. Maximum allowed is ${maxSizes[unit]}${unit}`;
+    }
+
+    return '';
+  };
+
+  // 處理容量值變更 - 只在輸入時更新值
+  const handleCapacityChange = (index, value) => {
+    handlePVChange(index, 'capacity.storage', value);
+    // 清除該字段的錯誤
+    setLocalErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors[`pv${index}Capacity`];
+      return newErrors;
+    });
+  };
+
+  // 處理容量值失去焦點 - 進行驗證
+  const handleCapacityBlur = (index, value) => {
+    const error = validateStorageCapacity(value);
+    if (error) {
+      setLocalErrors(prev => ({
+        ...prev,
+        [`pv${index}Capacity`]: error
+      }));
+    } else {
+      setLocalErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[`pv${index}Capacity`];
+        return newErrors;
+      });
+    }
+  };
+
+  // 生成 StorageClass YAML
+  const generateStorageClassYaml = () => {
+    if (!config?.name || !config?.version) return '';
+    
+    return `
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: ${config.name}-${config.version}-storageclass
+provisioner: kubernetes.io/no-provisioner
+reclaimPolicy: Retain
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: false`;
+  };
+
+  // 生成完整的預覽 YAML
+  const generatePreview = () => {
+    if (!showStorageClass) return '';
+
+    const storageClassYaml = generateStorageClassYaml();
+
+    const persistentVolumeYaml = persistentVolumes.map(pv => {
+      const selectedNode = pv?.nodeAffinity?.required?.nodeSelectorTerms?.[0]?.matchExpressions?.[0]?.values?.[0] || '';
+      
+      return `
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: ${pv.name}
+  labels:
+    type: ${pv.labels.type}
+spec:
+  capacity:
+    storage: ${pv.capacity.storage}
+  volumeMode: ${pv.volumeMode}
+  accessModes:
+    - ${pv.accessModes[0]}
+  persistentVolumeReclaimPolicy: ${pv.persistentVolumeReclaimPolicy}
+  storageClassName: ${config?.name}-${config?.version}-storageclass
+  local:
+    path: ${pv.local.path}
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - ${selectedNode}`;
     }).join('\n---\n');
+
+    if (storageClassYaml && persistentVolumeYaml) {
+      return `${storageClassYaml}\n---\n${persistentVolumeYaml}`;
+    } else if (storageClassYaml) {
+      return storageClassYaml;
+    } else if (persistentVolumeYaml) {
+      return persistentVolumeYaml;
+    }
+    return '';
   };
 
   return (
     <Box>
-      <Typography variant="h6" gutterBottom>
-        {t('podDeployment:podDeployment.volumes.title')}
-      </Typography>
+      {loading && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', m: 2 }}>
+          <CircularProgress />
+        </Box>
+      )}
 
-      {errors?.volumes && (
+      {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
-          {errors.volumes}
+          {error}
         </Alert>
       )}
 
-      <Box sx={{ mb: 2 }}>
+      {/* StorageClass 配置 */}
+      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography variant="h6">
+          Storage Class Configuration
+        </Typography>
         <Button
-          variant="outlined"
-          startIcon={<AddIcon />}
-          onClick={handleAddVolume}
+          variant="contained"
+          onClick={() => setShowStorageClass(prev => !prev)}
         >
-          {t('podDeployment:podDeployment.volumes.add')}
+          {showStorageClass ? 'Hide Storage Class' : 'Create Storage Class'}
         </Button>
       </Box>
 
-      <Grid container spacing={2}>
-        {config.yamlTemplate?.volumes?.map((volume, index) => (
-          <Grid item xs={12} key={index}>
-            <Card variant="outlined">
-              <CardContent>
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      label={t('podDeployment:podDeployment.volumes.name')}
-                      value={volume.name}
-                      onChange={(e) => handleVolumeChange(index, 'name', e.target.value)}
-                      error={!!errors?.volumes?.[index]?.name}
-                      helperText={errors?.volumes?.[index]?.name}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <FormControl fullWidth>
-                      <InputLabel>
-                        {t('podDeployment:podDeployment.volumes.type')}
-                      </InputLabel>
-                      <Select
-                        value={volume.type}
-                        onChange={(e) => handleVolumeChange(index, 'type', e.target.value)}
-                        label={t('podDeployment:podDeployment.volumes.type')}
-                      >
-                        <MenuItem value="hostPath">Host Path</MenuItem>
-                        <MenuItem value="persistentVolumeClaim">Persistent Volume Claim</MenuItem>
-                        <MenuItem value="configMap">Config Map</MenuItem>
-                        <MenuItem value="secret">Secret</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label={t('podDeployment:podDeployment.volumes.mountPath')}
-                      value={volume.mountPath}
-                      onChange={(e) => handleVolumeChange(index, 'mountPath', e.target.value)}
-                      error={!!errors?.volumes?.[index]?.mountPath}
-                      helperText={errors?.volumes?.[index]?.mountPath}
-                    />
-                  </Grid>
-                  {volume.type === 'hostPath' && (
-                    <Grid item xs={12}>
-                      <TextField
-                        fullWidth
-                        label={t('podDeployment:podDeployment.volumes.hostPath')}
-                        value={volume.hostPath}
-                        onChange={(e) => handleVolumeChange(index, 'hostPath', e.target.value)}
-                      />
-                    </Grid>
-                  )}
-                  {volume.type === 'persistentVolumeClaim' && (
-                    <Grid item xs={12}>
-                      <TextField
-                        fullWidth
-                        label={t('podDeployment:podDeployment.volumes.claimName')}
-                        value={volume.claimName}
-                        onChange={(e) => handleVolumeChange(index, 'claimName', e.target.value)}
-                      />
-                    </Grid>
-                  )}
-                  {volume.type === 'configMap' && (
-                    <Grid item xs={12}>
-                      <TextField
-                        fullWidth
-                        label={t('podDeployment:podDeployment.volumes.configMapName')}
-                        value={volume.configMapName}
-                        onChange={(e) => handleVolumeChange(index, 'configMapName', e.target.value)}
-                      />
-                    </Grid>
-                  )}
-                  {volume.type === 'secret' && (
-                    <Grid item xs={12}>
-                      <TextField
-                        fullWidth
-                        label={t('podDeployment:podDeployment.volumes.secretName')}
-                        value={volume.secretName}
-                        onChange={(e) => handleVolumeChange(index, 'secretName', e.target.value)}
-                      />
-                    </Grid>
-                  )}
-                </Grid>
-              </CardContent>
-              <CardActions sx={{ justifyContent: 'flex-end' }}>
+      {showStorageClass && (
+        <Paper sx={{ p: 2, mb: 2 }}>
+          <Typography variant="h6" gutterBottom>
+            Storage Class Configuration
+          </Typography>
+          <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
+            {generateStorageClassYaml()}
+          </pre>
+        </Paper>
+      )}
+
+      {/* PersistentVolume 配置 - 只在有 StorageClass 時顯示 */}
+      {showStorageClass && (
+        <Box sx={{ mt: 3 }}>
+          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6">
+              Persistent Volumes
+            </Typography>
+            <Button
+              startIcon={<AddIcon />}
+              onClick={handleAddPersistentVolume}
+              variant="contained"
+            >
+              Add Persistent Volume
+            </Button>
+          </Box>
+
+          {persistentVolumes.map((pv, index) => (
+            <Paper key={index} sx={{ p: 2, mb: 2 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="subtitle1">
+                  Persistent Volume #{index + 1} ({pv.name})
+                </Typography>
                 <IconButton
+                  onClick={() => handleRemovePV(index)}
                   color="error"
-                  onClick={() => handleRemoveVolume(index)}
+                  size="small"
                 >
                   <DeleteIcon />
                 </IconButton>
-              </CardActions>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
-
-      {config.yamlTemplate?.volumes?.length > 0 && (
-        <Box sx={{ mt: 3 }}>
-          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-            {t('podDeployment:podDeployment.volumes.preview')}
-          </Typography>
-          <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
-            <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
-              {generateVolumePreview(config.yamlTemplate.volumes)}
-            </pre>
-          </Paper>
+              </Box>
+              
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Name"
+                    value={pv.name}
+                    disabled
+                    helperText="Automatically generated name"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Storage Capacity"
+                    value={pv.capacity.storage}
+                    onChange={(e) => handleCapacityChange(index, e.target.value)}
+                    onBlur={(e) => handleCapacityBlur(index, e.target.value)}
+                    error={!!localErrors[`pv${index}Capacity`]}
+                    helperText={localErrors[`pv${index}Capacity`] || "e.g., 1Gi, 500Mi"}
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Volume Mode</InputLabel>
+                    <Select
+                      value={pv.volumeMode}
+                      onChange={(e) => handlePVChange(index, 'volumeMode', e.target.value)}
+                    >
+                      <MenuItem value="Filesystem">Filesystem</MenuItem>
+                      <MenuItem value="Block">Block</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Access Mode</InputLabel>
+                    <Select
+                      value={pv.accessModes[0]}
+                      onChange={(e) => handlePVChange(index, 'accessModes', [e.target.value])}
+                    >
+                      <MenuItem value="ReadWriteOnce">ReadWriteOnce</MenuItem>
+                      <MenuItem value="ReadOnlyMany">ReadOnlyMany</MenuItem>
+                      <MenuItem value="ReadWriteMany">ReadWriteMany</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Local Path"
+                    value={pv.local.path}
+                    onChange={(e) => handlePVChange(index, 'local.path', e.target.value)}
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Node Hostname</InputLabel>
+                    <Select
+                      value={pv.nodeAffinity?.required?.nodeSelectorTerms?.[0]?.matchExpressions?.[0]?.values?.[0] || ''}
+                      onChange={(e) => {
+                        console.log('Node selection changed:', e.target.value);
+                        handlePVChange(
+                          index,
+                          'nodeAffinity.required.nodeSelectorTerms.0.matchExpressions.0.values.0',
+                          e.target.value
+                        );
+                      }}
+                      required
+                    >
+                      {nodes.map(node => (
+                        <MenuItem key={node.name} value={node.name}>
+                          {node.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+              </Grid>
+            </Paper>
+          ))}
         </Box>
+      )}
+
+      {/* YAML 預覽 */}
+      {(showStorageClass || persistentVolumes.length > 0) && (
+        <Paper sx={{ p: 2, mt: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            Configuration Preview
+          </Typography>
+          <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
+            {generatePreview()}
+          </pre>
+        </Paper>
       )}
     </Box>
   );

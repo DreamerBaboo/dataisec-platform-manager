@@ -283,4 +283,87 @@ router.get('/templates/:name/config', authenticateToken, async (req, res) => {
   }
 });
 
+// 添加儲存配置相關路由
+router.post('/templates/:name/storage', authenticateToken, async (req, res) => {
+  try {
+    const { name } = req.params;
+    const { version, storageClassYaml, persistentVolumeYaml } = req.body;
+    
+    // 確保目錄存在
+    const storageDir = path.join(
+      __dirname,
+      '../deploymentTemplate',
+      name,
+      'storage'
+    );
+    await fs.mkdir(storageDir, { recursive: true });
+    
+    // 保存 StorageClass YAML
+    const storageClassPath = path.join(
+      storageDir,
+      `${name}-${version}-storageClass.yaml`
+    );
+    await fs.writeFile(storageClassPath, storageClassYaml);
+    
+    // 保存 PersistentVolume YAML
+    const pvPath = path.join(
+      storageDir,
+      `${name}-${version}-persistentVolumes.yaml`
+    );
+    await fs.writeFile(pvPath, persistentVolumeYaml);
+    
+    res.json({
+      message: 'Storage configuration saved successfully',
+      files: {
+        storageClass: storageClassPath,
+        persistentVolume: pvPath
+      }
+    });
+  } catch (error) {
+    console.error('Failed to save storage configuration:', error);
+    res.status(500).json({
+      error: 'Failed to save storage configuration',
+      details: error.message
+    });
+  }
+});
+
+// 獲取儲存配置
+router.get('/templates/:name/storage/:version', authenticateToken, async (req, res) => {
+  try {
+    const { name, version } = req.params;
+    const storageDir = path.join(
+      __dirname,
+      '../deploymentTemplate',
+      name,
+      'storage'
+    );
+    
+    const storageClassPath = path.join(
+      storageDir,
+      `${name}-${version}-storageClass.yaml`
+    );
+    const pvPath = path.join(
+      storageDir,
+      `${name}-${version}-persistentVolumes.yaml`
+    );
+    
+    const [storageClassYaml, persistentVolumeYaml] = await Promise.all([
+      fs.readFile(storageClassPath, 'utf8').catch(() => ''),
+      fs.readFile(pvPath, 'utf8').catch(() => '')
+    ]);
+    
+    res.json({
+      storageClassYaml,
+      persistentVolumeYaml
+    });
+  } catch (error) {
+    console.error('Failed to read storage configuration:', error);
+    res.status(500).json({
+      error: 'Failed to read storage configuration',
+      details: error.message
+    });
+  }
+});
+
 module.exports = router; 

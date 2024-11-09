@@ -10,6 +10,7 @@ class K8sService {
     this.kc.loadFromDefault();
     this.k8sApi = this.kc.makeApiClient(k8s.CoreV1Api);
     this.k8sAppsApi = this.kc.makeApiClient(k8s.AppsV1Api);
+    this.storageApi = this.kc.makeApiClient(k8s.StorageV1Api);
   }
 
   // 生成部署預覽
@@ -319,6 +320,111 @@ class K8sService {
         }
       }
     );
+  }
+
+  async getNodes() {
+    try {
+      const response = await this.k8sApi.listNode();
+      return response.body.items.map(node => ({
+        name: node.metadata.name,
+        status: node.status.conditions.find(c => c.type === 'Ready')?.status === 'True' ? 'Ready' : 'NotReady',
+        labels: node.metadata.labels,
+        capacity: node.status.capacity,
+        allocatable: node.status.allocatable
+      }));
+    } catch (error) {
+      console.error('Failed to get nodes:', error);
+      throw error;
+    }
+  }
+
+  // Storage Class 相關方法
+  async createStorageClass(name, spec) {
+    try {
+      const storageClass = {
+        apiVersion: 'storage.k8s.io/v1',
+        kind: 'StorageClass',
+        metadata: {
+          name
+        },
+        provisioner: spec.provisioner || 'kubernetes.io/no-provisioner',
+        reclaimPolicy: spec.reclaimPolicy || 'Retain',
+        volumeBindingMode: spec.volumeBindingMode || 'WaitForFirstConsumer',
+        allowVolumeExpansion: spec.allowVolumeExpansion || false
+      };
+
+      const response = await this.storageApi.createStorageClass(storageClass);
+      return response.body;
+    } catch (error) {
+      console.error('Failed to create storage class:', error);
+      throw error;
+    }
+  }
+
+  // Persistent Volume 相關方法
+  async createPersistentVolume(name, spec) {
+    try {
+      const persistentVolume = {
+        apiVersion: 'v1',
+        kind: 'PersistentVolume',
+        metadata: {
+          name,
+          labels: {
+            type: 'local'
+          }
+        },
+        spec: {
+          capacity: {
+            storage: spec.capacity
+          },
+          volumeMode: spec.volumeMode || 'Filesystem',
+          accessModes: spec.accessModes,
+          persistentVolumeReclaimPolicy: spec.persistentVolumeReclaimPolicy || 'Retain',
+          storageClassName: spec.storageClassName,
+          local: {
+            path: spec.local.path
+          },
+          nodeAffinity: spec.nodeAffinity
+        }
+      };
+
+      const response = await this.k8sApi.createPersistentVolume(persistentVolume);
+      return response.body;
+    } catch (error) {
+      console.error('Failed to create persistent volume:', error);
+      throw error;
+    }
+  }
+
+  // 獲取儲存狀態
+  async getStorageStatus(namespace) {
+    try {
+      const [storageClasses, persistentVolumes, persistentVolumeClaims] = await Promise.all([
+        this.listStorageClasses(),
+        this.listPersistentVolumes(namespace),
+        this.listPersistentVolumeClaims(namespace)
+      ]);
+
+      return {
+        storageClasses: {
+          total: storageClasses.length,
+          default: storageClasses.find(sc => sc.isDefault)?.name
+        },
+        persistentVolumes: {
+          total: persistentVolumes.length,
+          available: persistentVolumes.filter(pv => pv.status === 'Available').length,
+          bound: persistentVolumes.filter(pv => pv.status === 'Bound').length
+        },
+        persistentVolumeClaims: {
+          total: persistentVolumeClaims.length,
+          bound: persistentVolumeClaims.filter(pvc => pvc.status === 'Bound').length,
+          pending: persistentVolumeClaims.filter(pvc => pvc.status === 'Pending').length
+        }
+      };
+    } catch (error) {
+      console.error('Failed to get storage status:', error);
+      throw error;
+    }
   }
 }
 

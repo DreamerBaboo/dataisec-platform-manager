@@ -9,10 +9,32 @@ const YAML = require('yaml');
 const generatePreview = async (req, res) => {
   try {
     const config = req.body;
-    const preview = k8sService.generateDeploymentPreview(config);
-    res.json(preview);
+    
+    // 驗證配置
+    const validations = [
+      validateStorageConfig(config),
+      validateRepositoryConfig(config),
+      // 其他驗證...
+    ];
+    
+    const errors = validations
+      .filter(v => !v.isValid)
+      .reduce((acc, v) => ({ ...acc, ...v.errors }), {});
+    
+    if (Object.keys(errors).length > 0) {
+      return res.status(400).json({ errors });
+    }
+    
+    // 生成完整配置
+    const fullConfig = await generateDeploymentConfig(config.name, config.version);
+    
+    res.json({ yaml: fullConfig });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Failed to generate preview:', error);
+    res.status(500).json({
+      error: 'Failed to generate preview',
+      details: error.message
+    });
   }
 };
 
@@ -452,6 +474,74 @@ const validateRepositoryConfig = (config) => {
   };
 };
 
+// 驗證儲存配置
+const validateStorageConfig = (config) => {
+  const errors = {};
+  
+  // 驗證 StorageClass
+  if (config.storageClasses) {
+    config.storageClasses.forEach((sc, index) => {
+      if (!sc.name) {
+        errors[`storageClasses.${index}.name`] = 'Storage class name is required';
+      }
+      if (!sc.provisioner) {
+        errors[`storageClasses.${index}.provisioner`] = 'Provisioner is required';
+      }
+    });
+  }
+  
+  // 驗證 PersistentVolume
+  if (config.persistentVolumes) {
+    config.persistentVolumes.forEach((pv, index) => {
+      if (!pv.name) {
+        errors[`persistentVolumes.${index}.name`] = 'PV name is required';
+      }
+      if (!pv.capacity) {
+        errors[`persistentVolumes.${index}.capacity`] = 'Capacity is required';
+      }
+      if (!pv.accessModes || pv.accessModes.length === 0) {
+        errors[`persistentVolumes.${index}.accessModes`] = 'At least one access mode is required';
+      }
+    });
+  }
+  
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors
+  };
+};
+
+// 生成完整的部署配置
+const generateDeploymentConfig = async (name, version) => {
+  const deploymentDir = path.join(__dirname, '../deploymentTemplate', name);
+  const storageDir = path.join(deploymentDir, 'storage');
+  
+  try {
+    // 讀取所有配置文件
+    const [
+      storageClassYaml,
+      persistentVolumeYaml,
+      deploymentYaml
+    ] = await Promise.all([
+      fs.readFile(path.join(storageDir, `${name}-${version}-storageClass.yaml`), 'utf8').catch(() => ''),
+      fs.readFile(path.join(storageDir, `${name}-${version}-persistentVolumes.yaml`), 'utf8').catch(() => ''),
+      fs.readFile(path.join(deploymentDir, `${name}-template.yaml`), 'utf8')
+    ]);
+    
+    // 合併所有 YAML 文件
+    const fullConfig = [
+      storageClassYaml,
+      persistentVolumeYaml,
+      deploymentYaml
+    ].filter(Boolean).join('\n---\n');
+    
+    return fullConfig;
+  } catch (error) {
+    console.error('Failed to generate deployment config:', error);
+    throw error;
+  }
+};
+
 module.exports = {
   generatePreview,
   createDeployment,
@@ -467,5 +557,7 @@ module.exports = {
   getDeploymentVersions,
   getVersionConfig,
   saveTemplateContent,
-  validateRepositoryConfig
+  validateRepositoryConfig,
+  validateStorageConfig,
+  generateDeploymentConfig
 }; 

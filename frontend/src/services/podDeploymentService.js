@@ -178,6 +178,43 @@ export const podDeploymentService = {
       console.error('Failed to get deployment logs:', error);
       throw error;
     }
+  },
+
+  // Save storage configuration
+  async saveStorageConfig(name, version, storageConfig) {
+    try {
+      const response = await axios.post(
+        `${API_URL}/api/pod-deployments/templates/${name}/storage`,
+        {
+          version,
+          storageClassYaml: storageConfig.storageClassYaml,
+          persistentVolumeYaml: storageConfig.persistentVolumeYaml
+        },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Failed to save storage config:', error);
+      throw error;
+    }
+  },
+
+  // Get storage configuration
+  async getStorageConfig(name, version) {
+    try {
+      const response = await axios.get(
+        `${API_URL}/api/pod-deployments/templates/${name}/storage/${version}`,
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Failed to get storage config:', error);
+      throw error;
+    }
   }
 };
 

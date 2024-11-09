@@ -335,6 +335,32 @@
         "tagsFetchFailed": "獲取標籤列表失敗",
         "searchFailed": "搜索映像失敗"
       }
+    },
+    "storage": {
+      "title": "儲存配置",
+      "storageClass": {
+        "title": "儲存類別",
+        "name": "名稱",
+        "provisioner": "供應者",
+        "reclaimPolicy": "回收策略",
+        "volumeBindingMode": "卷綁定模式",
+        "allowVolumeExpansion": "允許卷擴展"
+      },
+      "persistentVolume": {
+        "title": "持久卷",
+        "name": "名稱",
+        "capacity": "容量",
+        "accessMode": "訪問模式",
+        "storageClass": "儲存類別",
+        "hostPath": "主機路徑"
+      },
+      "preview": "預覽",
+      "validation": {
+        "nameRequired": "名稱為必填項",
+        "provisionerRequired": "供應者為必填項",
+        "capacityRequired": "容量為必填項",
+        "accessModeRequired": "至少需要一個訪問模式"
+      }
     }
   }
 } 
