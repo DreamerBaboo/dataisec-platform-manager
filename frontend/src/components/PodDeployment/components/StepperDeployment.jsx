@@ -20,6 +20,7 @@ import SecretEditor from '../steps/SecretEditor';
 import DeploymentPreview from './DeploymentPreview';
 import NamespaceQuotaConfig from '../steps/NamespaceQuotaConfig';
 import RepositoryConfig from '../steps/RepositoryConfig';
+import { podDeploymentService } from '../../../services/podDeploymentService';
 
 const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
   const { t } = useAppTranslation();
@@ -112,15 +113,76 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
     return Object.keys(newErrors).length === 0;
   }, [deploymentConfig, visibleSteps, t]);
 
-  const handleNext = () => {
-    if (validateStep(activeStep)) {
+  const handleNext = async () => {
+    console.group('🚀 Step Transition Process');
+    console.log('Current deployment config:', {
+      name: deploymentConfig.name,
+      version: deploymentConfig.version,
+      step: activeStep
+    });
+
+    try {
+      // 驗證當前步驟
+      if (!validateStep(activeStep)) {
+        console.warn('❌ Step validation failed');
+        console.groupEnd();
+        return;
+      }
+
+      // 如果是基本設置步驟且有新版本，保存配置
+      if (activeStep === 0 && deploymentConfig.name && deploymentConfig.version) {
+        console.log('💾 Preparing to save config:', {
+          name: deploymentConfig.name,
+          version: deploymentConfig.version,
+          timestamp: new Date().toISOString()
+        });
+
+        try {
+          const saveResult = await podDeploymentService.saveDeploymentConfig(
+            deploymentConfig.name,
+            deploymentConfig.version,
+            deploymentConfig
+          );
+          
+          console.log('✅ Configuration saved successfully:', saveResult);
+        } catch (error) {
+          console.error('❌ Failed to save configuration:', error);
+          setErrors(prev => ({
+            ...prev,
+            save: t('podDeployment:podDeployment.errors.failedToSaveConfig')
+          }));
+          console.groupEnd();
+          return;
+        }
+      }
+
+      // 進入下一步
       let nextStep = activeStep + 1;
-      // 跳過隱藏的步驟
       while (nextStep < steps.length && !visibleSteps[steps[nextStep]]) {
         nextStep++;
       }
+      
+      console.log('➡️ Moving to next step:', {
+        from: activeStep,
+        to: nextStep,
+        stepName: steps[nextStep],
+        timestamp: new Date().toISOString()
+      });
+      
       setActiveStep(nextStep);
+    } catch (error) {
+      console.error('❌ Error in step transition:', {
+        error: error.message,
+        stack: error.stack,
+        timestamp: new Date().toISOString()
+      });
+      
+      setErrors(prev => ({
+        ...prev,
+        general: t('podDeployment:podDeployment.errors.generalError')
+      }));
     }
+    console.groupEnd();
   };
 
   const handleBack = useCallback(() => {
@@ -249,6 +311,16 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
   const getVisibleSteps = useCallback(() => {
     return steps.filter(step => visibleSteps[step]);
   }, [visibleSteps]);
+
+  // 監聽配置變更
+  useEffect(() => {
+    console.log('📊 Deployment config updated:', {
+      name: deploymentConfig.name,
+      version: deploymentConfig.version,
+      step: activeStep,
+      timestamp: new Date().toISOString()
+    });
+  }, [deploymentConfig, activeStep]);
 
   return (
     <Box sx={{ width: '100%' }}>

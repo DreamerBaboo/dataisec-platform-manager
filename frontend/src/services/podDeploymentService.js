@@ -70,26 +70,51 @@ export const podDeploymentService = {
 
   // Save deployment configuration with version
   async saveDeploymentConfig(name, version, config) {
+    console.group('💾 Save Deployment Config');
+    console.log('Request parameters:', {
+      name,
+      version,
+      configSummary: {
+        namespace: config.namespace,
+        enableResourceQuota: config.enableResourceQuota,
+      },
+      timestamp: new Date().toISOString()
+    });
+
     try {
-      console.log('Saving deployment config:', { name, version, config });
       const response = await axios.post(
         `${API_URL}/api/pod-deployments/config`,
         {
           name,
           version,
-          config
-        },
-        {
-          headers: { 
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json'
+          config: {
+            ...config,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
           }
-        }
+        },
+        getAuthHeaders()
       );
-      console.log('Configuration saved:', response.data);
+      
+      console.log('✅ Save operation successful:', {
+        status: response.status,
+        dataReceived: !!response.data,
+        timestamp: new Date().toISOString()
+      });
+      console.groupEnd();
       return response.data;
     } catch (error) {
-      console.error('Failed to save deployment config:', error);
+      console.error('❌ Save operation failed:', {
+        name,
+        version,
+        error: {
+          message: error.message,
+          status: error.response?.status,
+          data: error.response?.data
+        },
+        timestamp: new Date().toISOString()
+      });
+      console.groupEnd();
       throw error;
     }
   },

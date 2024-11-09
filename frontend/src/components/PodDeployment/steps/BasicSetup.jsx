@@ -15,6 +15,7 @@ import { Upload as UploadIcon } from '@mui/icons-material';
 import { useAppTranslation } from '../../../hooks/useAppTranslation';
 import { templateService } from '../../../services/templateService';
 import { podDeploymentService } from '../../../services/podDeploymentService';
+import semver from 'semver';
 
 const BasicSetup = ({ config, onChange, errors: propErrors, onStepVisibilityChange }) => {
   const { t } = useAppTranslation();
@@ -25,6 +26,7 @@ const BasicSetup = ({ config, onChange, errors: propErrors, onStepVisibilityChan
   const [isNewDeployment, setIsNewDeployment] = useState(false);
   const [versions, setVersions] = useState([]);
   const [namespaces, setNamespaces] = useState([]);
+  const [localVersion, setLocalVersion] = useState('');
 
   const handleResourceQuotaChange = (event) => {
     const isChecked = event.target.checked;
@@ -232,31 +234,36 @@ spec:
   // Load version configuration when version changes
   useEffect(() => {
     const loadVersionConfig = async () => {
-      if (!config.name || !config.version || isNewDeployment) {
-        console.log('⏭️ Skipping config load:', { 
-          name: config.name, 
-          version: config.version,
-          isNewDeployment 
+      if (!config.name || !localVersion || isNewDeployment) {
+        console.log('⏭️ Skipping config load:', {
+          name: config.name,
+          localVersion,
+          isNewDeployment
         });
         return;
       }
-      
+
       try {
-        console.log('🔄 Loading config for:', {
+        console.log('🔄 Loading config with version:', {
           name: config.name,
-          version: config.version
+          localVersion
         });
         
         const versionConfig = await podDeploymentService.getVersionConfig(
           config.name,
-          config.version
+          localVersion
         );
 
         if (versionConfig?.config) {
-          console.log('✅ Loaded version config:', versionConfig);
+          console.log('✅ Loaded version config:', {
+            config: versionConfig,
+            currentVersion: localVersion
+          });
+          const currentVersion = localVersion;
           onChange({
             ...config,
-            ...versionConfig.config
+            ...versionConfig.config,
+            version: currentVersion
           });
         } else {
           console.warn('⚠️ Invalid config format:', versionConfig);
@@ -281,7 +288,7 @@ spec:
     };
 
     loadVersionConfig();
-  }, [config.name, config.version, isNewDeployment, t]);
+  }, [config.name, localVersion, isNewDeployment, t]);
 
   // Fetch namespaces on component mount
   useEffect(() => {
@@ -300,6 +307,96 @@ spec:
 
     fetchNamespaces();
   }, [t]);
+
+  // 在組件掛載時添加日誌
+  useEffect(() => {
+    console.log('🔍 BasicSetup mounted with config:', {
+      name: config.name,
+      version: config.version,
+      namespace: config.namespace,
+      timestamp: new Date().toISOString()
+    });
+  }, []);
+
+  // 監聽配置變更
+  useEffect(() => {
+    console.log('📊 Config updated in BasicSetup:', {
+      name: config.name,
+      version: config.version,
+      namespace: config.namespace,
+      timestamp: new Date().toISOString()
+    });
+  }, [config]);
+
+  // 在組件初始化時設置本地版本
+  useEffect(() => {
+    if (config.version && !localVersion) {
+      console.log('🔄 Initializing local version:', {
+        configVersion: config.version,
+        currentLocalVersion: localVersion
+      });
+      setLocalVersion(config.version);
+    }
+  }, [config.version]);
+
+  // 確保在配置更新時不會覆蓋用戶輸入的版本
+  useEffect(() => {
+    const loadVersionConfig = async () => {
+      if (!config.name || !localVersion || isNewDeployment) {
+        console.log('⏭️ Skipping config load:', {
+          name: config.name,
+          localVersion,
+          isNewDeployment
+        });
+        return;
+      }
+
+      try {
+        console.log('🔄 Loading config with version:', {
+          name: config.name,
+          localVersion
+        });
+        
+        const versionConfig = await podDeploymentService.getVersionConfig(
+          config.name,
+          localVersion
+        );
+
+        if (versionConfig?.config) {
+          console.log('✅ Loaded version config:', {
+            config: versionConfig,
+            currentVersion: localVersion
+          });
+          const currentVersion = localVersion;
+          onChange({
+            ...config,
+            ...versionConfig.config,
+            version: currentVersion
+          });
+        } else {
+          console.warn('⚠️ Invalid config format:', versionConfig);
+          setLocalErrors(prev => ({
+            ...prev,
+            version: t('podDeployment:podDeployment.errors.invalidConfigFormat')
+          }));
+        }
+      } catch (error) {
+        console.error('❌ Failed to load version config:', error);
+        let errorMessage = t('podDeployment:podDeployment.errors.failedToLoadConfig');
+        
+        if (error.response?.status === 404) {
+          errorMessage = t('podDeployment:podDeployment.errors.versionNotFound');
+        }
+        
+        setLocalErrors(prev => ({
+          ...prev,
+          version: errorMessage
+        }));
+      }
+    };
+
+    loadVersionConfig();
+  }, [config.name, localVersion, isNewDeployment, t]);
 
   return (
     <Box>
@@ -338,15 +435,58 @@ spec:
         <Grid item xs={12} sm={6}>
           <Autocomplete
             freeSolo
-            value={config.version || ''}
+            value={localVersion}
             onChange={(event, newValue) => {
+              console.group('🔄 Version Selection Debug');
+              try {
+                const selectedVersion = typeof newValue === 'string' ? newValue : '';
+                
+                console.log('Version Selection Details:', {
+                  rawValue: newValue,
+                  selectedVersion,
+                  previousVersion: localVersion,
+                  configVersion: config.version
+                });
+
+                // 更新本地版本狀態
+                setLocalVersion(selectedVersion);
+                
+                // 更新父組件的配置
+                onChange({
+                  ...config,
+                  version: selectedVersion
+                });
+
+                console.log('✅ Version updated:', {
+                  newVersion: selectedVersion,
+                  newConfig: {
+                    ...config,
+                    version: selectedVersion
+                  }
+                });
+              } catch (error) {
+                console.error('❌ Version selection error:', error);
+              }
+              console.groupEnd();
+            }}
+            onInputChange={(event, newInputValue) => {
+              console.log('🔤 Input Change:', {
+                newInputValue,
+                currentLocalVersion: localVersion,
+                currentConfigVersion: config.version
+              });
+              setLocalVersion(newInputValue);
               onChange({
                 ...config,
-                version: newValue
+                version: newInputValue
               });
             }}
-            options={versions.map(v => v.version)}
-            disabled={isNewDeployment}
+            options={versions}
+            getOptionLabel={(option) => {
+              const label = typeof option === 'string' ? option : '';
+              console.log('🏷️ Option Label:', { option, label });
+              return label;
+            }}
             renderInput={(params) => (
               <TextField
                 {...params}
@@ -354,6 +494,20 @@ spec:
                 required
                 error={!!allErrors.version}
                 helperText={allErrors.version}
+                value={localVersion}
+                onChange={(e) => {
+                  const newValue = e.target.value;
+                  console.log('📝 TextField Change:', {
+                    newValue,
+                    currentLocalVersion: localVersion,
+                    currentConfigVersion: config.version
+                  });
+                  setLocalVersion(newValue);
+                  onChange({
+                    ...config,
+                    version: newValue
+                  });
+                }}
               />
             )}
           />
