@@ -119,4 +119,15 @@ router.get('/storage/config/:name/:version', authenticateToken, async (req, res)
   }
 });
 
+// 添加命名空間路由
+router.get('/namespaces', authenticateToken, async (req, res) => {
+  try {
+    const namespaces = await k8sService.getNamespaces();
+    res.json(namespaces);
+  } catch (error) {
+    console.error('Failed to get namespaces:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router; 

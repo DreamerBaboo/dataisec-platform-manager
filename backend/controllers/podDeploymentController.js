@@ -542,6 +542,16 @@ const generateDeploymentConfig = async (name, version) => {
   }
 };
 
+const getNamespaces = async (req, res) => {
+  try {
+    const namespaces = await k8sService.getNamespaces();
+    res.json(namespaces);
+  } catch (error) {
+    console.error('Failed to get namespaces:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   generatePreview,
   createDeployment,
@@ -559,5 +569,6 @@ module.exports = {
   saveTemplateContent,
   validateRepositoryConfig,
   validateStorageConfig,
-  generateDeploymentConfig
+  generateDeploymentConfig,
+  getNamespaces
 }; 

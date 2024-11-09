@@ -215,6 +215,22 @@ export const podDeploymentService = {
       console.error('Failed to get storage config:', error);
       throw error;
     }
+  },
+
+  // Get namespaces
+  async getNamespaces() {
+    try {
+      const response = await axios.get(
+        `${API_URL}/api/k8s/namespaces`,
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch namespaces:', error);
+      throw error;
+    }
   }
 };
 

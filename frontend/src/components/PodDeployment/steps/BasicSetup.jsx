@@ -24,6 +24,7 @@ const BasicSetup = ({ config, onChange, errors: propErrors, onStepVisibilityChan
   const [showTemplateUpload, setShowTemplateUpload] = useState(false);
   const [isNewDeployment, setIsNewDeployment] = useState(false);
   const [versions, setVersions] = useState([]);
+  const [namespaces, setNamespaces] = useState([]);
 
   const handleResourceQuotaChange = (event) => {
     const isChecked = event.target.checked;
@@ -199,6 +200,24 @@ spec:
     loadVersionConfig();
   }, [config.name, config.version]);
 
+  // Fetch namespaces on component mount
+  useEffect(() => {
+    const fetchNamespaces = async () => {
+      try {
+        const namespaceList = await podDeploymentService.getNamespaces();
+        setNamespaces(namespaceList);
+      } catch (error) {
+        console.error('Failed to fetch namespaces:', error);
+        setLocalErrors(prev => ({
+          ...prev,
+          namespace: t('podDeployment:podDeployment.errors.failedToFetchNamespaces')
+        }));
+      }
+    };
+
+    fetchNamespaces();
+  }, [t]);
+
   return (
     <Box>
       <Typography variant="h6" gutterBottom>
@@ -250,19 +269,48 @@ spec:
                 {...params}
                 label={t('podDeployment:podDeployment.basic.version')}
                 required
+                error={!!allErrors.version}
+                helperText={allErrors.version}
               />
             )}
           />
         </Grid>
         <Grid item xs={12} sm={6}>
-          <TextField
-            fullWidth
-            label={t('podDeployment:podDeployment.basic.namespace')}
-            value={config.namespace}
-            onChange={(e) => onChange({ ...config, namespace: e.target.value })}
-            error={!!allErrors.namespace}
-            helperText={allErrors.namespace}
-            required
+          <Autocomplete
+            freeSolo
+            value={config.namespace || ''}
+            onChange={(event, newValue) => {
+              onChange({
+                ...config,
+                namespace: typeof newValue === 'string' ? newValue : newValue?.name
+              });
+            }}
+            options={namespaces}
+            getOptionLabel={(option) => {
+              if (typeof option === 'string') return option;
+              return option?.name || '';
+            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label={t('podDeployment:podDeployment.basic.namespace')}
+                required
+                error={!!allErrors.namespace}
+                helperText={allErrors.namespace}
+                fullWidth
+              />
+            )}
+            renderOption={(props, option) => (
+              <li {...props}>
+                <Box>
+                  <Typography>{option.name}</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {option.status}
+                  </Typography>
+                </Box>
+              </li>
+            )}
+            loading={namespaces.length === 0}
           />
         </Grid>
 

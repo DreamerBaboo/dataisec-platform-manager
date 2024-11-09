@@ -80,6 +80,16 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
         } else if (!/^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(config.name)) {
           newErrors.name = t('podDeployment:podDeployment.validation.name.format');
         }
+        
+        if (!config.version) {
+          newErrors.version = t('podDeployment:podDeployment.validation.version.required');
+        }
+        
+        if (!config.namespace) {
+          newErrors.namespace = t('podDeployment:podDeployment.validation.namespace.required');
+        } else if (!/^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(config.namespace)) {
+          newErrors.namespace = t('podDeployment:podDeployment.validation.namespace.format');
+        }
         break;
         
       case 2: // Repository Config

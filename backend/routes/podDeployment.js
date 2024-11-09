@@ -17,6 +17,8 @@ router.get('/logs', authenticateToken, podDeploymentController.getDeploymentLogs
 router.get('/:name/containers', authenticateToken, podDeploymentController.getContainers);
 router.get('/:name/status', authenticateToken, podDeploymentController.getDeploymentStatus);
 
+router.get('/namespaces', authenticateToken, podDeploymentController.getNamespaces);
+
 // Add template routes
 router.get('/templates/list', authenticateToken, async (req, res) => {
   try {

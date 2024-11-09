@@ -530,6 +530,19 @@ class K8sService {
       throw error;
     }
   }
+
+  async getNamespaces() {
+    try {
+      const { body } = await this.k8sApi.listNamespace();
+      return body.items.map(ns => ({
+        name: ns.metadata.name,
+        status: ns.status.phase
+      }));
+    } catch (error) {
+      console.error('Failed to fetch namespaces:', error);
+      throw error;
+    }
+  }
 }
 
 module.exports = new K8sService(); 
