@@ -17,6 +17,9 @@ router.get('/logs', authenticateToken, podDeploymentController.getDeploymentLogs
 router.get('/:name/containers', authenticateToken, podDeploymentController.getContainers);
 router.get('/:name/status', authenticateToken, podDeploymentController.getDeploymentStatus);
 
+// 處理命名空間變更
+router.post('/namespace', authenticateToken, podDeploymentController.handleNamespaceChange);
+
 router.get('/namespaces', authenticateToken, podDeploymentController.getNamespaces);
 
 // Add template routes
@@ -82,117 +85,63 @@ router.post('/config', authenticateToken, podDeploymentController.saveDeployment
 router.get('/:name/versions', authenticateToken, async (req, res) => {
   try {
     const { name } = req.params;
-    console.log('🔍 Getting versions for deployment:', name);
-
-    // 設定路徑
-    const deploymentDir = path.join(__dirname, '../deploymentTemplate', name);
-    const configPath = path.join(deploymentDir, 'config.json');
-    console.log('📂 Config path:', configPath);
-
-    // 確保目錄存在
-    await fs.mkdir(deploymentDir, { recursive: true });
-
-    // 默認配置
-    const defaultConfig = {
-      name,
-      versions: {
-        '1.0.0': {
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          config: {
-            name,
-            version: '1.0.0',
-            namespace: 'default',
-            enableResourceQuota: false,
-            resourceQuota: {
-              requestsCpu: '1',
-              requestsMemory: '1Gi',
-              limitsCpu: '2',
-              limitsMemory: '2Gi',
-              pods: '10',
-              configmaps: '10',
-              pvcs: '5',
-              services: '10',
-              secrets: '10',
-              deployments: '5',
-              replicasets: '10',
-              statefulsets: '5',
-              jobs: '10',
-              cronjobs: '5'
-            }
-          }
-        }
-      },
-      latestVersion: '1.0.0'
-    };
-
-    // 讀取或創建配置文件
-    let config;
+    const configPath = path.join(__dirname, '../deploymentTemplate', `${name}/config.json`);
+    
+    let config = {};
     try {
-      const fileContent = await fs.readFile(configPath, 'utf8');
-      config = JSON.parse(fileContent);
-      console.log('📄 Found existing config file');
+      config = JSON.parse(await fs.readFile(configPath, 'utf8'));
     } catch (error) {
-      console.log('📝 Creating new config file with default version');
-      config = defaultConfig;
-      
-      // 保存默認配置
-      await fs.writeFile(configPath, JSON.stringify(config, null, 2));
-      console.log('✅ Saved default config file');
+      config = { versions: [], latestVersion: null };
     }
-
-    // 確保至少有一個版本
-    if (Object.keys(config.versions).length === 0) {
-      console.log('⚠️ No versions found, adding default version');
-      config.versions['1.0.0'] = defaultConfig.versions['1.0.0'];
-      config.latestVersion = '1.0.0';
-      await fs.writeFile(configPath, JSON.stringify(config, null, 2));
-    }
-
-    // 格式化版本列表
-    const versions = Object.entries(config.versions).map(([version, data]) => ({
-      version,
-      createdAt: data.createdAt,
-      updatedAt: data.updatedAt
-    }));
-
-    console.log('✅ Returning versions:', versions);
+    
     res.json({
       name,
-      versions,
+      versions: Object.keys(config.versions || {}),
       latestVersion: config.latestVersion
     });
-
   } catch (error) {
-    console.error('❌ Error handling versions request:', error);
-    res.status(500).json({
-      error: 'Failed to handle versions request',
-      details: error.message
-    });
+    console.error('Failed to get versions:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Get specific version configuration
+// 添加 compareVersions 函數
+function compareVersions(v1, v2) {
+  const v1Parts = v1.split('.').map(Number);
+  const v2Parts = v2.split('.').map(Number);
+  
+  for (let i = 0; i < Math.max(v1Parts.length, v2Parts.length); i++) {
+    const v1Part = v1Parts[i] || 0;
+    const v2Part = v2Parts[i] || 0;
+    if (v1Part > v2Part) return 1;
+    if (v1Part < v2Part) return -1;
+  }
+  return 0;
+}
+
+// 移除重複的路由，只保留一個版本
 router.get('/:name/versions/:version/config', authenticateToken, async (req, res) => {
+  const { name, version } = req.params;
   try {
-    const { name, version } = req.params;
     console.log('🔍 Getting config for:', { name, version });
 
     const deploymentDir = path.join(__dirname, '../deploymentTemplate', name);
     const configPath = path.join(deploymentDir, 'config.json');
 
-    // 檢查目錄是否存在，不存在則創建
+    console.log('📂 Looking for config at:', configPath);
+
+    // 確保目錄存在
     await fs.mkdir(deploymentDir, { recursive: true });
 
-    // 檢查配置文件是否存在
+    // 讀取或創建配置
     let config;
     try {
       const fileContent = await fs.readFile(configPath, 'utf8');
       config = JSON.parse(fileContent);
       console.log('📄 Found existing config file:', config);
     } catch (error) {
-      // 如果文件不存在或無法解析，創建新的配置
       console.log('📝 Creating new config file');
+      // 如果文件不存在，創建默認配置
       config = {
         name,
         versions: {
@@ -226,35 +175,91 @@ router.get('/:name/versions/:version/config', authenticateToken, async (req, res
         latestVersion: version
       };
 
-      // 保存新配置文件
+      // 保存新配置
       await fs.writeFile(configPath, JSON.stringify(config, null, 2));
       console.log('✅ Created and saved new config file');
     }
 
     // 檢查請求的版本是否存在
     if (!config.versions[version]) {
-      return res.status(404).json({
-        error: 'Version not found',
-        details: `Version ${version} does not exist for deployment ${name}`
-      });
+      console.log('📝 Adding new version to config:', version);
+      config.versions[version] = {
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        config: {
+          name,
+          version,
+          namespace: 'default',
+          enableResourceQuota: false,
+          resourceQuota: {
+            requestsCpu: '1',
+            requestsMemory: '1Gi',
+            limitsCpu: '2',
+            limitsMemory: '2Gi',
+            pods: '10',
+            configmaps: '10',
+            pvcs: '5',
+            services: '10',
+            secrets: '10',
+            deployments: '5',
+            replicasets: '10',
+            statefulsets: '5',
+            jobs: '10',
+            cronjobs: '5'
+          }
+        }
+      };
+
+      // 更新最新版本（如果需要）
+      if (!config.latestVersion || compareVersions(version, config.latestVersion) > 0) {
+        config.latestVersion = version;
+      }
+
+      // 保存更新後的配置
+      await fs.writeFile(configPath, JSON.stringify(config, null, 2));
+      console.log('✅ Saved updated config with new version');
     }
 
-    const versionData = config.versions[version];
-    console.log('✅ Found version data:', versionData);
+    // 返回版本配置
+    const versionConfig = config.versions[version];
+    console.log('✅ Returning version config:', versionConfig);
+    
+    if (!versionConfig) {
+      throw new Error(`Version ${version} not found in config`);
+    }
 
-    // 返回正確格式的配置
     res.json({
-      config: versionData.config,  // 包含完整的配置對象
-      createdAt: versionData.createdAt,
-      updatedAt: versionData.updatedAt
+      name,
+      version,
+      ...versionConfig.config
     });
 
   } catch (error) {
     console.error('❌ Error handling version config request:', error);
     res.status(500).json({
       error: 'Failed to handle version config request',
-      details: error.message
+      details: error.message,
+      stack: error.stack
     });
+  }
+});
+
+// 移除重複的模板配置路由，只保留一個版本
+router.get('/templates/:name/config', authenticateToken, async (req, res) => {
+  try {
+    const { name } = req.params;
+    const configPath = path.join(
+      __dirname,
+      '../deploymentTemplate',
+      name,
+      'config.json'
+    );
+    
+    const config = await fs.readFile(configPath, 'utf8');
+    res.json(JSON.parse(config));
+  } catch (error) {
+    console.error('Failed to read config:', error);
+    res.status(500).json({ error: 'Failed to read configuration' });
   }
 });
 
@@ -353,24 +358,6 @@ router.post('/templates/:name/config', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Failed to save config:', error);
     res.status(500).json({ error: 'Failed to save configuration' });
-  }
-});
-
-router.get('/templates/:name/config', authenticateToken, async (req, res) => {
-  try {
-    const { name } = req.params;
-    const configPath = path.join(
-      __dirname,
-      '../deploymentTemplate',
-      name,
-      'config.json'
-    );
-    
-    const config = await fs.readFile(configPath, 'utf8');
-    res.json(JSON.parse(config));
-  } catch (error) {
-    console.error('Failed to read config:', error);
-    res.status(500).json({ error: 'Failed to read configuration' });
   }
 });
 
@@ -475,7 +462,7 @@ router.get('/:name/versions/:version/config', authenticateToken, async (req, res
     try {
       const configFile = await fs.readFile(configPath, 'utf8');
       config = JSON.parse(configFile);
-      console.log('📄 Found existing config file:', config);
+      console.log('📄 Found existing config file');
     } catch (error) {
       // 如果文件不存在或無法解析，創建新的配置
       console.log('📝 Creating new config file');
@@ -517,30 +504,132 @@ router.get('/:name/versions/:version/config', authenticateToken, async (req, res
       console.log('✅ Created new config file');
     }
 
-    // 檢查請求的版本是否存在
-    if (!config.versions[version]) {
-      return res.status(404).json({
-        error: 'Version not found',
-        details: `Version ${version} does not exist for deployment ${name}`
-      });
+    // 檢查版本是否存在，不則創建
+    if (!config.versions?.[version]) {
+      console.log('📝 Adding new version to config');
+      config.versions[version] = {
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        config: {
+          name,
+          version,
+          namespace: 'default',
+          enableResourceQuota: false,
+          resourceQuota: {
+            requestsCpu: '1',
+            requestsMemory: '1Gi',
+            limitsCpu: '2',
+            limitsMemory: '2Gi',
+            pods: '10',
+            configmaps: '10',
+            pvcs: '5',
+            services: '10',
+            secrets: '10',
+            deployments: '5',
+            replicasets: '10',
+            statefulsets: '5',
+            jobs: '10',
+            cronjobs: '5'
+          }
+        }
+      };
+
+      // 更新最新版本
+      config.latestVersion = version;
+
+      // 保存更新後的配置
+      await fs.writeFile(configPath, JSON.stringify(config, null, 2));
+      console.log('✅ Updated config file with new version');
     }
 
-    const versionData = config.versions[version];
-    console.log('✅ Found version data:', versionData);
-
-    // 返回正確格式的配置
-    res.json({
-      config: versionData.config,  // 包含完整的配置對象
-      createdAt: versionData.createdAt,
-      updatedAt: versionData.updatedAt
-    });
+    console.log('✅ Returning configuration for version:', version);
+    res.json(config.versions[version]);
 
   } catch (error) {
-    console.error('❌ Error handling version config request:', error);
+    console.error('❌ Failed to handle version config:', error);
     res.status(500).json({
-      error: 'Failed to handle version config request',
+      error: 'Failed to handle version configuration',
       details: error.message
     });
+  }
+});
+
+// 添加新的路由處理版本創建
+router.post('/:name/versions', authenticateToken, async (req, res) => {
+  try {
+    const { name } = req.params;
+    const { version } = req.body;
+    
+    // 讀取現有配置
+    const configPath = path.join(__dirname, '../deploymentTemplate', `${name}/config.json`);
+    let config = {};
+    
+    try {
+      config = JSON.parse(await fs.readFile(configPath, 'utf8'));
+    } catch (error) {
+      config = { name, versions: {}, latestVersion: null };
+    }
+    
+    // 添加新版本
+    config.versions[version] = {
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      config: {
+        name,
+        namespace: 'default',
+        templatePath: '',
+        yamlConfig: null,
+        resources: {},
+        affinity: {},
+        volumes: [],
+        configMaps: [],
+        secrets: [],
+        enableResourceQuota: false,
+        resourceQuota: null,
+        version,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+    };
+    
+    config.latestVersion = version;
+    
+    // 保存配置
+    await fs.mkdir(path.dirname(configPath), { recursive: true });
+    await fs.writeFile(configPath, JSON.stringify(config, null, 2));
+    
+    res.json({ message: 'Version created successfully', version });
+  } catch (error) {
+    console.error('Failed to create version:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 修改配置保存路由
+router.post('/:name/versions/:version/config', authenticateToken, async (req, res) => {
+  try {
+    const { name, version } = req.params;
+    const { config: newConfig } = req.body;
+    
+    const configPath = path.join(__dirname, '../deploymentTemplate', `${name}/config.json`);
+    const config = JSON.parse(await fs.readFile(configPath, 'utf8'));
+    
+    if (!config.versions[version]) {
+      return res.status(404).json({ error: 'Version not found' });
+    }
+    
+    config.versions[version].config = {
+      ...config.versions[version].config,
+      ...newConfig,
+      updatedAt: new Date().toISOString()
+    };
+    
+    await fs.writeFile(configPath, JSON.stringify(config, null, 2));
+    
+    res.json({ message: 'Configuration saved successfully' });
+  } catch (error) {
+    console.error('Failed to save configuration:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 

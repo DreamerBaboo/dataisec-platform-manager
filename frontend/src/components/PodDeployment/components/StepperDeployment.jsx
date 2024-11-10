@@ -25,18 +25,20 @@ import { podDeploymentService } from '../../../services/podDeploymentService';
 const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
   const { t } = useAppTranslation();
   const [activeStep, setActiveStep] = useState(0);
+  const [versions, setVersions] = useState([]);
   const [deploymentConfig, setDeploymentConfig] = useState({
-    name: '',
-    namespace: 'default',
-    templatePath: '',
-    yamlConfig: null,
-    resources: {},
-    affinity: {},
-    volumes: [],
-    configMaps: [],
-    secrets: [],
-    enableResourceQuota: false,
-    resourceQuota: null
+    name: deployment?.name || '',
+    namespace: deployment?.namespace || 'default',
+    templatePath: deployment?.templatePath || '',
+    yamlConfig: deployment?.yamlConfig || null,
+    resources: deployment?.resources || {},
+    affinity: deployment?.affinity || {},
+    volumes: deployment?.volumes || [],
+    configMaps: deployment?.configMaps || [],
+    secrets: deployment?.secrets || [],
+    enableResourceQuota: deployment?.enableResourceQuota || false,
+    resourceQuota: deployment?.resourceQuota || null,
+    version: deployment?.version || ''
   });
   const [errors, setErrors] = useState({});
   const [visibleSteps, setVisibleSteps] = useState({
@@ -70,6 +72,29 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
       setDeploymentConfig(deployment);
     }
   }, [deployment]);
+
+  useEffect(() => {
+    const fetchVersions = async () => {
+      if (!deploymentConfig.name) return;
+      
+      try {
+        const response = await podDeploymentService.getDeploymentVersions(deploymentConfig.name);
+        const versionList = Array.isArray(response.versions) ? response.versions : [];
+        setVersions(versionList);
+        
+        if (deployment && !deploymentConfig.version && response.latestVersion) {
+          setDeploymentConfig(prev => ({
+            ...prev,
+            version: response.latestVersion
+          }));
+        }
+      } catch (error) {
+        console.error('Failed to fetch versions:', error);
+      }
+    };
+
+    fetchVersions();
+  }, [deploymentConfig.name, deployment]);
 
   const validateStep = useCallback((step, config = deploymentConfig) => {
     const newErrors = {};
@@ -114,75 +139,60 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
   }, [deploymentConfig, visibleSteps, t]);
 
   const handleNext = async () => {
-    console.group('🚀 Step Transition Process');
-    console.log('Current deployment config:', {
-      name: deploymentConfig.name,
-      version: deploymentConfig.version,
-      step: activeStep
-    });
-
     try {
       // 驗證當前步驟
       if (!validateStep(activeStep)) {
-        console.warn('❌ Step validation failed');
-        console.groupEnd();
         return;
       }
 
-      // 如果是基本設置步驟且有新版本，保存配置
-      if (activeStep === 0 && deploymentConfig.name && deploymentConfig.version) {
-        console.log('💾 Preparing to save config:', {
-          name: deploymentConfig.name,
-          version: deploymentConfig.version,
+      // 保存當前配置
+      if (activeStep === 0) {
+        const configToSave = {
+          ...deploymentConfig,
           timestamp: new Date().toISOString()
+        };
+        
+        console.log('💾 Preparing to save config:', {
+          name: configToSave.name,
+          version: configToSave.version,
+          isNewVersion: !versions.includes(configToSave.version)
         });
-
+        
         try {
-          const saveResult = await podDeploymentService.saveDeploymentConfig(
-            deploymentConfig.name,
-            deploymentConfig.version,
-            deploymentConfig
+          await podDeploymentService.saveDeploymentConfig(
+            configToSave.name,
+            configToSave.version,
+            configToSave
           );
+
+          // 重新加載版本列表
+          const response = await podDeploymentService.getDeploymentVersions(configToSave.name);
+          setVersions(Array.isArray(response.versions) ? response.versions : []);
           
-          console.log('✅ Configuration saved successfully:', saveResult);
+          console.log('✅ Configuration saved and versions updated');
         } catch (error) {
           console.error('❌ Failed to save configuration:', error);
           setErrors(prev => ({
             ...prev,
-            save: t('podDeployment:podDeployment.errors.failedToSaveConfig')
+            save: t('podDeployment:podDeployment.errors.saveFailed')
           }));
-          console.groupEnd();
           return;
         }
       }
-
-      // 進入下一步
-      let nextStep = activeStep + 1;
-      while (nextStep < steps.length && !visibleSteps[steps[nextStep]]) {
-        nextStep++;
-      }
       
-      console.log('➡️ Moving to next step:', {
-        from: activeStep,
-        to: nextStep,
-        stepName: steps[nextStep],
-        timestamp: new Date().toISOString()
+      // 移動到下一步
+      setActiveStep(prevStep => {
+        const nextStep = prevStep + 1;
+        console.log('📊 Moving to next step:', {
+          currentStep: prevStep,
+          nextStep: nextStep,
+          config: deploymentConfig
+        });
+        return nextStep;
       });
-      
-      setActiveStep(nextStep);
     } catch (error) {
-      console.error('❌ Error in step transition:', {
-        error: error.message,
-        stack: error.stack,
-        timestamp: new Date().toISOString()
-      });
-      
-      setErrors(prev => ({
-        ...prev,
-        general: t('podDeployment:podDeployment.errors.generalError')
-      }));
+      console.error('❌ Failed to process next step:', error);
     }
-    console.groupEnd();
   };
 
   const handleBack = useCallback(() => {
@@ -195,12 +205,17 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
 }, [activeStep, visibleSteps, steps]);
 
  const handleConfigChange = useCallback((newConfig) => {
+  console.log('🔄 Config change in StepperDeployment:', {
+    currentConfig: deploymentConfig,
+    newConfig: newConfig,
+    isVersionChange: newConfig.version !== deploymentConfig.version
+  });
+
   setDeploymentConfig(prev => {
     const updatedConfig = {
       ...prev,
       ...newConfig
     };
-    // 重新驗證當前步驟
     validateStep(activeStep, updatedConfig);
     return updatedConfig;
   });
@@ -321,6 +336,38 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
       timestamp: new Date().toISOString()
     });
   }, [deploymentConfig, activeStep]);
+
+  // 修改版本監聽器
+  useEffect(() => {
+    const loadVersionConfig = async () => {
+      if (!deploymentConfig.name || !deploymentConfig.version) return;
+      
+      // 只在加載現有版本時獲取配置
+      if (versions.includes(deploymentConfig.version)) {
+        try {
+          const versionConfig = await podDeploymentService.getVersionConfig(
+            deploymentConfig.name,
+            deploymentConfig.version
+          );
+          
+          console.log('📥 Loading version config:', {
+            name: deploymentConfig.name,
+            version: deploymentConfig.version,
+            config: versionConfig
+          });
+          
+          setDeploymentConfig(prev => ({
+            ...prev,
+            ...versionConfig.config
+          }));
+        } catch (error) {
+          console.error('Failed to load version config:', error);
+        }
+      }
+    };
+
+    loadVersionConfig();
+  }, [deploymentConfig.name, deploymentConfig.version, versions]);
 
   return (
     <Box sx={{ width: '100%' }}>

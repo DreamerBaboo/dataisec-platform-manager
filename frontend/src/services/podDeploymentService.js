@@ -26,14 +26,16 @@ export const podDeploymentService = {
         config
       );
       
-      console.log('✅ Versions retrieved:', response.data);
-      return response.data;
+      // 確保返回格式一致
+      const data = {
+        versions: Array.isArray(response.data.versions) ? response.data.versions : [],
+        latestVersion: response.data.latestVersion || null
+      };
+      
+      console.log('✅ Versions retrieved:', data);
+      return data;
     } catch (error) {
-      console.error('❌ Failed to get deployment versions:', {
-        name,
-        error: error.message,
-        status: error.response?.status
-      });
+      console.error('❌ Failed to get deployment versions:', error);
       throw error;
     }
   },
@@ -41,80 +43,61 @@ export const podDeploymentService = {
   // Get specific version configuration
   async getVersionConfig(name, version) {
     try {
-      console.log(`📥 Requesting config for ${name} version ${version}`);
+      console.log('📥 Getting version config:', { name, version });
       const config = getAuthHeaders();
       
       const response = await axios.get(
-        `${API_URL}/api/pod-deployments/${name}/versions/${version}/config`,
+        `${API_URL}/api/pod-deployments/${name}/config?version=${version}`,
         config
       );
       
-      // 驗證回應格式
-      if (!response.data?.config) {
-        console.warn('⚠️ Invalid response format:', response.data);
-        throw new Error('Invalid config format in response');
-      }
-      
-      console.log('✅ Successfully got version config:', response.data);
+      console.log('✅ Version config retrieved:', response.data);
       return response.data;
     } catch (error) {
-      console.error('❌ Failed to get version config:', {
-        name,
-        version,
-        error: error.message,
-        response: error.response?.data
-      });
+      console.error('❌ Failed to get version config:', error);
       throw error;
     }
   },
 
   // Save deployment configuration with version
   async saveDeploymentConfig(name, version, config) {
-    console.group('💾 Save Deployment Config');
-    console.log('Request parameters:', {
-      name,
-      version,
-      configSummary: {
-        namespace: config.namespace,
-        enableResourceQuota: config.enableResourceQuota,
-      },
-      timestamp: new Date().toISOString()
-    });
-
     try {
-      const response = await axios.post(
-        `${API_URL}/api/pod-deployments/config`,
-        {
-          name,
-          version,
-          config: {
-            ...config,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+      console.log('💾 Saving deployment config:', { name, version, config });
+      const headers = getAuthHeaders();
+      
+      // 檢查版本是否存在
+      const existingVersions = await this.getDeploymentVersions(name);
+      const isNewVersion = !existingVersions.versions.includes(version);
+      
+      if (isNewVersion) {
+        console.log('📝 Creating new version first...');
+        try {
+          await this.createVersion(name, version);
+        } catch (error) {
+          console.error('❌ Failed to create version:', error);
+          if (error.response?.status !== 409) {
+            throw error;
           }
-        },
-        getAuthHeaders()
+        }
+      }
+      
+      // 使用正確的 API 端點
+      const response = await axios.post(
+        `${API_URL}/api/pod-deployments/${name}/versions/${version}/config`,
+        { config },
+        headers
       );
       
-      console.log('✅ Save operation successful:', {
-        status: response.status,
-        dataReceived: !!response.data,
-        timestamp: new Date().toISOString()
-      });
-      console.groupEnd();
+      console.log('✅ Configuration saved successfully:', response.data);
       return response.data;
     } catch (error) {
-      console.error('❌ Save operation failed:', {
-        name,
-        version,
-        error: {
-          message: error.message,
-          status: error.response?.status,
-          data: error.response?.data
-        },
-        timestamp: new Date().toISOString()
+      console.error('❌ Failed to save deployment config:', error);
+      console.error('Error details:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        config: error.config,
+        url: error.config?.url
       });
-      console.groupEnd();
       throw error;
     }
   },
@@ -283,6 +266,50 @@ export const podDeploymentService = {
       return response.data;
     } catch (error) {
       console.error('Failed to fetch namespaces:', error);
+      throw error;
+    }
+  },
+
+  async handleNamespaceChange(deploymentName, namespace) {
+    try {
+      console.log('📝 Handling namespace change:', { deploymentName, namespace });
+      const response = await axios.post(
+        `${API_URL}/api/pod-deployments/namespace`,
+        { deploymentName, namespace },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        }
+      );
+      
+      if (response.data.isNew) {
+        console.log('✨ Created new namespace configuration');
+      } else {
+        console.log('ℹ️ Using existing namespace');
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('Failed to handle namespace change:', error);
+      throw error;
+    }
+  },
+
+  // 創建新版本
+  async createVersion(deploymentName, version) {
+    try {
+      console.log('📝 Creating new version:', { deploymentName, version });
+      const config = getAuthHeaders();
+      
+      const response = await axios.post(
+        `${API_URL}/api/pod-deployments/${deploymentName}/versions`,
+        { version },
+        config
+      );
+      
+      console.log('✅ Version created:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Failed to create version:', error);
       throw error;
     }
   }

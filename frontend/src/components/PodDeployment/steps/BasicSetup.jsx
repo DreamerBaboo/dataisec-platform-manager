@@ -9,13 +9,13 @@ import {
   FormControlLabel,
   Checkbox,
   Paper,
-  Autocomplete
+  Autocomplete,
+  CircularProgress
 } from '@mui/material';
 import { Upload as UploadIcon } from '@mui/icons-material';
 import { useAppTranslation } from '../../../hooks/useAppTranslation';
 import { templateService } from '../../../services/templateService';
 import { podDeploymentService } from '../../../services/podDeploymentService';
-import semver from 'semver';
 
 const BasicSetup = ({ config, onChange, errors: propErrors, onStepVisibilityChange }) => {
   const { t } = useAppTranslation();
@@ -25,8 +25,8 @@ const BasicSetup = ({ config, onChange, errors: propErrors, onStepVisibilityChan
   const [showTemplateUpload, setShowTemplateUpload] = useState(false);
   const [isNewDeployment, setIsNewDeployment] = useState(false);
   const [versions, setVersions] = useState([]);
-  const [namespaces, setNamespaces] = useState([]);
-  const [localVersion, setLocalVersion] = useState('');
+  const [existingNamespaces, setExistingNamespaces] = useState([]);
+  const [isLoadingNamespaces, setIsLoadingNamespaces] = useState(true);
 
   const handleResourceQuotaChange = (event) => {
     const isChecked = event.target.checked;
@@ -162,241 +162,177 @@ spec:
   // Fetch versions when deployment name changes
   useEffect(() => {
     const fetchVersions = async () => {
-      if (!config.name || isNewDeployment) {
-        console.log('⏭️ Skipping version fetch:', { 
-          name: config.name, 
-          isNewDeployment 
-        });
-        return;
-      }
+      if (!config.name || isNewDeployment) return;
       
       try {
-        console.log('🔄 Fetching versions for:', config.name);
-        const token = localStorage.getItem('token');
+        const response = await podDeploymentService.getDeploymentVersions(config.name);
+        const versionList = Array.isArray(response.versions) ? response.versions : [];
+        setVersions(versionList);
         
-        if (!token) {
-          console.warn('⚠️ No auth token found');
-          setLocalErrors(prev => ({
-            ...prev,
-            version: t('podDeployment:podDeployment.errors.authenticationRequired')
-          }));
-          return;
-        }
-
-        const response = await podDeploymentService.getDeploymentVersions(
-          config.name,
-          token
-        );
-        
-        if (response?.versions && Array.isArray(response.versions)) {
-          console.log('✅ Fetched versions:', response.versions);
-          setVersions(response.versions);
-          
-          // Auto-select latest version if none selected
-          if (!config.version && response.latestVersion) {
-            console.log('📌 Auto-selecting latest version:', response.latestVersion);
-            onChange({
-              ...config,
-              version: response.latestVersion
-            });
-          }
-        } else {
-          console.warn('⚠️ Invalid response format:', response);
-          setLocalErrors(prev => ({
-            ...prev,
-            version: t('podDeployment:podDeployment.errors.invalidVersionFormat')
-          }));
+        // Auto-select latest version if none selected
+        if (!config.version && response.latestVersion) {
+          onChange({
+            ...config,
+            version: response.latestVersion
+          });
         }
       } catch (error) {
-        console.error('❌ Failed to fetch versions:', error);
-        let errorMessage = t('podDeployment:podDeployment.errors.failedToFetchVersions');
-        
-        // 處理特定錯誤類型
-        if (error.response?.status === 401) {
-          errorMessage = t('podDeployment:podDeployment.errors.unauthorized');
-        } else if (error.response?.status === 404) {
-          errorMessage = t('podDeployment:podDeployment.errors.deploymentNotFound');
-        }
-        
-        setLocalErrors(prev => ({
-          ...prev,
-          version: errorMessage
-        }));
-        
-        // 清空版本列表
-        setVersions([]);
+        console.error('Failed to fetch versions:', error);
       }
     };
 
     fetchVersions();
-  }, [config.name, isNewDeployment, t]);
+  }, [config.name, isNewDeployment]);
 
   // Load version configuration when version changes
   useEffect(() => {
     const loadVersionConfig = async () => {
-      if (!config.name || !localVersion || isNewDeployment) {
-        console.log('⏭️ Skipping config load:', {
-          name: config.name,
-          localVersion,
-          isNewDeployment
-        });
-        return;
-      }
-
+      if (!config.name || !config.version || isNewDeployment) return;
+      
       try {
-        console.log('🔄 Loading config with version:', {
-          name: config.name,
-          localVersion
-        });
-        
         const versionConfig = await podDeploymentService.getVersionConfig(
           config.name,
-          localVersion
+          config.version
         );
-
-        if (versionConfig?.config) {
-          console.log('✅ Loaded version config:', {
-            config: versionConfig,
-            currentVersion: localVersion
-          });
-          const currentVersion = localVersion;
-          onChange({
-            ...config,
-            ...versionConfig.config,
-            version: currentVersion
-          });
-        } else {
-          console.warn('⚠️ Invalid config format:', versionConfig);
-          setLocalErrors(prev => ({
-            ...prev,
-            version: t('podDeployment:podDeployment.errors.invalidConfigFormat')
-          }));
-        }
+        onChange(versionConfig.config);
       } catch (error) {
-        console.error('❌ Failed to load version config:', error);
-        let errorMessage = t('podDeployment:podDeployment.errors.failedToLoadConfig');
-        
-        if (error.response?.status === 404) {
-          errorMessage = t('podDeployment:podDeployment.errors.versionNotFound');
-        }
-        
-        setLocalErrors(prev => ({
-          ...prev,
-          version: errorMessage
-        }));
+        console.error('Failed to load version config:', error);
       }
     };
 
     loadVersionConfig();
-  }, [config.name, localVersion, isNewDeployment, t]);
+  }, [config.name, config.version]);
 
-  // Fetch namespaces on component mount
+  // 獲取現有的 namespaces
   useEffect(() => {
     const fetchNamespaces = async () => {
       try {
-        const namespaceList = await podDeploymentService.getNamespaces();
-        setNamespaces(namespaceList);
+        setIsLoadingNamespaces(true);
+        const namespaces = await podDeploymentService.getNamespaces();
+        setExistingNamespaces(namespaces.map(ns => ns.name));
       } catch (error) {
         console.error('Failed to fetch namespaces:', error);
-        setLocalErrors(prev => ({
-          ...prev,
-          namespace: t('podDeployment:podDeployment.errors.failedToFetchNamespaces')
-        }));
+      } finally {
+        setIsLoadingNamespaces(false);
       }
     };
 
     fetchNamespaces();
-  }, [t]);
-
-  // 在組件掛載時添加日誌
-  useEffect(() => {
-    console.log('🔍 BasicSetup mounted with config:', {
-      name: config.name,
-      version: config.version,
-      namespace: config.namespace,
-      timestamp: new Date().toISOString()
-    });
   }, []);
 
-  // 監聽配置變更
-  useEffect(() => {
-    console.log('📊 Config updated in BasicSetup:', {
-      name: config.name,
-      version: config.version,
-      namespace: config.namespace,
-      timestamp: new Date().toISOString()
-    });
-  }, [config]);
+  const handleNamespaceChange = async (event, newValue) => {
+    try {
+      if (!newValue) return;
 
-  // 在組件初始化時設置本地版本
-  useEffect(() => {
-    if (config.version && !localVersion) {
-      console.log('🔄 Initializing local version:', {
-        configVersion: config.version,
-        currentLocalVersion: localVersion
-      });
-      setLocalVersion(config.version);
-    }
-  }, [config.version]);
-
-  // 確保在配置更新時不會覆蓋用戶輸入的版本
-  useEffect(() => {
-    const loadVersionConfig = async () => {
-      if (!config.name || !localVersion || isNewDeployment) {
-        console.log('⏭️ Skipping config load:', {
-          name: config.name,
-          localVersion,
-          isNewDeployment
-        });
-        return;
+      const isNewNamespace = !existingNamespaces.includes(newValue);
+      
+      if (isNewNamespace && config.name) {
+        // 如果是新的 namespace 且已有部署名稱，則創建 YAML
+        await podDeploymentService.handleNamespaceChange(config.name, newValue);
       }
+      
+      onChange({
+        ...config,
+        namespace: newValue
+      });
+    } catch (error) {
+      console.error('Failed to handle namespace change:', error);
+      setLocalErrors(prev => ({
+        ...prev,
+        namespace: t('podDeployment:podDeployment.errors.namespaceCreateFailed')
+      }));
+    }
+  };
 
+  const handleVersionChange = (event, newValue) => {
+    const newVersion = newValue?.trim() || '';
+    
+    console.log('📝 Version change in BasicSetup:', { 
+      oldVersion: config.version,
+      newVersion: newVersion,
+      isNewVersion: !versions.includes(newVersion)
+    });
+    
+    onChange({
+      ...config,
+      version: newVersion
+    });
+  };
+
+  // 修改版本失焦處理
+  const handleVersionBlur = async (event) => {
+    const newVersion = event.target.value?.trim();
+    if (!newVersion || !config.name) return;
+
+    console.log('🔍 Version field blur:', {
+      currentVersion: config.version,
+      newVersion: newVersion,
+      isNewVersion: !versions.includes(newVersion)
+    });
+
+    // 如果是新版本，創建新的配置
+    if (!versions.includes(newVersion)) {
       try {
-        console.log('🔄 Loading config with version:', {
-          name: config.name,
-          localVersion
-        });
-        
-        const versionConfig = await podDeploymentService.getVersionConfig(
-          config.name,
-          localVersion
-        );
+        // 創建新版本的配置
+        const newConfig = {
+          ...config,
+          version: newVersion,
+          timestamp: new Date().toISOString()
+        };
 
-        if (versionConfig?.config) {
-          console.log('✅ Loaded version config:', {
-            config: versionConfig,
-            currentVersion: localVersion
+        console.log('📝 Creating new version config:', newConfig);
+
+        try {
+          // 保存新版本配置
+          await podDeploymentService.saveDeploymentConfig(
+            config.name,
+            newVersion,
+            newConfig
+          );
+
+          // 更新版本列表
+          const response = await podDeploymentService.getDeploymentVersions(config.name);
+          const updatedVersions = Array.isArray(response.versions) ? response.versions : [];
+          setVersions(updatedVersions);
+
+          // 更新當前配置
+          onChange(newConfig);
+
+          console.log('✅ New version created and saved successfully:', {
+            version: newVersion,
+            config: newConfig
           });
-          const currentVersion = localVersion;
-          onChange({
-            ...config,
-            ...versionConfig.config,
-            version: currentVersion
-          });
-        } else {
-          console.warn('⚠️ Invalid config format:', versionConfig);
-          setLocalErrors(prev => ({
-            ...prev,
-            version: t('podDeployment:podDeployment.errors.invalidConfigFormat')
-          }));
+        } catch (error) {
+          console.error('❌ Failed to save new version:', error);
+          const errorStatus = error.response?.status;
+          
+          // 根據錯誤狀態顯示不同的錯誤信息
+          if (errorStatus === 404) {
+            setLocalErrors(prev => ({
+              ...prev,
+              version: t('podDeployment:podDeployment.errors.apiEndpointNotFound')
+            }));
+          } else if (errorStatus === 400) {
+            setLocalErrors(prev => ({
+              ...prev,
+              version: t('podDeployment:podDeployment.errors.invalidVersionFormat')
+            }));
+          } else {
+            setLocalErrors(prev => ({
+              ...prev,
+              version: t('podDeployment:podDeployment.errors.versionCreateFailed')
+            }));
+          }
         }
       } catch (error) {
-        console.error('❌ Failed to load version config:', error);
-        let errorMessage = t('podDeployment:podDeployment.errors.failedToLoadConfig');
-        
-        if (error.response?.status === 404) {
-          errorMessage = t('podDeployment:podDeployment.errors.versionNotFound');
-        }
-        
+        console.error('❌ Failed to prepare new version:', error);
         setLocalErrors(prev => ({
           ...prev,
-          version: errorMessage
+          version: t('podDeployment:podDeployment.errors.unexpectedError')
         }));
       }
-    };
-
-    loadVersionConfig();
-  }, [config.name, localVersion, isNewDeployment, t]);
+    }
+  };
 
   return (
     <Box>
@@ -435,58 +371,11 @@ spec:
         <Grid item xs={12} sm={6}>
           <Autocomplete
             freeSolo
-            value={localVersion}
-            onChange={(event, newValue) => {
-              console.group('🔄 Version Selection Debug');
-              try {
-                const selectedVersion = typeof newValue === 'string' ? newValue : '';
-                
-                console.log('Version Selection Details:', {
-                  rawValue: newValue,
-                  selectedVersion,
-                  previousVersion: localVersion,
-                  configVersion: config.version
-                });
-
-                // 更新本地版本狀態
-                setLocalVersion(selectedVersion);
-                
-                // 更新父組件的配置
-                onChange({
-                  ...config,
-                  version: selectedVersion
-                });
-
-                console.log('✅ Version updated:', {
-                  newVersion: selectedVersion,
-                  newConfig: {
-                    ...config,
-                    version: selectedVersion
-                  }
-                });
-              } catch (error) {
-                console.error('❌ Version selection error:', error);
-              }
-              console.groupEnd();
-            }}
-            onInputChange={(event, newInputValue) => {
-              console.log('🔤 Input Change:', {
-                newInputValue,
-                currentLocalVersion: localVersion,
-                currentConfigVersion: config.version
-              });
-              setLocalVersion(newInputValue);
-              onChange({
-                ...config,
-                version: newInputValue
-              });
-            }}
-            options={versions}
-            getOptionLabel={(option) => {
-              const label = typeof option === 'string' ? option : '';
-              console.log('🏷️ Option Label:', { option, label });
-              return label;
-            }}
+            value={config.version || ''}
+            onChange={handleVersionChange}
+            options={versions || []}
+            disabled={isNewDeployment}
+            getOptionLabel={(option) => option?.toString() || ''}
             renderInput={(params) => (
               <TextField
                 {...params}
@@ -494,61 +383,56 @@ spec:
                 required
                 error={!!allErrors.version}
                 helperText={allErrors.version}
-                value={localVersion}
-                onChange={(e) => {
-                  const newValue = e.target.value;
-                  console.log('📝 TextField Change:', {
-                    newValue,
-                    currentLocalVersion: localVersion,
-                    currentConfigVersion: config.version
-                  });
-                  setLocalVersion(newValue);
-                  onChange({
-                    ...config,
-                    version: newValue
-                  });
-                }}
+                onBlur={handleVersionBlur} // 添加失焦處理
               />
             )}
           />
+          {!versions.includes(config.version) && config.version && (
+            <Alert 
+              severity="info" 
+              sx={{ mt: 1 }}
+            >
+              {t('podDeployment:podDeployment.basic.newVersion')}
+            </Alert>
+          )}
         </Grid>
         <Grid item xs={12} sm={6}>
           <Autocomplete
             freeSolo
             value={config.namespace || ''}
-            onChange={(event, newValue) => {
-              onChange({
-                ...config,
-                namespace: typeof newValue === 'string' ? newValue : newValue?.name
-              });
-            }}
-            options={namespaces}
-            getOptionLabel={(option) => {
-              if (typeof option === 'string') return option;
-              return option?.name || '';
-            }}
+            onChange={handleNamespaceChange}
+            options={existingNamespaces}
+            loading={isLoadingNamespaces}
             renderInput={(params) => (
               <TextField
                 {...params}
-                label={t('podDeployment:podDeployment.basic.namespace')}
                 required
+                fullWidth
+                label={t('podDeployment:podDeployment.basic.namespace')}
                 error={!!allErrors.namespace}
                 helperText={allErrors.namespace}
-                fullWidth
+                InputProps={{
+                  ...params.InputProps,
+                  endAdornment: (
+                    <>
+                      {isLoadingNamespaces ? (
+                        <CircularProgress color="inherit" size={20} />
+                      ) : null}
+                      {params.InputProps.endAdornment}
+                    </>
+                  ),
+                }}
               />
             )}
-            renderOption={(props, option) => (
-              <li {...props}>
-                <Box>
-                  <Typography>{option.name}</Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {option.status}
-                  </Typography>
-                </Box>
-              </li>
-            )}
-            loading={namespaces.length === 0}
           />
+          {!existingNamespaces.includes(config.namespace) && config.namespace && (
+            <Alert 
+              severity="info" 
+              sx={{ mt: 1 }}
+            >
+              {t('podDeployment:podDeployment.basic.newNamespace')}
+            </Alert>
+          )}
         </Grid>
 
         <Grid item xs={12}>

@@ -543,6 +543,44 @@ class K8sService {
       throw error;
     }
   }
+
+  async createNamespaceYaml(name) {
+    const namespaceConfig = {
+      apiVersion: 'v1',
+      kind: 'Namespace',
+      metadata: {
+        name: name,
+        labels: {
+          'created-by': 'pod-deployment-system'
+        }
+      }
+    };
+    
+    return yaml.dump(namespaceConfig);
+  }
+
+  async saveNamespaceYaml(deploymentName, namespace) {
+    try {
+      const deploymentDir = path.join(__dirname, '../deploymentTemplate', deploymentName);
+      const namespaceDir = path.join(deploymentDir, 'namespaces');
+      
+      // 確保目錄存在
+      await fs.mkdir(namespaceDir, { recursive: true });
+      
+      // 生成 namespace YAML
+      const namespaceYaml = await this.createNamespaceYaml(namespace);
+      
+      // 保存 YAML 文件
+      const filePath = path.join(namespaceDir, `${namespace}-namespace.yaml`);
+      await fs.writeFile(filePath, namespaceYaml);
+      
+      console.log('✅ Namespace YAML saved:', filePath);
+      return filePath;
+    } catch (error) {
+      console.error('❌ Failed to save namespace YAML:', error);
+      throw error;
+    }
+  }
 }
 
 module.exports = new K8sService(); 

@@ -2,8 +2,8 @@
   "name": "dataisec-console",
   "versions": {
     "1.0.0": {
-      "createdAt": "2024-11-09T19:03:37.735Z",
-      "updatedAt": "2024-11-09T19:03:37.735Z",
+      "createdAt": "2024-11-10T12:48:47.012Z",
+      "updatedAt": "2024-11-10T12:48:47.012Z",
       "config": {
         "name": "dataisec-console",
         "namespace": "default",
@@ -15,30 +15,15 @@
         "configMaps": [],
         "secrets": [],
         "enableResourceQuota": false,
-        "resourceQuota": {
-          "requestsCpu": "1",
-          "requestsMemory": "1Gi",
-          "limitsCpu": "2",
-          "limitsMemory": "2Gi",
-          "pods": "10",
-          "configmaps": "10",
-          "pvcs": "5",
-          "services": "10",
-          "secrets": "10",
-          "deployments": "5",
-          "replicasets": "10",
-          "statefulsets": "5",
-          "jobs": "10",
-          "cronjobs": "5"
-        },
+        "resourceQuota": null,
         "version": "1.0.0",
-        "createdAt": "2024-11-09T19:03:37.732Z",
-        "updatedAt": "2024-11-09T19:03:37.732Z"
+        "createdAt": "2024-11-10T12:48:47.012Z",
+        "updatedAt": "2024-11-10T12:48:47.012Z"
       }
     },
     "1.0.1": {
-      "createdAt": "2024-11-09T19:06:50.489Z",
-      "updatedAt": "2024-11-09T19:06:50.489Z",
+      "createdAt": "2024-11-10T12:54:22.869Z",
+      "updatedAt": "2024-11-10T12:54:22.869Z",
       "config": {
         "name": "dataisec-console",
         "namespace": "default",
@@ -50,27 +35,34 @@
         "configMaps": [],
         "secrets": [],
         "enableResourceQuota": false,
-        "resourceQuota": {
-          "requestsCpu": "1",
-          "requestsMemory": "1Gi",
-          "limitsCpu": "2",
-          "limitsMemory": "2Gi",
-          "pods": "10",
-          "configmaps": "10",
-          "pvcs": "5",
-          "services": "10",
-          "secrets": "10",
-          "deployments": "5",
-          "replicasets": "10",
-          "statefulsets": "5",
-          "jobs": "10",
-          "cronjobs": "5"
-        },
+        "resourceQuota": null,
         "version": "1.0.1",
-        "createdAt": "2024-11-09T19:06:50.482Z",
-        "updatedAt": "2024-11-09T19:06:50.482Z"
+        "createdAt": "2024-11-10T12:54:22.869Z",
+        "updatedAt": "2024-11-10T12:57:33.335Z",
+        "timestamp": "2024-11-10T12:57:33.316Z"
+      }
+    },
+    "1.0.2": {
+      "createdAt": "2024-11-10T12:57:51.976Z",
+      "updatedAt": "2024-11-10T12:57:51.976Z",
+      "config": {
+        "name": "dataisec-console",
+        "namespace": "default",
+        "templatePath": "",
+        "yamlConfig": null,
+        "resources": {},
+        "affinity": {},
+        "volumes": [],
+        "configMaps": [],
+        "secrets": [],
+        "enableResourceQuota": false,
+        "resourceQuota": null,
+        "version": "1.0.2",
+        "createdAt": "2024-11-10T12:57:51.976Z",
+        "updatedAt": "2024-11-10T12:57:53.743Z",
+        "timestamp": "2024-11-10T12:57:53.724Z"
       }
     }
   },
-  "latestVersion": "1.0.1"
+  "latestVersion": "1.0.2"
 }
