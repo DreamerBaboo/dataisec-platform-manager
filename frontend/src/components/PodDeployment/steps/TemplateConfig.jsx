@@ -18,6 +18,7 @@ import {
 import Editor from '@monaco-editor/react';
 import { useAppTranslation } from '../../../hooks/useAppTranslation';
 import YamlEditor from '../components/YamlEditor';
+import podDeploymentService from '../../../services/podDeploymentService';
 
 const PLACEHOLDER_CATEGORIES = {
   image: ['repository', 'repository_port', 'tag'],
@@ -33,10 +34,29 @@ const TemplateConfig = ({ config, onChange, errors }) => {
   const [templateContent, setTemplateContent] = useState('');
   const [templateFile, setTemplateFile] = useState('');
   const [yamlError, setYamlError] = useState(null);
+  const [namespaces, setNamespaces] = useState([]);
+  const [isLoadingNamespaces, setIsLoadingNamespaces] = useState(true);
 
   useEffect(() => {
     loadTemplate();
   }, [config.templatePath]);
+
+  useEffect(() => {
+    const fetchNamespaces = async () => {
+      try {
+        setIsLoadingNamespaces(true);
+        const response = await podDeploymentService.getNamespaces();
+        const namespaceNames = response.map(ns => ns.name);
+        setNamespaces(namespaceNames);
+      } catch (error) {
+        console.error('Failed to fetch namespaces:', error);
+      } finally {
+        setIsLoadingNamespaces(false);
+      }
+    };
+
+    fetchNamespaces();
+  }, []);
 
   const loadTemplate = async () => {
     try {
@@ -269,6 +289,25 @@ const TemplateConfig = ({ config, onChange, errors }) => {
     }
   };
 
+  const handleNamespaceChange = async (event, newValue) => {
+    try {
+      if (!newValue) return;
+
+      const isNewNamespace = !namespaces.includes(newValue);
+      
+      if (isNewNamespace && config.name) {
+        await podDeploymentService.handleNamespaceChange(config.name, newValue);
+      }
+      
+      onChange({
+        ...config,
+        namespace: newValue
+      });
+    } catch (error) {
+      console.error('Failed to handle namespace change:', error);
+    }
+  };
+
   return (
     <Box>
       <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between' }}>
@@ -359,6 +398,27 @@ const TemplateConfig = ({ config, onChange, errors }) => {
         error={yamlError}
         onTemplateChange={handleTemplateChange}
       />
+
+      <Grid container spacing={2}>
+        <Grid item xs={12}>
+          <Autocomplete
+            freeSolo
+            value={config.namespace}
+            onChange={handleNamespaceChange}
+            options={namespaces}
+            loading={isLoadingNamespaces}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label={t('podDeployment:podDeployment.basic.namespace')}
+                required
+                error={!!errors?.namespace}
+                helperText={errors?.namespace}
+              />
+            )}
+          />
+        </Grid>
+      </Grid>
     </Box>
   );
 };

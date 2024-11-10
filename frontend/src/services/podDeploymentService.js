@@ -92,193 +92,38 @@ export const podDeploymentService = {
       return response.data;
     } catch (error) {
       console.error('❌ Failed to save deployment config:', error);
-      console.error('Error details:', {
-        status: error.response?.status,
-        data: error.response?.data,
-        config: error.config,
-        url: error.config?.url
-      });
       throw error;
     }
   },
 
-  // Check if deployment exists
-  async checkDeploymentExists(name) {
+  // Create new version
+  async createVersion(name, version) {
     try {
-      console.log('Checking if deployment exists:', name);
-      const response = await axios.get(
-        `${API_URL}/api/pod-deployments/${name}/exists`,
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        }
-      );
-      console.log('Deployment exists check:', response.data);
-      return response.data.exists;
-    } catch (error) {
-      if (error.response && error.response.status === 404) {
-        return false;
-      }
-      console.error('Failed to check deployment existence:', error);
-      throw error;
-    }
-  },
-
-  // Get deployment list
-  async getDeployments() {
-    try {
-      const response = await axios.get(
-        `${API_URL}/api/pod-deployments`,
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        }
-      );
-      return response.data;
-    } catch (error) {
-      console.error('Failed to get deployments:', error);
-      throw error;
-    }
-  },
-
-  // Create new deployment
-  async createDeployment(deploymentConfig) {
-    try {
+      console.log('📝 Creating new version:', { name, version });
+      const config = getAuthHeaders();
+      
       const response = await axios.post(
-        `${API_URL}/api/pod-deployments`,
-        deploymentConfig,
-        {
-          headers: { 
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json'
-          }
-        }
+        `${API_URL}/api/pod-deployments/${name}/versions`,
+        { version },
+        config
       );
+      
+      console.log('✅ Version created:', response.data);
       return response.data;
     } catch (error) {
-      console.error('Failed to create deployment:', error);
+      console.error('❌ Failed to create version:', error);
       throw error;
     }
   },
 
-  // Get deployment preview
-  async getDeploymentPreview(config) {
-    try {
-      const response = await axios.post(
-        `${API_URL}/api/pod-deployments/preview`,
-        config,
-        {
-          headers: { 
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-      return response.data;
-    } catch (error) {
-      console.error('Failed to get deployment preview:', error);
-      throw error;
-    }
-  },
-
-  // Get deployment status
-  async getDeploymentStatus(name, namespace) {
-    try {
-      const response = await axios.get(
-        `${API_URL}/api/pod-deployments/${name}/status`,
-        {
-          params: { namespace },
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        }
-      );
-      return response.data;
-    } catch (error) {
-      console.error('Failed to get deployment status:', error);
-      throw error;
-    }
-  },
-
-  // Get deployment logs
-  async getDeploymentLogs(name, namespace, options = {}) {
-    try {
-      const response = await axios.get(
-        `${API_URL}/api/pod-deployments/logs`,
-        {
-          params: { 
-            name,
-            namespace,
-            ...options
-          },
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        }
-      );
-      return response.data;
-    } catch (error) {
-      console.error('Failed to get deployment logs:', error);
-      throw error;
-    }
-  },
-
-  // Save storage configuration
-  async saveStorageConfig(name, version, storageConfig) {
-    try {
-      const response = await axios.post(
-        `${API_URL}/api/pod-deployments/templates/${name}/storage`,
-        {
-          version,
-          storageClassYaml: storageConfig.storageClassYaml,
-          persistentVolumeYaml: storageConfig.persistentVolumeYaml
-        },
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        }
-      );
-      return response.data;
-    } catch (error) {
-      console.error('Failed to save storage config:', error);
-      throw error;
-    }
-  },
-
-  // Get storage configuration
-  async getStorageConfig(name, version) {
-    try {
-      const response = await axios.get(
-        `${API_URL}/api/pod-deployments/templates/${name}/storage/${version}`,
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        }
-      );
-      return response.data;
-    } catch (error) {
-      console.error('Failed to get storage config:', error);
-      throw error;
-    }
-  },
-
-  // Get namespaces
-  async getNamespaces() {
-    try {
-      const response = await axios.get(
-        `${API_URL}/api/k8s/namespaces`,
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        }
-      );
-      return response.data;
-    } catch (error) {
-      console.error('Failed to fetch namespaces:', error);
-      throw error;
-    }
-  },
-
+  // Handle namespace change
   async handleNamespaceChange(deploymentName, namespace) {
     try {
       console.log('📝 Handling namespace change:', { deploymentName, namespace });
       const response = await axios.post(
         `${API_URL}/api/pod-deployments/namespace`,
         { deploymentName, namespace },
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        }
+        getAuthHeaders()
       );
       
       if (response.data.isNew) {
@@ -294,22 +139,89 @@ export const podDeploymentService = {
     }
   },
 
-  // 創建新版本
-  async createVersion(deploymentName, version) {
+  // Get namespaces
+  async getNamespaces() {
     try {
-      console.log('📝 Creating new version:', { deploymentName, version });
+      const response = await axios.get(
+        `${API_URL}/api/k8s/namespaces`,
+        getAuthHeaders()
+      );
+      return Array.isArray(response.data) ? response.data : [];
+    } catch (error) {
+      console.error('Failed to fetch namespaces:', error);
+      throw error;
+    }
+  },
+
+  // Get storage configuration
+  async getStorageConfig(name, version) {
+    try {
+      console.log('📥 Getting storage config:', { name, version });
       const config = getAuthHeaders();
       
-      const response = await axios.post(
-        `${API_URL}/api/pod-deployments/${deploymentName}/versions`,
-        { version },
+      const response = await axios.get(
+        `${API_URL}/api/pod-deployments/${name}/storage?version=${version}`,
         config
       );
       
-      console.log('✅ Version created:', response.data);
+      console.log('✅ Storage config retrieved:', response.data);
       return response.data;
     } catch (error) {
-      console.error('❌ Failed to create version:', error);
+      console.error('❌ Failed to get storage config:', error);
+      throw error;
+    }
+  },
+
+  // Save storage configuration
+  async saveStorageConfig(name, version, storageConfig) {
+    try {
+      console.log('💾 Saving storage config:', { name, version, storageConfig });
+      const headers = getAuthHeaders();
+      
+      const response = await axios.post(
+        `${API_URL}/api/pod-deployments/${name}/versions/${version}/storage`,
+        storageConfig,
+        headers
+      );
+      
+      console.log('✅ Storage configuration saved successfully:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Failed to save storage config:', error);
+      throw error;
+    }
+  },
+
+  // Create storage class
+  async createStorageClass(name, version, storageClassConfig) {
+    try {
+      console.log('📝 Creating storage class:', { name, version, storageClassConfig });
+      const headers = getAuthHeaders();
+      
+      const response = await axios.post(
+        `${API_URL}/api/pod-deployments/${name}/versions/${version}/storage-class`,
+        storageClassConfig,
+        headers
+      );
+      
+      console.log('✅ Storage class created:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Failed to create storage class:', error);
+      throw error;
+    }
+  },
+
+  // Get storage classes
+  async getStorageClasses() {
+    try {
+      const response = await axios.get(
+        `${API_URL}/api/k8s/storage-classes`,
+        getAuthHeaders()
+      );
+      return Array.isArray(response.data) ? response.data : [];
+    } catch (error) {
+      console.error('Failed to fetch storage classes:', error);
       throw error;
     }
   }

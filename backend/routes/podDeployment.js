@@ -633,4 +633,15 @@ router.post('/:name/versions/:version/config', authenticateToken, async (req, re
   }
 });
 
+// Add version configuration routes
+router.get('/:name/versions', authenticateToken, podDeploymentController.getDeploymentVersions);
+router.get('/:name/config', authenticateToken, podDeploymentController.getVersionConfig);
+router.post('/:name/versions', authenticateToken, podDeploymentController.createVersion);
+router.post('/:name/versions/:version/config', authenticateToken, podDeploymentController.saveVersionConfig);
+
+// Add storage-related routes
+router.get('/:name/storage', authenticateToken, podDeploymentController.getStorageConfig);
+router.post('/:name/versions/:version/storage', authenticateToken, podDeploymentController.saveStorageConfig);
+router.post('/:name/versions/:version/storage-class', authenticateToken, podDeploymentController.createStorageClass);
+
 module.exports = router; 

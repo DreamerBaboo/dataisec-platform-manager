@@ -334,6 +334,13 @@ spec:
     }
   };
 
+  const handleBasicConfigChange = (field) => (event) => {
+    onChange({
+      ...config,
+      [field]: event.target.value
+    });
+  };
+
   return (
     <Box>
       <Typography variant="h6" gutterBottom>
@@ -393,44 +400,6 @@ spec:
               sx={{ mt: 1 }}
             >
               {t('podDeployment:podDeployment.basic.newVersion')}
-            </Alert>
-          )}
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <Autocomplete
-            freeSolo
-            value={config.namespace || ''}
-            onChange={handleNamespaceChange}
-            options={existingNamespaces}
-            loading={isLoadingNamespaces}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                required
-                fullWidth
-                label={t('podDeployment:podDeployment.basic.namespace')}
-                error={!!allErrors.namespace}
-                helperText={allErrors.namespace}
-                InputProps={{
-                  ...params.InputProps,
-                  endAdornment: (
-                    <>
-                      {isLoadingNamespaces ? (
-                        <CircularProgress color="inherit" size={20} />
-                      ) : null}
-                      {params.InputProps.endAdornment}
-                    </>
-                  ),
-                }}
-              />
-            )}
-          />
-          {!existingNamespaces.includes(config.namespace) && config.namespace && (
-            <Alert 
-              severity="info" 
-              sx={{ mt: 1 }}
-            >
-              {t('podDeployment:podDeployment.basic.newNamespace')}
             </Alert>
           )}
         </Grid>

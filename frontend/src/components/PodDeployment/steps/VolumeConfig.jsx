@@ -12,7 +12,11 @@ import {
   MenuItem,
   Paper,
   CircularProgress,
-  Alert
+  Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { useAppTranslation } from '../../../hooks/useAppTranslation';
@@ -29,6 +33,13 @@ const VolumeConfig = ({ config, onChange, errors = {} }) => {
   const [error, setError] = useState(null);
   const [showStorageClass, setShowStorageClass] = useState(false);
   const [localErrors, setLocalErrors] = useState({});
+  const [createStorageClassDialog, setCreateStorageClassDialog] = useState(false);
+  const [newStorageClass, setNewStorageClass] = useState({
+    name: '',
+    provisioner: 'kubernetes.io/no-provisioner',
+    reclaimPolicy: 'Retain',
+    volumeBindingMode: 'WaitForFirstConsumer'
+  });
 
   // 當組件掛載時加載現有配置
   useEffect(() => {
@@ -378,6 +389,31 @@ spec:
     return '';
   };
 
+  const handleCreateStorageClass = async () => {
+    try {
+      setLoading(true);
+      await podDeploymentService.createStorageClass(
+        config.name,
+        config.version,
+        newStorageClass
+      );
+      
+      setShowStorageClass(true);
+      setCreateStorageClassDialog(false);
+      
+      // Refresh storage configuration
+      const response = await podDeploymentService.getStorageConfig(config.name, config.version);
+      if (response.storageClassYaml) {
+        setShowStorageClass(true);
+      }
+    } catch (error) {
+      console.error('Failed to create storage class:', error);
+      setError(t('podDeployment:errors.failedToCreateStorageClass'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Box>
       {loading && (
@@ -543,6 +579,72 @@ spec:
           </pre>
         </Paper>
       )}
+
+      {!showStorageClass && (
+        <Box sx={{ mt: 2 }}>
+          <Button
+            variant="contained"
+            onClick={() => setCreateStorageClassDialog(true)}
+            startIcon={<AddIcon />}
+          >
+            {t('podDeployment:podDeployment.volume.createStorageClass')}
+          </Button>
+        </Box>
+      )}
+
+      <Dialog 
+        open={createStorageClassDialog} 
+        onClose={() => setCreateStorageClassDialog(false)}
+      >
+        <DialogTitle>
+          {t('podDeployment:podDeployment.volume.createStorageClass')}
+        </DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label={t('podDeployment:podDeployment.volume.storageClassName')}
+                value={newStorageClass.name}
+                onChange={(e) => setNewStorageClass(prev => ({
+                  ...prev,
+                  name: e.target.value
+                }))}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <FormControl fullWidth>
+                <InputLabel>
+                  {t('podDeployment:podDeployment.volume.reclaimPolicy')}
+                </InputLabel>
+                <Select
+                  value={newStorageClass.reclaimPolicy}
+                  onChange={(e) => setNewStorageClass(prev => ({
+                    ...prev,
+                    reclaimPolicy: e.target.value
+                  }))}
+                >
+                  <MenuItem value="Retain">Retain</MenuItem>
+                  <MenuItem value="Delete">Delete</MenuItem>
+                  <MenuItem value="Recycle">Recycle</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCreateStorageClassDialog(false)}>
+            {t('common:common.cancel')}
+          </Button>
+          <Button 
+            variant="contained"
+            onClick={handleCreateStorageClass}
+            disabled={loading}
+          >
+            {t('common:common.create')}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

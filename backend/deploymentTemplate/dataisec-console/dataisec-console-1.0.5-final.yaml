@@ -1,10 +1,10 @@
 # values.yaml
 name: dataisec-console
-replicaCount:  #[1, 2, 3, 4, 5, 6]
+replicaCount: 6 #[1, 2, 3, 4, 5, 6]
 
 image:
-  repository: :/dataisec-console #[localhost] #[5000, 5001]
-  tag:  #[latest]
+  repository: 192.168.170.135:5000/dataisec-console #[localhost] #[5000, 5001]
+  tag: 0.1.0 #[latest]
   pullPolicy: IfNotPresent
   insecureRegistry: true
 
@@ -15,9 +15,9 @@ fullnameOverride: "dataisec-console"
 
 service:
   type: NodePort
-  port:  #[3000]
-  targetPort:  #[3000]
-  nodePort:  #[32000]
+  port: 3000 #[3000]
+  targetPort: 3000 #[3000]
+  nodePort: 32000 #[32000]
 
 ingress:
   enabled: false
@@ -32,11 +32,11 @@ ingress:
 
 resources:
   limits:
-    cpu:  #[1000m, 2000m, 3000m, 4000m, 5000m]
-    memory:  #[2Gi]
+    cpu: 4000m #[1000m, 2000m, 3000m, 4000m, 5000m]
+    memory: 2Gi #[2Gi]
   requests:
-    cpu:  #[100m, 200m, 300m, 400m, 500m]
-    memory:  #[128Mi]
+    cpu: 300m #[100m, 200m, 300m, 400m, 500m]
+    memory: 128Mi #[128Mi]
 
 autoscaling:
   enabled: false
@@ -89,7 +89,7 @@ readinessProbe:
 
 
 nodeSelector:
-  kubernetes.io/hostname:  #[{node-role.opensearch: master}]
+  kubernetes.io/hostname: {node-role.opensearch: master} #[{node-role.opensearch: master}]
 
 tolerations: []
 
@@ -98,15 +98,15 @@ affinity: {}
 # Custom environment variables for your application
 env:
   - name: SITE_NODE
-    value:  #[localhost]
+    value: localhost #[localhost]
   - name: WEB_PORT
-    value:  #[3000]
+    value: 3000 #[3000]
   - name: DB_NODE
     value: https://opensearch-cluster-master-headless.opensearch.svc.cluster.local:9200
   - name: COMPANY_NAME
-    value:  #[Dataisec]
+    value: Dataisec #[Dataisec]
   - name: SESSION_SECRET
-    value:  #[secret]
+    value: secqweqwerethjkhkh #[secqweqweret]
 
 # Application specific configurations can go here
 appConfig:

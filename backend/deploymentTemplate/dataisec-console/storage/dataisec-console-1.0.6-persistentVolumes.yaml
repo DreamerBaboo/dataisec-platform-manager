@@ -6,12 +6,12 @@ metadata:
     type: local
 spec:
   capacity:
-    storage: 1Gi
-  volumeMode: Filesystem
+    storage: 10Ti
+  volumeMode: Block
   accessModes:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
-  storageClassName: dataisec-console-1.0.2-storageclass
+  storageClassName: dataisec-console-1.0.6-storageclass
   local:
     path: /data
   nodeAffinity:
@@ -21,4 +21,4 @@ spec:
         - key: kubernetes.io/hostname
           operator: In
           values:
-          - 
+          - kind-worker

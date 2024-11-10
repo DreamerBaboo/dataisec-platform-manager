@@ -106,7 +106,7 @@ env:
   - name: COMPANY_NAME
     value: ${COMPANY_NAME} #[Dataisec]
   - name: SESSION_SECRET
-    value: ${SESSION_SECRET} #[secret]
+    value: ${SESSION_SECRET} #[secqweqweret]
 
 # Application specific configurations can go here
 appConfig:

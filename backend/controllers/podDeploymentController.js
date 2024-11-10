@@ -293,7 +293,7 @@ const saveDeploymentConfig = async (req, res) => {
 
     // Add new version
     deploymentConfig.versions[version] = {
-      createdAt: new Date().toISOString(),
+      createdAt: deploymentConfig.versions[version]?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       config
     };
@@ -304,6 +304,9 @@ const saveDeploymentConfig = async (req, res) => {
       deploymentConfig.latestVersion = version;
     }
 
+    // Ensure directory exists
+    await fs.mkdir(path.dirname(configPath), { recursive: true });
+
     // Save configuration
     await fs.writeFile(configPath, JSON.stringify(deploymentConfig, null, 2));
 
@@ -313,6 +316,56 @@ const saveDeploymentConfig = async (req, res) => {
     });
   } catch (error) {
     console.error('Failed to save deployment config:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Create new version
+const createVersion = async (req, res) => {
+  try {
+    const { name } = req.params;
+    const { version } = req.body;
+    
+    const configPath = path.join(__dirname, '../deploymentTemplate', name, 'config.json');
+    let config = {};
+    
+    try {
+      config = JSON.parse(await fs.readFile(configPath, 'utf8'));
+    } catch (error) {
+      config = { name, versions: {}, latestVersion: null };
+    }
+    
+    // Add new version
+    config.versions[version] = {
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      config: {
+        name,
+        namespace: 'default',
+        templatePath: '',
+        yamlConfig: null,
+        resources: {},
+        affinity: {},
+        volumes: [],
+        configMaps: [],
+        secrets: [],
+        enableResourceQuota: false,
+        resourceQuota: null,
+        version,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+    };
+    
+    config.latestVersion = version;
+    
+    // Ensure directory exists
+    await fs.mkdir(path.dirname(configPath), { recursive: true });
+    await fs.writeFile(configPath, JSON.stringify(config, null, 2));
+    
+    res.json({ message: 'Version created successfully', version });
+  } catch (error) {
+    console.error('Failed to create version:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -346,19 +399,48 @@ const getDeploymentVersions = async (req, res) => {
 // Get specific version configuration
 const getVersionConfig = async (req, res) => {
   try {
-    const { name, version } = req.params;
-    const configPath = path.join(__dirname, '../deploymentTemplate', name, 'config.json');
-
-    const configFile = await fs.readFile(configPath, 'utf8');
-    const config = JSON.parse(configFile);
-
-    if (!config.versions[version]) {
-      return res.status(404).json({ error: 'Version not found' });
+    const { name } = req.params;
+    const { version } = req.query;
+    
+    if (!name || !version) {
+      return res.status(400).json({ 
+        error: 'Deployment name and version are required' 
+      });
     }
 
-    res.json(config.versions[version]);
+    console.log('📥 Getting version config:', { name, version });
+    
+    const configPath = path.join(__dirname, '../deploymentTemplate', name, 'config.json');
+    
+    // Read config file
+    const configFile = await fs.readFile(configPath, 'utf8');
+    const config = JSON.parse(configFile);
+    
+    // Check if version exists
+    if (!config.versions[version]) {
+      return res.status(404).json({
+        error: 'Version not found'
+      });
+    }
+    
+    console.log('✅ Found version config');
+    
+    res.json({
+      name,
+      version,
+      config: config.versions[version].config
+    });
+    
   } catch (error) {
-    console.error('Failed to get version config:', error);
+    console.error('❌ Failed to get version config:', error);
+    
+    // Handle file not found error
+    if (error.code === 'ENOENT') {
+      return res.status(404).json({
+        error: 'Deployment configuration not found'
+      });
+    }
+    
     res.status(500).json({ error: error.message });
   }
 };
@@ -606,6 +688,203 @@ const getNamespaces = async (req, res) => {
   }
 };
 
+// Save version configuration
+const saveVersionConfig = async (req, res) => {
+  try {
+    const { name, version } = req.params;
+    const { config: newConfig } = req.body;
+    
+    console.log('💾 Saving version config:', { name, version });
+    
+    const configPath = path.join(__dirname, '../deploymentTemplate', name, 'config.json');
+    
+    // Read existing config
+    let config;
+    try {
+      const existingConfig = await fs.readFile(configPath, 'utf8');
+      config = JSON.parse(existingConfig);
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        config = {
+          name,
+          versions: {},
+          latestVersion: version
+        };
+      } else {
+        throw error;
+      }
+    }
+    
+    // Update version config
+    config.versions[version] = {
+      createdAt: config.versions[version]?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      config: {
+        ...newConfig,
+        name,
+        version,
+        updatedAt: new Date().toISOString()
+      }
+    };
+    
+    // Update latest version if newer
+    if (!config.latestVersion || semver.gt(version, config.latestVersion)) {
+      config.latestVersion = version;
+    }
+    
+    // Ensure directory exists
+    await fs.mkdir(path.dirname(configPath), { recursive: true });
+    
+    // Save updated config
+    await fs.writeFile(configPath, JSON.stringify(config, null, 2));
+    
+    console.log('✅ Version config saved successfully');
+    
+    res.json({
+      message: 'Version configuration saved successfully',
+      version
+    });
+    
+  } catch (error) {
+    console.error('❌ Failed to save version config:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Get storage configuration
+const getStorageConfig = async (req, res) => {
+  try {
+    const { name } = req.params;
+    const { version } = req.query;
+
+    if (!name || !version) {
+      return res.status(400).json({
+        error: 'Deployment name and version are required'
+      });
+    }
+
+    console.log('📥 Getting storage config:', { name, version });
+
+    // 構建存儲配置路徑
+    const storagePath = path.join(__dirname, '../deploymentTemplate', name, 'storage');
+    const storageClassPath = path.join(storagePath, `${name}-${version}-storageClass.yaml`);
+    const persistentVolumePath = path.join(storagePath, `${name}-${version}-persistentVolumes.yaml`);
+
+    let storageClassYaml = null;
+    let persistentVolumeYaml = null;
+
+    // 讀取 StorageClass 配置
+    try {
+      storageClassYaml = await fs.readFile(storageClassPath, 'utf8');
+    } catch (error) {
+      if (error.code !== 'ENOENT') {
+        throw error;
+      }
+    }
+
+    // 讀取 PersistentVolume 配置
+    try {
+      persistentVolumeYaml = await fs.readFile(persistentVolumePath, 'utf8');
+    } catch (error) {
+      if (error.code !== 'ENOENT') {
+        throw error;
+      }
+    }
+
+    // 如果兩個文件都不存在，返回 404
+    if (!storageClassYaml && !persistentVolumeYaml) {
+      return res.status(404).json({
+        error: 'Storage configuration not found'
+      });
+    }
+
+    console.log('✅ Storage config retrieved');
+
+    res.json({
+      storageClassYaml,
+      persistentVolumeYaml
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to get storage config:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Save storage configuration
+const saveStorageConfig = async (req, res) => {
+  try {
+    const { name, version } = req.params;
+    const { storageClassYaml, persistentVolumeYaml } = req.body;
+
+    console.log('💾 Saving storage config:', { name, version });
+
+    // 確保存儲目錄存在
+    const storagePath = path.join(__dirname, '../deploymentTemplate', name, 'storage');
+    await fs.mkdir(storagePath, { recursive: true });
+
+    // 保存 StorageClass 配置
+    if (storageClassYaml) {
+      const storageClassPath = path.join(storagePath, `${name}-${version}-storageClass.yaml`);
+      await fs.writeFile(storageClassPath, storageClassYaml);
+    }
+
+    // 保存 PersistentVolume 配置
+    if (persistentVolumeYaml) {
+      const persistentVolumePath = path.join(storagePath, `${name}-${version}-persistentVolumes.yaml`);
+      await fs.writeFile(persistentVolumePath, persistentVolumeYaml);
+    }
+
+    console.log('✅ Storage config saved successfully');
+
+    res.json({
+      message: 'Storage configuration saved successfully'
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to save storage config:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Create storage class
+const createStorageClass = async (req, res) => {
+  try {
+    const { name, version } = req.params;
+    const storageClassConfig = req.body;
+
+    console.log('📝 Creating storage class:', { name, version, storageClassConfig });
+
+    // 生成 StorageClass YAML
+    const storageClassYaml = `apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: ${name}-${version}-storageclass
+provisioner: ${storageClassConfig.provisioner}
+reclaimPolicy: ${storageClassConfig.reclaimPolicy}
+volumeBindingMode: ${storageClassConfig.volumeBindingMode}
+allowVolumeExpansion: false`;
+
+    // 保存 StorageClass YAML
+    const storagePath = path.join(__dirname, '../deploymentTemplate', name, 'storage');
+    await fs.mkdir(storagePath, { recursive: true });
+
+    const storageClassPath = path.join(storagePath, `${name}-${version}-storageClass.yaml`);
+    await fs.writeFile(storageClassPath, storageClassYaml);
+
+    console.log('✅ Storage class created successfully');
+
+    res.json({
+      message: 'Storage class created successfully',
+      storageClassYaml
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to create storage class:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   generatePreview,
   createDeployment,
@@ -625,5 +904,10 @@ module.exports = {
   validateStorageConfig,
   generateDeploymentConfig,
   handleNamespaceChange,
-  getNamespaces
+  getNamespaces,
+  createVersion,
+  saveVersionConfig,
+  getStorageConfig,
+  saveStorageConfig,
+  createStorageClass
 }; 
