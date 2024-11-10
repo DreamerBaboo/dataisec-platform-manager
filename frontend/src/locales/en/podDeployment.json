@@ -314,24 +314,89 @@
     "yamlTemplate": {
       "upload": "Upload YAML Template",
       "placeholders": "Template Placeholders",
-      "preview": "Template Preview",
       "noTemplate": "No template uploaded",
       "uploadError": "Failed to upload template",
       "parseError": "Failed to parse YAML template",
-      "editor": "YAML Editor",
-      "save": "Save Changes",
       "saveSuccess": "Template saved successfully",
       "saveError": "Failed to save template",
-      "editTemplate": "Edit Original Template",
       "searchPlaceholders": "Search placeholders...",
-      "reload": "Reload",
       "defaultValues": "Default Values",
       "templateUploaded": "Template uploaded successfully",
       "uploadTemplate": "Upload Template",
-      "close": "Close Preview"
+       "editor": "YAML Template Editor",
+      "content": "Template Content",
+      "showPreview": "Show Preview",
+      "hidePreview": "Hide Preview",
+      "categories": {
+        "image": "Image Settings",
+        "service": "Service Settings",
+        "deployment": "Deployment Settings",
+        "misc": "Other Settings"
+      }
     },
     "basicSetup": {
       "title": "Basic Setup"
+    },
+    "templateConfig": {
+      "title": "Template Configuration",
+      "namespaceSection": "Namespace Configuration",
+      "placeholders": "Template Placeholders",
+      "searchPlaceholders": "Search placeholders...",
+      "categories": {
+        "image": "Image Settings",
+        "service": "Service Settings",
+        "deployment": "Deployment Settings",
+        "misc": "Other Settings"
+      }
+    },
+    "repository": {
+      "title": "Repository Configuration",
+      "search": "Search repositories...",
+      "repository": "Repository",
+      "tag": "Tag",
+      "errors": {
+        "fetchFailed": "Failed to fetch repositories",
+        "tagsFetchFailed": "Failed to fetch tags"
+      }
+    },
+    "volume": {
+      "title": "Volume Configuration",
+      "createStorageClass": "Create Storage Class",
+      "storageClassName": "Storage Class Name",
+      "reclaimPolicy": "Reclaim Policy",
+      "volumeBindingMode": "Volume Binding Mode",
+      "nodeHostname": "Node Hostname",
+      "preview": "Configuration Preview"
+    },
+    "configMap": {
+      "title": "ConfigMap Configuration",
+      "addConfigMap": "Add ConfigMap",
+      "configMapName": "ConfigMap Name",
+      "data": "Data",
+      "addData": "Add Data",
+      "key": "Key",
+      "value": "Value"
+    },
+    "secret": {
+      "title": "Secret Configuration",
+      "addSecret": "Add Secret",
+      "secretName": "Secret Name",
+      "data": "Data",
+      "addData": "Add Data",
+      "key": "Key",
+      "value": "Value"
+    },
+    "namespaceQuota": {
+      "title": "Namespace Resource Quota",
+      "requestsCpu": "CPU Requests",
+      "requestsMemory": "Memory Requests",
+      "limitsCpu": "CPU Limits",
+      "limitsMemory": "Memory Limits",
+      "pods": "Pods",
+      "configmaps": "ConfigMaps",
+      "pvcs": "PVCs",
+      "services": "Services",
+      "secrets": "Secrets"
     }
   }
 }

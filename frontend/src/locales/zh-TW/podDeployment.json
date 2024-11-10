@@ -3,7 +3,7 @@
     "title": "Pod 部署管理",
     "createNew": "創建新部署",
     "steps": {
-      "basicSetup": "基礎設定",
+      "basicSetup": "基本設定",
       "resourceAllocation": "資源配置",
       "affinity": "親和性",
       "storageConfiguration": "存儲配置",
@@ -21,10 +21,10 @@
       "templateConfig": "模板配置",
       "templatePreview": "模板預覽",
       "resourceConfig": "資源配置",
-      "volumeConfig": "存儲配置",
-      "configMapConfig": "配置映射",
-      "secretConfig": "密鑰",
-      "affinityConfig": "親和性",
+      "volumeConfig": "儲存配置",
+      "configMapConfig": "ConfigMap 配置",
+      "secretConfig": "Secret 配置",
+      "affinityConfig": "親和性配置",
       "review": "審核",
       "deploy": "部署",
       "uploadTemplate": "上傳模板",
@@ -32,9 +32,9 @@
       "uploadTemplateSuccess": "模板上傳成功",
       "reload": "重新加載",
       "namespaceQuota": "命名空間配額",
-      "repository": "映像倉庫",
-      "tag": "映像標籤",
-      "repositoryConfig": "映像倉庫配置",
+      "repository": "倉庫配置",
+      "tag": "標籤",
+      "repositoryConfig": "倉庫配置",
       "port": "端口"  
     },
     "filter": {
@@ -272,7 +272,7 @@
       "loadTemplate": "載入模板",
       "saveAsTemplate": "保存為模板",
       "categories": {
-        "application": "應用程序",
+        "application": "應��程序",
         "database": "數據庫",
         "middleware": "中間件",
         "monitoring": "監控",
@@ -326,9 +326,20 @@
       "templateUploaded": "模板上傳成功",
       "uploadTemplate": "上傳模板",
       "close": "關閉預覽",
-      "reload": "重新加載"
+      "reload": "重新加載",
+      "content": "模板內容",
+      "categories": {
+        "image": "映像配置",
+        "service": "服務配置",
+        "deployment": "部署配置",
+        "misc": "其他配置"
+      }
     },
     "repository": {
+      "title": "倉庫配置",
+      "search": "搜索倉庫...",
+      "repository": "倉庫",
+      "tag": "標籤",
       "errors": {
         "unauthorized": "未授權訪問，請重新登入",
         "fetchFailed": "獲取倉庫列表失敗",

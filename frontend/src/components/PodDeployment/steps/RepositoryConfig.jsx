@@ -119,12 +119,12 @@ const RepositoryConfig = ({ config, onChange, errors }) => {
     });
   };
 
-  const handlePortChange = (event) => {
-    onChange({
-      ...config,
-      port: event.target.value
-    });
-  };
+  // const handlePortChange = (event) => {
+  //   onChange({
+  //     ...config,
+  //     port: event.target.value
+  //   });
+  // };
 
   const handleSearchChange = (event) => {
     const term = event.target.value;
@@ -185,7 +185,7 @@ const RepositoryConfig = ({ config, onChange, errors }) => {
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={12} md={3}>
+          {/* <Grid item xs={12} md={3}>
             <TextField
               fullWidth
               type="number"
@@ -195,7 +195,7 @@ const RepositoryConfig = ({ config, onChange, errors }) => {
               error={!!errors?.port}
               helperText={errors?.port}
             />
-          </Grid>
+          </Grid> */}
         </Grid>
       </Paper>
       {error && (

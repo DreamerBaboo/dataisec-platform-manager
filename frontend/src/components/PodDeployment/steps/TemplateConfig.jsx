@@ -8,17 +8,24 @@ import {
   Paper,
   TextField,
   InputAdornment,
-  Autocomplete
+  Autocomplete,
+  Divider,
+  IconButton,
+  Collapse
 } from '@mui/material';
 import {
   Edit as EditIcon,
   Search as SearchIcon,
-  Refresh as RefreshIcon
+  Refresh as RefreshIcon,
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon,
+  Preview as PreviewIcon
 } from '@mui/icons-material';
 import Editor from '@monaco-editor/react';
 import { useAppTranslation } from '../../../hooks/useAppTranslation';
 import YamlEditor from '../components/YamlEditor';
 import podDeploymentService from '../../../services/podDeploymentService';
+import SearchBar from '../../common/SearchBar';
 
 const PLACEHOLDER_CATEGORIES = {
   image: ['repository', 'repository_port', 'tag'],
@@ -36,6 +43,7 @@ const TemplateConfig = ({ config, onChange, errors }) => {
   const [yamlError, setYamlError] = useState(null);
   const [namespaces, setNamespaces] = useState([]);
   const [isLoadingNamespaces, setIsLoadingNamespaces] = useState(true);
+  const [showPreview, setShowPreview] = useState(false);
 
   useEffect(() => {
     loadTemplate();
@@ -225,37 +233,6 @@ const TemplateConfig = ({ config, onChange, errors }) => {
     return preview;
   };
 
-  const renderPlaceholders = () => (
-    <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
-      {Object.entries(PLACEHOLDER_CATEGORIES).map(([category, _]) => {
-        const categoryPlaceholders = Object.keys(config.yamlTemplate?.placeholders || {})
-          .filter(key => {
-            const matchesFilter = key.toLowerCase().includes(placeholderFilter.toLowerCase());
-            const placeholderCategory = getPlaceholderCategory(key);
-            // 過濾掉 repository 和 tag 佔位符
-            return matchesFilter && placeholderCategory === category && key !== 'repository' && key !== 'tag';
-          });
-
-        if (categoryPlaceholders.length === 0) return null;
-
-        return (
-          <Box key={category} sx={{ mb: 3 }}>
-            <Typography variant="subtitle1" sx={{ mb: 1, textTransform: 'capitalize' }}>
-              {category}
-            </Typography>
-            <Grid container spacing={2}>
-              {categoryPlaceholders.map((placeholder) => (
-                <Grid item xs={12} key={placeholder}>
-                  {renderPlaceholderField(placeholder)}
-                </Grid>
-              ))}
-            </Grid>
-          </Box>
-        );
-      })}
-    </Box>
-  );
-
   const handleTemplateChange = async (templateData) => {
     try {
       const { content, placeholders, defaultValues, categories } = templateData;
@@ -310,58 +287,81 @@ const TemplateConfig = ({ config, onChange, errors }) => {
 
   return (
     <Box>
-      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between' }}>
-        <Typography variant="h6">
-          {t('podDeployment:podDeployment.yamlTemplate.editor')}
+      {/* Header Section */}
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h6" gutterBottom>
+          {t('podDeployment:podDeployment.templateConfig.title')}
         </Typography>
+        
+        {/* Namespace Selection */}
+        <Paper sx={{ p: 2, mb: 2 }}>
+          <Typography variant="subtitle2" gutterBottom color="textSecondary">
+            {t('podDeployment:podDeployment.templateConfig.namespaceSection')}
+          </Typography>
+          <Autocomplete
+            freeSolo
+            value={config.namespace}
+            onChange={handleNamespaceChange}
+            options={namespaces}
+            loading={isLoadingNamespaces}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label={t('podDeployment:podDeployment.basic.namespace')}
+                required
+                error={!!errors?.namespace}
+                helperText={errors?.namespace}
+              />
+            )}
+          />
+        </Paper>
+      </Box>
+
+      {/* Template Actions */}
+      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Button
+            variant="outlined"
             startIcon={<RefreshIcon />}
             onClick={loadTemplate}
           >
             {t('podDeployment:podDeployment.yamlTemplate.reload')}
           </Button>
           <Button
+            variant="outlined"
             startIcon={<EditIcon />}
             onClick={() => setEditorOpen(true)}
           >
             {t('podDeployment:podDeployment.yamlTemplate.editTemplate')}
           </Button>
         </Box>
+        <Button
+          variant="contained"
+          startIcon={showPreview ? <VisibilityOffIcon /> : <VisibilityIcon />}
+          onClick={() => setShowPreview(!showPreview)}
+        >
+          {showPreview 
+            ? t('podDeployment:podDeployment.yamlTemplate.hidePreview')
+            : t('podDeployment:podDeployment.yamlTemplate.showPreview')
+          }
+        </Button>
       </Box>
 
+      {/* Error Display */}
       {yamlError && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {yamlError}
         </Alert>
       )}
 
-      <Grid container spacing={2}>
-        <Grid item xs={12} md={6}>
-          <Box sx={{ mb: 2 }}>
-            <TextField
-              fullWidth
-              size="small"
-              placeholder={t('podDeployment:podDeployment.yamlTemplate.searchPlaceholders')}
-              value={placeholderFilter}
-              onChange={(e) => setPlaceholderFilter(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon />
-                  </InputAdornment>
-                )
-              }}
-            />
-          </Box>
-
-          <Box sx={{ maxHeight: 'calc(100vh - 300px)', overflow: 'auto' }}>
-            {renderPlaceholders()}
-          </Box>
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ height: 'calc(100vh - 300px)' }}>
+      {/* Preview Section */}
+      <Collapse in={showPreview} sx={{ mb: 2 }}>
+        <Paper sx={{ p: 2 }}>
+          <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <PreviewIcon />
+            {t('podDeployment:podDeployment.yamlTemplate.preview')}
+          </Typography>
+          <Box sx={{ height: '400px' }}>
             <Editor
               height="100%"
               defaultLanguage="yaml"
@@ -376,10 +376,57 @@ const TemplateConfig = ({ config, onChange, errors }) => {
                 theme: 'vs-light'
               }}
             />
-          </Paper>
-        </Grid>
-      </Grid>
+          </Box>
+        </Paper>
+      </Collapse>
 
+      {/* Placeholders Configuration */}
+      <Paper sx={{ p: 2 }}>
+        <Typography variant="subtitle1" gutterBottom>
+          {t('podDeployment:podDeployment.yamlTemplate.placeholders')}
+        </Typography>
+        
+        <SearchBar
+          value={placeholderFilter}
+          onChange={(e) => setPlaceholderFilter(e.target.value)}
+          onClear={() => setPlaceholderFilter('')}
+          placeholder={t('podDeployment:podDeployment.yamlTemplate.searchPlaceholders')}
+          sx={{ mb: 2 }}
+        />
+
+        <Grid container spacing={3}>
+          {Object.entries(PLACEHOLDER_CATEGORIES).map(([category, _]) => {
+            const categoryPlaceholders = Object.keys(config.yamlTemplate?.placeholders || {})
+              .filter(key => {
+                const matchesFilter = key.toLowerCase().includes(placeholderFilter.toLowerCase());
+                const placeholderCategory = getPlaceholderCategory(key);
+                return matchesFilter && placeholderCategory === category && 
+                       key !== 'repository' && key !== 'tag';
+              });
+
+            if (categoryPlaceholders.length === 0) return null;
+
+            return (
+              <Grid item xs={12} md={6} key={category}>
+                <Paper variant="outlined" sx={{ p: 2 }}>
+                  <Typography variant="subtitle2" sx={{ mb: 2, textTransform: 'capitalize' }}>
+                    {t(`podDeployment:podDeployment.yamlTemplate.categories.${category}`)}
+                  </Typography>
+                  <Grid container spacing={2}>
+                    {categoryPlaceholders.map((placeholder) => (
+                      <Grid item xs={12} key={placeholder}>
+                        {renderPlaceholderField(placeholder)}
+                      </Grid>
+                    ))}
+                  </Grid>
+                </Paper>
+              </Grid>
+            );
+          })}
+        </Grid>
+      </Paper>
+
+      {/* YAML Editor Dialog */}
       <YamlEditor
         open={editorOpen}
         onClose={() => setEditorOpen(false)}
@@ -398,27 +445,6 @@ const TemplateConfig = ({ config, onChange, errors }) => {
         error={yamlError}
         onTemplateChange={handleTemplateChange}
       />
-
-      <Grid container spacing={2}>
-        <Grid item xs={12}>
-          <Autocomplete
-            freeSolo
-            value={config.namespace}
-            onChange={handleNamespaceChange}
-            options={namespaces}
-            loading={isLoadingNamespaces}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label={t('podDeployment:podDeployment.basic.namespace')}
-                required
-                error={!!errors?.namespace}
-                helperText={errors?.namespace}
-              />
-            )}
-          />
-        </Grid>
-      </Grid>
     </Box>
   );
 };
