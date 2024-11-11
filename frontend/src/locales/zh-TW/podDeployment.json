@@ -26,7 +26,7 @@
       "secretConfig": "Secret 配置",
       "affinityConfig": "親和性配置",
       "review": "審核",
-      "deploy": "���署",
+      "deploy": "部署",
       "uploadTemplate": "上傳模板",
       "uploadTemplateFile": "請上傳模板文件",
       "uploadTemplateSuccess": "模板上傳成功",
@@ -225,7 +225,7 @@
       "errors": "配置驗證錯誤",
       "name": {
         "required": "部署名稱不能為空",
-        "format": "部署名稱只能包含小寫字母、數字和連字符，且必須以字母或數字開頭和結尾"
+        "format": "部署名稱只能包含小���母、數字和連字符，且必須以字母或數字開頭和結尾"
       },
       "namespace": {
         "required": "命名空間不能為空"
@@ -268,7 +268,7 @@
       "save": "保存新模板",
       "browse": "瀏覽模板",
       "name": "模板名稱",
-      "description": "���板描述",
+      "description": "板描述",
       "category": "模板分類",
       "filterByCategory": "按分類篩選",
       "saveButton": "保存模板",
@@ -383,6 +383,54 @@
       "createSuccess": "命名空間創建成功",
       "createError": "創建命名空間失敗",
       "invalidName": "無效的命名空間名稱"
+    },
+    "configMap": {
+      "title": "ConfigMap 配置",
+      "add": "新增 ConfigMap",
+      "edit": "編輯 ConfigMap",
+      "create": "創建 ConfigMap",
+      "type": "ConfigMap 類型",
+      "types": {
+        "basic": "基本鍵值對",
+        "file": "從文件創建",
+        "directory": "從目錄創建",
+        "literal": "從字面值創建"
+      },
+      "fields": {
+        "name": "ConfigMap 名稱",
+        "key": "鍵",
+        "value": "值",
+        "fileName": "文件名稱",
+        "filePath": "文件路徑",
+        "mountPath": "掛載路徑",
+        "directoryPath": "目錄路徑",
+        "literals": "字面值"
+      },
+      "validation": {
+        "required": "此欄位為必填項",
+        "fileType": "僅支持 .txt 和 .conf 文件",
+        "invalidPath": "無效的路徑格式",
+        "duplicateKey": "鍵已存在",
+        "invalidKey": "無效的鍵格式",
+        "keyRequired": "鍵是必填項",
+        "valueRequired": "值是必填項"
+      },
+      "errors": {
+        "saveFailed": "保存 ConfigMap 失敗",
+        "deleteFailed": "刪除 ConfigMap 失敗",
+        "createFailed": "創建 ConfigMap 失敗"
+      },
+      "preview": "預覽 ConfigMap",
+      "showPreview": "顯示預覽",
+      "hidePreview": "隱藏預覽",
+      "typeInfo": {
+        "basic": "基本鍵值對。您可以添加多個具有不同鍵和值的條目。",
+        "file": "從文件創建 ConfigMap。文件內容將用作值。",
+        "directory": "從目錄中的所有文件創建 ConfigMap。",
+        "literal": "使用字面值創建 ConfigMap。"
+      },
+      "addEntry": "添加鍵值對",
+      "removeEntry": "移除條目"
     }
   }
 } 

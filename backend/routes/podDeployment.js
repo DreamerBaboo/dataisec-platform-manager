@@ -678,4 +678,16 @@ router.post('/:name/versions/:version/storage-class', authenticateToken, podDepl
 // Add delete storage route
 router.delete('/:name/versions/:version/storage/:type', authenticateToken, podDeploymentController.deleteStorageConfig);
 
+// Add deploy scripts route
+router.post('/:name/versions/:version/deploy-scripts', authenticateToken, podDeploymentController.saveDeployScript);
+
+// Get ConfigMap configuration
+router.get('/:name/configmaps', authenticateToken, podDeploymentController.getConfigMapConfig);
+
+// Save ConfigMap configuration
+router.post('/:name/versions/:version/configmaps', authenticateToken, podDeploymentController.saveConfigMapConfig);
+
+// Delete deploy script
+router.delete('/:name/versions/:version/deploy-scripts/:filename', authenticateToken, podDeploymentController.deleteDeployScript);
+
 module.exports = router; 

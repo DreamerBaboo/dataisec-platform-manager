@@ -936,6 +936,182 @@ const deleteStorageConfig = async (req, res) => {
   }
 };
 
+// Save deploy script
+const saveDeployScript = async (req, res) => {
+  try {
+    const { name, version } = req.params;
+    const { filename, content } = req.body;
+
+    console.log('💾 Saving deploy script:', { name, version, filename });
+
+    // Create deploy-scripts directory if it doesn't exist
+    const deployScriptsPath = path.join(
+      __dirname,
+      '../deploymentTemplate',
+      name,
+      'deploy-scripts'
+    );
+    await fs.mkdir(deployScriptsPath, { recursive: true });
+
+    // Save the script file
+    const filePath = path.join(deployScriptsPath, filename);
+    await fs.writeFile(filePath, content);
+
+    console.log('✅ Deploy script saved successfully:', filePath);
+
+    res.json({
+      message: 'Deploy script saved successfully',
+      path: filePath
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to save deploy script:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Get ConfigMap configuration
+const getConfigMapConfig = async (req, res) => {
+  try {
+    const { name } = req.params;
+    const { version } = req.query;
+
+    if (!name || !version) {
+      return res.status(400).json({
+        error: 'Deployment name and version are required'
+      });
+    }
+
+    console.log('📥 Getting ConfigMap config:', { name, version });
+
+    // Read config.json first
+    const configPath = path.join(__dirname, '../deploymentTemplate', name, 'config.json');
+    const configFile = await fs.readFile(configPath, 'utf8');
+    const config = JSON.parse(configFile);
+
+    // Get ConfigMap YAML if it exists
+    const deployScriptsPath = path.join(__dirname, '../deploymentTemplate', name, 'deploy-scripts');
+    const configMapPath = path.join(deployScriptsPath, `${name}-${version}-configmap.yaml`);
+
+    let configMapYaml = null;
+    try {
+      configMapYaml = await fs.readFile(configMapPath, 'utf8');
+    } catch (error) {
+      if (error.code !== 'ENOENT') {
+        throw error;
+      }
+    }
+
+    // Get ConfigMaps from config.json
+    const configMaps = config.versions[version]?.config?.configMaps || [];
+
+    console.log('✅ ConfigMap config retrieved');
+
+    res.json({
+      configMaps,
+      configMapYaml
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to get ConfigMap config:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Save ConfigMap configuration
+const saveConfigMapConfig = async (req, res) => {
+  try {
+    const { name, version } = req.params;
+    const { configMaps, configMapYaml } = req.body;
+
+    console.log('💾 Saving ConfigMap config:', { name, version });
+
+    // Save to config.json
+    const configPath = path.join(__dirname, '../deploymentTemplate', name, 'config.json');
+    const configFile = await fs.readFile(configPath, 'utf8');
+    const config = JSON.parse(configFile);
+
+    if (!config.versions[version]) {
+      return res.status(404).json({
+        error: 'Version not found'
+      });
+    }
+
+    // Update ConfigMaps in config
+    config.versions[version].config = {
+      ...config.versions[version].config,
+      configMaps
+    };
+
+    await fs.writeFile(configPath, JSON.stringify(config, null, 2));
+
+    // Save YAML file if provided
+    if (configMapYaml) {
+      const deployScriptsPath = path.join(__dirname, '../deploymentTemplate', name, 'deploy-scripts');
+      await fs.mkdir(deployScriptsPath, { recursive: true });
+
+      const yamlPath = path.join(deployScriptsPath, `${name}-${version}-configmap.yaml`);
+      await fs.writeFile(yamlPath, configMapYaml);
+    }
+
+    console.log('✅ ConfigMap config saved successfully');
+
+    res.json({
+      message: 'ConfigMap configuration saved successfully'
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to save ConfigMap config:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Delete deploy script
+const deleteDeployScript = async (req, res) => {
+  try {
+    const { name, version, filename } = req.params;
+
+    console.log('🗑️ Deleting deploy script:', { name, version, filename });
+
+    // Build path to deploy script
+    const deployScriptsPath = path.join(
+      __dirname,
+      '../deploymentTemplate',
+      name,
+      'deploy-scripts'
+    );
+
+    const filePath = path.join(deployScriptsPath, filename);
+
+    try {
+      // Check if file exists before attempting to delete
+      await fs.access(filePath);
+      // Delete the file
+      await fs.unlink(filePath);
+      console.log('✅ Deploy script deleted:', filePath);
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        // File doesn't exist - consider this a success
+        console.log('⚠️ File does not exist:', filePath);
+        return res.json({
+          message: 'File does not exist or already deleted',
+          path: filePath
+        });
+      }
+      throw error;
+    }
+
+    res.json({
+      message: 'Deploy script deleted successfully',
+      path: filePath
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to delete deploy script:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   generatePreview,
   createDeployment,
@@ -961,5 +1137,9 @@ module.exports = {
   getStorageConfig,
   saveStorageConfig,
   createStorageClass,
-  deleteStorageConfig
+  deleteStorageConfig,
+  saveDeployScript,
+  getConfigMapConfig,
+  saveConfigMapConfig,
+  deleteDeployScript
 }; 

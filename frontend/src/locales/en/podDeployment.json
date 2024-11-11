@@ -372,12 +372,52 @@
     },
     "configMap": {
       "title": "ConfigMap Configuration",
-      "addConfigMap": "Add ConfigMap",
-      "configMapName": "ConfigMap Name",
-      "data": "Data",
-      "addData": "Add Data",
-      "key": "Key",
-      "value": "Value"
+      "add": "Add ConfigMap",
+      "edit": "Edit ConfigMap",
+      "create": "Create ConfigMap",
+      "type": "ConfigMap Type",
+      "addEntry": "Add Entry",
+      "removeEntry": "Remove Entry",
+      "types": {
+        "basic": "Basic Key-Value",
+        "file": "From File",
+        "directory": "From Directory",
+        "literal": "From Literal Values"
+      },
+      "fields": {
+        "name": "ConfigMap Name",
+        "key": "Key",
+        "value": "Value",
+        "fileName": "File Name",
+        "filePath": "File Path",
+        "mountPath": "Mount Path",
+        "directoryPath": "Directory Path",
+        "literals": "Literal Values"
+      },
+      "validation": {
+        "required": "This field is required",
+        "fileType": "Only .txt and .conf files are supported",
+        "invalidPath": "Invalid path format",
+        "invalidKey": "Invalid key format",
+        "keyFormat": "Key must be alphanumeric and may contain '-', '_', or '.'",
+        "keyRequired": "Key is required",
+        "valueRequired": "Value is required"
+      },
+      "errors": {
+        "saveFailed": "Failed to save ConfigMap",
+        "deleteFailed": "Failed to delete ConfigMap",
+        "createFailed": "Failed to create ConfigMap"
+      },
+      "preview": "Preview ConfigMap",
+      "showPreview": "Show Preview",
+      "hidePreview": "Hide Preview",
+      "typeInfo": {
+        "basic": "Basic key-value pairs. You can add multiple entries with different keys and values.",
+        "file": "Create ConfigMap from a file. The file content will be used as the value.",
+        "directory": "Create ConfigMap from all files in a directory.",
+        "literal": "Create ConfigMap with literal values."
+      }
+      
     },
     "secret": {
       "title": "Secret Configuration",

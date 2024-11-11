@@ -310,6 +310,55 @@ export const podDeploymentService = {
       throw error;
     }
   },
+
+  // Get ConfigMap configuration
+  async getConfigMapConfig(name, version) {
+    try {
+      console.log('📥 Getting ConfigMap config:', { name, version });
+      const response = await axios.get(
+        `${API_URL}/api/pod-deployments/${name}/configmaps?version=${version}`,
+        getAuthHeaders()
+      );
+      console.log('✅ ConfigMap config retrieved:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Failed to get ConfigMap config:', error);
+      throw error;
+    }
+  },
+
+  // Save ConfigMap configuration
+  async saveConfigMapConfig(name, version, configMapConfig) {
+    try {
+      console.log('💾 Saving ConfigMap config:', { name, version, configMapConfig });
+      const response = await axios.post(
+        `${API_URL}/api/pod-deployments/${name}/versions/${version}/configmaps`,
+        configMapConfig,
+        getAuthHeaders()
+      );
+      console.log('✅ ConfigMap config saved:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Failed to save ConfigMap config:', error);
+      throw error;
+    }
+  },
+
+  // Delete deploy script
+  async deleteDeployScript(name, version, filename) {
+    try {
+      console.log('🗑️ Deleting deploy script:', { name, version, filename });
+      const response = await axios.delete(
+        `${API_URL}/api/pod-deployments/${name}/versions/${version}/deploy-scripts/${filename}`,
+        getAuthHeaders()
+      );
+      console.log('✅ Deploy script deleted:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Failed to delete deploy script:', error);
+      throw error;
+    }
+  },
 };
 
 export default podDeploymentService;
