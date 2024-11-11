@@ -42,7 +42,7 @@ const VolumeConfig = ({ config, onChange, errors = {} }) => {
   });
   const [showStoragePreview, setShowStoragePreview] = useState(false);
 
-  // 當組件掛載時加載現有配置
+  // Load existing configuration when component mounts
   useEffect(() => {
     const loadStorageConfig = async () => {
       if (!config?.name || !config?.version) {
@@ -57,10 +57,12 @@ const VolumeConfig = ({ config, onChange, errors = {} }) => {
         const response = await podDeploymentService.getStorageConfig(config.name, config.version);
         console.log('Loaded storage configuration:', response);
 
+        // Set storage class visibility if it exists
         if (response.storageClassYaml) {
           setShowStorageClass(true);
         }
 
+        // Parse and set persistent volumes if they exist
         if (response.persistentVolumeYaml) {
           const pvDocs = YAML.parseAllDocuments(response.persistentVolumeYaml);
           const pvConfigs = pvDocs.map(doc => doc.toJSON()).filter(Boolean);
@@ -80,8 +82,10 @@ const VolumeConfig = ({ config, onChange, errors = {} }) => {
           setPersistentVolumes(formattedPVs);
         }
       } catch (error) {
-        console.error('Failed to load storage configuration:', error);
-        setError(t('podDeployment:errors.failedToLoadStorage'));
+        if (error.response?.status !== 404) {
+          console.error('Failed to load storage configuration:', error);
+          setError(t('podDeployment:errors.failedToLoadStorage'));
+        }
       } finally {
         setLoading(false);
       }
@@ -90,46 +94,40 @@ const VolumeConfig = ({ config, onChange, errors = {} }) => {
     loadStorageConfig();
   }, [config?.name, config?.version]);
 
-  // 保存配置
-  const saveStorageConfig = async () => {
-    if (!config?.name || !config?.version) {
-      console.error('Missing deployment name or version');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      console.log('Saving storage configuration...');
-
-      const storageConfig = {
-        storageClassYaml: generateStorageClassYaml(),
-        persistentVolumeYaml: generatePersistentVolumeYaml()
-      };
-
-      console.log('Storage configuration to save:', storageConfig);
-
-      await podDeploymentService.saveStorageConfig(
-        config.name,
-        config.version,
-        storageConfig
-      );
-
-      console.log('Storage configuration saved successfully');
-      setError(null);
-    } catch (error) {
-      console.error('Failed to save storage configuration:', error);
-      setError(t('podDeployment:errors.failedToSaveStorage'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 當配置改變時自動保存
+  // Save configuration whenever it changes
   useEffect(() => {
-    if (showStorageClass || persistentVolumes.length > 0) {
-      saveStorageConfig();
-    }
-  }, [showStorageClass, persistentVolumes]);
+    const saveStorageConfig = async () => {
+      if (!config?.name || !config?.version || !showStorageClass) return;
+
+      try {
+        const storageConfig = {
+          storageClassYaml: generateStorageClassYaml(),
+          persistentVolumeYaml: persistentVolumes.length > 0 ? generatePersistentVolumeYaml() : null
+        };
+
+        await podDeploymentService.saveStorageConfig(
+          config.name,
+          config.version,
+          storageConfig
+        );
+
+        // Only delete PV file if storage class exists and PV array is empty
+        if (showStorageClass && persistentVolumes.length === 0) {
+          await podDeploymentService.deleteStorageConfig(
+            config.name,
+            config.version,
+            'persistentVolume'
+          );
+        }
+
+      } catch (error) {
+        console.error('Failed to save storage configuration:', error);
+        setError(t('podDeployment:errors.failedToSaveStorage'));
+      }
+    };
+
+    saveStorageConfig();
+  }, [showStorageClass, persistentVolumes, config?.name, config?.version]);
 
   // 獲取節點列表
   useEffect(() => {
@@ -440,25 +438,6 @@ spec:
       setLoading(false);
     }
   };
-
-  // Delete PV file if no PVs configured
-  useEffect(() => {
-    const deletePVFileIfEmpty = async () => {
-      if (persistentVolumes.length === 0) {
-        try {
-          await podDeploymentService.deleteStorageConfig(
-            config.name,
-            config.version,
-            'persistentVolume'
-          );
-        } catch (error) {
-          console.error('Failed to delete empty PV file:', error);
-        }
-      }
-    };
-
-    deletePVFileIfEmpty();
-  }, [persistentVolumes.length, config.name, config.version]);
 
   // Save to deploy-scripts folder when navigating
   const handleNext = async () => {
