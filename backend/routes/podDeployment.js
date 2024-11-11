@@ -4,6 +4,7 @@ const { authenticateToken } = require('../middleware/auth');
 const podDeploymentController = require('../controllers/podDeploymentController');
 const path = require('path');
 const fs = require('fs').promises;
+const k8sService = require('../services/k8sService');
 
 // Pod Deployment 路由
 router.post('/preview', authenticateToken, podDeploymentController.generatePreview);
@@ -18,7 +19,37 @@ router.get('/:name/containers', authenticateToken, podDeploymentController.getCo
 router.get('/:name/status', authenticateToken, podDeploymentController.getDeploymentStatus);
 
 // 處理命名空間變更
-router.post('/namespace', authenticateToken, podDeploymentController.handleNamespaceChange);
+router.post('/namespace', authenticateToken, async (req, res) => {
+  try {
+    const { namespace } = req.body;
+
+    // Validate namespace name
+    if (!/^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(namespace)) {
+      return res.status(400).json({
+        error: 'Invalid namespace name. Must consist of lowercase alphanumeric characters or "-", and must start and end with an alphanumeric character.'
+      });
+    }
+
+    // Check if namespace already exists
+    const exists = await k8sService.namespaceExists(namespace);
+    if (exists) {
+      return res.status(409).json({
+        error: 'Namespace already exists'
+      });
+    }
+
+    // Create namespace
+    const result = await k8sService.createNamespace(namespace);
+    
+    res.json({
+      message: 'Namespace created successfully',
+      namespace: result
+    });
+  } catch (error) {
+    console.error('Failed to create namespace:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
 
 router.get('/namespaces', authenticateToken, podDeploymentController.getNamespaces);
 

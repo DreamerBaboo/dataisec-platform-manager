@@ -397,6 +397,13 @@
       "pvcs": "PVCs",
       "services": "Services",
       "secrets": "Secrets"
+    },
+    "namespace": {
+      "createTitle": "Create New Namespace",
+      "createConfirm": "Do you want to create a new namespace '{namespace}'?",
+      "createSuccess": "Namespace created successfully",
+      "createError": "Failed to create namespace",
+      "invalidName": "Invalid namespace name"
     }
   }
 }

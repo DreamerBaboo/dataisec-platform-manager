@@ -26,7 +26,7 @@
       "secretConfig": "Secret 配置",
       "affinityConfig": "親和性配置",
       "review": "審核",
-      "deploy": "部署",
+      "deploy": "���署",
       "uploadTemplate": "上傳模板",
       "uploadTemplateFile": "請上傳模板文件",
       "uploadTemplateSuccess": "模板上傳成功",
@@ -264,7 +264,7 @@
       "save": "保存新模板",
       "browse": "瀏覽模板",
       "name": "模板名稱",
-      "description": "模板描述",
+      "description": "���板描述",
       "category": "模板分類",
       "filterByCategory": "按分類篩選",
       "saveButton": "保存模板",
@@ -272,7 +272,7 @@
       "loadTemplate": "載入模板",
       "saveAsTemplate": "保存為模板",
       "categories": {
-        "application": "應��程序",
+        "application": "應程序",
         "database": "數據庫",
         "middleware": "中間件",
         "monitoring": "監控",
@@ -372,6 +372,13 @@
         "capacityRequired": "容量為必填項",
         "accessModeRequired": "至少需要一個訪問模式"
       }
+    },
+    "namespace": {
+      "createTitle": "創建新命名空間",
+      "createConfirm": "是否要創建新的命名空間 '{namespace}'？",
+      "createSuccess": "命名空間創建成功",
+      "createError": "創建命名空間失敗",
+      "invalidName": "無效的命名空間名稱"
     }
   }
 } 

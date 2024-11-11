@@ -6,8 +6,8 @@ metadata:
     type: local
 spec:
   capacity:
-    storage: 10Ti
-  volumeMode: Block
+    storage: 1Gi
+  volumeMode: Filesystem
   accessModes:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
@@ -21,4 +21,4 @@ spec:
         - key: kubernetes.io/hostname
           operator: In
           values:
-          - kind-worker
+          - 

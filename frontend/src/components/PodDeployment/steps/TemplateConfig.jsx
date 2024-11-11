@@ -11,7 +11,12 @@ import {
   Autocomplete,
   Divider,
   IconButton,
-  Collapse
+  Collapse,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -28,7 +33,7 @@ import podDeploymentService from '../../../services/podDeploymentService';
 import SearchBar from '../../common/SearchBar';
 
 const PLACEHOLDER_CATEGORIES = {
-  image: ['repository', 'repository_port', 'tag'],
+  image: ['repository', 'tag'],
   service: ['service_port', 'target_service_port', 'node_port', 'web_port'],
   deployment: ['replica_count'],
   misc: ['company_name']
@@ -44,6 +49,8 @@ const TemplateConfig = ({ config, onChange, errors }) => {
   const [namespaces, setNamespaces] = useState([]);
   const [isLoadingNamespaces, setIsLoadingNamespaces] = useState(true);
   const [showPreview, setShowPreview] = useState(false);
+  const [createNamespaceDialog, setCreateNamespaceDialog] = useState(false);
+  const [newNamespace, setNewNamespace] = useState('');
 
   useEffect(() => {
     loadTemplate();
@@ -159,20 +166,39 @@ const TemplateConfig = ({ config, onChange, errors }) => {
     }
   };
 
-  const handlePlaceholderChange = (placeholder, value) => {
-    onChange({
-      ...config,
-      yamlTemplate: {
-        ...config.yamlTemplate,
-        placeholders: {
-          ...config.yamlTemplate.placeholders,
-          [placeholder]: value
+  const handlePlaceholderChange = async (placeholder, value) => {
+    try {
+      if (placeholder === 'namespace') return;
+
+      const updatedConfig = {
+        ...config,
+        yamlTemplate: {
+          ...config.yamlTemplate,
+          placeholders: {
+            ...config.yamlTemplate?.placeholders,
+            [placeholder]: value
+          }
         }
-      }
-    });
+      };
+
+      await podDeploymentService.saveDeploymentConfig(
+        config.name,
+        config.version,
+        updatedConfig
+      );
+
+      onChange(updatedConfig);
+
+      console.log(`✅ Placeholder ${placeholder} updated successfully:`, value);
+    } catch (error) {
+      console.error(`❌ Failed to update placeholder ${placeholder}:`, error);
+      setYamlError(`Failed to save placeholder configuration`);
+    }
   };
 
   const getPlaceholderCategory = (placeholder) => {
+    if (placeholder === 'namespace') return null;
+
     if (placeholder.includes('cpu_') || 
         placeholder.includes('memory_') || 
         placeholder.includes('node_selector') || 
@@ -191,6 +217,8 @@ const TemplateConfig = ({ config, onChange, errors }) => {
   };
 
   const renderPlaceholderField = (placeholder) => {
+    if (placeholder === 'namespace') return null;
+
     const hasDefaultValues = config.yamlTemplate?.defaultValues?.[placeholder];
 
     if (hasDefaultValues) {
@@ -237,7 +265,6 @@ const TemplateConfig = ({ config, onChange, errors }) => {
     try {
       const { content, placeholders, defaultValues, categories } = templateData;
 
-      // Update configuration with new placeholders and categories
       onChange({
         ...config,
         yamlTemplate: {
@@ -258,7 +285,6 @@ const TemplateConfig = ({ config, onChange, errors }) => {
         }
       });
 
-      // Refresh template content
       setTemplateContent(content);
     } catch (error) {
       console.error('Template refresh error:', error);
@@ -270,40 +296,181 @@ const TemplateConfig = ({ config, onChange, errors }) => {
     try {
       if (!newValue) return;
 
-      const isNewNamespace = !namespaces.includes(newValue);
+      const namespaceValue = typeof newValue === 'string' ? newValue : newValue.name;
+      console.log('Namespace change:', { namespaceValue, newValue });
+
+      const isNewNamespace = !namespaces.includes(namespaceValue);
       
-      if (isNewNamespace && config.name) {
-        await podDeploymentService.handleNamespaceChange(config.name, newValue);
+      if (isNewNamespace) {
+        setNewNamespace(namespaceValue);
+        setCreateNamespaceDialog(true);
+      } else {
+        const updatedConfig = {
+          ...config,
+          namespace: namespaceValue,
+          yamlTemplate: {
+            ...config.yamlTemplate,
+            placeholders: {
+              ...config.yamlTemplate?.placeholders,
+              namespace: namespaceValue
+            }
+          }
+        };
+
+        await podDeploymentService.saveDeploymentConfig(
+          config.name,
+          config.version,
+          updatedConfig
+        );
+
+        onChange(updatedConfig);
       }
-      
-      onChange({
-        ...config,
-        namespace: newValue
-      });
     } catch (error) {
       console.error('Failed to handle namespace change:', error);
+      setYamlError('Failed to update namespace configuration');
+    }
+  };
+
+  const handleCreateNamespace = async () => {
+    try {
+      const response = await podDeploymentService.createNamespace(newNamespace);
+      
+      if (response.success) {
+        const updatedNamespaces = await podDeploymentService.getNamespaces();
+        const namespaceNames = updatedNamespaces.map(ns => ns.name);
+        setNamespaces(namespaceNames);
+        
+        const updatedConfig = {
+          ...config,
+          namespace: newNamespace,
+          yamlTemplate: {
+            ...config.yamlTemplate,
+            placeholders: {
+              ...config.yamlTemplate?.placeholders,
+              namespace: newNamespace
+            }
+          }
+        };
+
+        await podDeploymentService.saveDeploymentConfig(
+          config.name,
+          config.version,
+          updatedConfig
+        );
+
+        onChange(updatedConfig);
+        setCreateNamespaceDialog(false);
+      }
+    } catch (error) {
+      console.error('Failed to create namespace:', error);
+      setYamlError('Failed to create namespace');
+    }
+  };
+
+  const handleNamespaceBlur = async (event) => {
+    const namespaceValue = event.target.value?.trim();
+    
+    if (!namespaceValue) return;
+
+    console.log('Namespace blur detected:', {
+      value: namespaceValue,
+      existingNamespaces: namespaces,
+      isNew: !namespaces.includes(namespaceValue)
+    });
+
+    const isNewNamespace = !namespaces.includes(namespaceValue);
+    
+    if (isNewNamespace) {
+      setNewNamespace(namespaceValue);
+      setCreateNamespaceDialog(true);
+    }
+  };
+
+  const handleTemplateFieldChange = async (field, value) => {
+    try {
+      const updatedConfig = {
+        ...config,
+        [field]: value
+      };
+
+      onChange(updatedConfig);
+
+      await podDeploymentService.saveDeploymentConfig(
+        config.name,
+        config.version,
+        updatedConfig
+      );
+
+      console.log(`✅ Template field ${field} updated successfully:`, value);
+    } catch (error) {
+      console.error(`❌ Failed to update template field ${field}:`, error);
+      setYamlError(`Failed to save ${field} configuration`);
+    }
+  };
+
+  const handleTemplateContentSave = async (newContent) => {
+    try {
+      const updatedConfig = {
+        ...config,
+        yamlTemplate: {
+          ...config.yamlTemplate,
+          content: newContent
+        }
+      };
+
+      await podDeploymentService.saveDeploymentConfig(
+        config.name,
+        config.version,
+        updatedConfig
+      );
+
+      onChange(updatedConfig);
+      setTemplateContent(newContent);
+      setEditorOpen(false);
+
+      console.log('✅ Template content saved successfully');
+    } catch (error) {
+      console.error('❌ Failed to save template content:', error);
+      setYamlError('Failed to save template content');
     }
   };
 
   return (
     <Box>
-      {/* Header Section */}
       <Box sx={{ mb: 3 }}>
         <Typography variant="h6" gutterBottom>
           {t('podDeployment:podDeployment.templateConfig.title')}
         </Typography>
         
-        {/* Namespace Selection */}
         <Paper sx={{ p: 2, mb: 2 }}>
           <Typography variant="subtitle2" gutterBottom color="textSecondary">
             {t('podDeployment:podDeployment.templateConfig.namespaceSection')}
           </Typography>
           <Autocomplete
             freeSolo
-            value={config.namespace}
+            value={config.namespace || ''}
             onChange={handleNamespaceChange}
+            onInputChange={(event, newValue) => {
+              if (event) {
+                const updatedConfig = {
+                  ...config,
+                  namespace: newValue,
+                  yamlTemplate: {
+                    ...config.yamlTemplate,
+                    placeholders: {
+                      ...config.yamlTemplate?.placeholders,
+                      namespace: newValue
+                    }
+                  }
+                };
+                onChange(updatedConfig);
+              }
+            }}
             options={namespaces}
             loading={isLoadingNamespaces}
+            getOptionLabel={(option) => {
+              return typeof option === 'string' ? option : option.name || '';
+            }}
             renderInput={(params) => (
               <TextField
                 {...params}
@@ -311,13 +478,13 @@ const TemplateConfig = ({ config, onChange, errors }) => {
                 required
                 error={!!errors?.namespace}
                 helperText={errors?.namespace}
+                onBlur={handleNamespaceBlur}
               />
             )}
           />
         </Paper>
       </Box>
 
-      {/* Template Actions */}
       <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Button
@@ -347,14 +514,12 @@ const TemplateConfig = ({ config, onChange, errors }) => {
         </Button>
       </Box>
 
-      {/* Error Display */}
       {yamlError && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {yamlError}
         </Alert>
       )}
 
-      {/* Preview Section */}
       <Collapse in={showPreview} sx={{ mb: 2 }}>
         <Paper sx={{ p: 2 }}>
           <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -380,7 +545,6 @@ const TemplateConfig = ({ config, onChange, errors }) => {
         </Paper>
       </Collapse>
 
-      {/* Placeholders Configuration */}
       <Paper sx={{ p: 2 }}>
         <Typography variant="subtitle1" gutterBottom>
           {t('podDeployment:podDeployment.yamlTemplate.placeholders')}
@@ -400,8 +564,11 @@ const TemplateConfig = ({ config, onChange, errors }) => {
               .filter(key => {
                 const matchesFilter = key.toLowerCase().includes(placeholderFilter.toLowerCase());
                 const placeholderCategory = getPlaceholderCategory(key);
-                return matchesFilter && placeholderCategory === category && 
-                       key !== 'repository' && key !== 'tag';
+                return matchesFilter && 
+                       placeholderCategory === category && 
+                       key !== 'namespace' && 
+                       key !== 'repository' && 
+                       key !== 'tag';
               });
 
             if (categoryPlaceholders.length === 0) return null;
@@ -426,25 +593,50 @@ const TemplateConfig = ({ config, onChange, errors }) => {
         </Grid>
       </Paper>
 
-      {/* YAML Editor Dialog */}
       <YamlEditor
         open={editorOpen}
         onClose={() => setEditorOpen(false)}
         content={templateContent}
         deploymentName={config.name}
         templateFile={templateFile}
-        onSave={async (newContent) => {
-          try {
-            setTemplateContent(newContent);
-            parseTemplate(newContent);
-            setEditorOpen(false);
-          } catch (error) {
-            setYamlError('Failed to save template');
-          }
-        }}
+        onSave={handleTemplateContentSave}
         error={yamlError}
         onTemplateChange={handleTemplateChange}
       />
+
+      <Dialog
+        open={createNamespaceDialog}
+        onClose={() => setCreateNamespaceDialog(false)}
+      >
+        <DialogTitle>
+          {t('podDeployment:podDeployment.namespace.createTitle')}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {t('podDeployment:podDeployment.namespace.createConfirm', {
+              namespace: newNamespace
+            })}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => {
+            setCreateNamespaceDialog(false);
+            onChange({
+              ...config,
+              namespace: ''
+            });
+          }}>
+            {t('common:common.cancel')}
+          </Button>
+          <Button 
+            onClick={handleCreateNamespace} 
+            variant="contained"
+            color="primary"
+          >
+            {t('common:common.create')}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

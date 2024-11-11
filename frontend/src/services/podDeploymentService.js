@@ -224,7 +224,27 @@ export const podDeploymentService = {
       console.error('Failed to fetch storage classes:', error);
       throw error;
     }
-  }
+  },
+
+  // Create new namespace
+  async createNamespace(namespace) {
+    try {
+      console.log('📝 Creating new namespace:', namespace);
+      const headers = getAuthHeaders();
+      
+      const response = await axios.post(
+        `${API_URL}/api/k8s/namespaces`,
+        { namespace },
+        headers
+      );
+      
+      console.log('✅ Namespace created successfully:', response.data);
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('❌ Failed to create namespace:', error);
+      throw error;
+    }
+  },
 };
 
 export default podDeploymentService;

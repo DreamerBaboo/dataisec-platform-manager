@@ -465,7 +465,7 @@ class K8sService {
     }
   }
 
-  // 保存儲存配置
+  // 保��儲存配置
   async saveStorageConfig(name, version, storageClassYaml, persistentVolumeYaml) {
     try {
       const deploymentDir = path.join(__dirname, '../deploymentTemplate', name);
@@ -578,6 +578,39 @@ class K8sService {
       return filePath;
     } catch (error) {
       console.error('❌ Failed to save namespace YAML:', error);
+      throw error;
+    }
+  }
+
+  async createNamespace(namespace) {
+    try {
+      console.log('📝 Creating K8s namespace:', namespace);
+
+      const namespaceManifest = {
+        apiVersion: 'v1',
+        kind: 'Namespace',
+        metadata: {
+          name: namespace
+        }
+      };
+
+      const response = await this.k8sApi.createNamespace(namespaceManifest);
+      console.log('✅ Namespace created:', response.body);
+      return response.body;
+    } catch (error) {
+      console.error('❌ Failed to create namespace:', error);
+      throw error;
+    }
+  }
+
+  async namespaceExists(namespace) {
+    try {
+      await this.k8sApi.readNamespace(namespace);
+      return true;
+    } catch (error) {
+      if (error.response?.statusCode === 404) {
+        return false;
+      }
       throw error;
     }
   }
