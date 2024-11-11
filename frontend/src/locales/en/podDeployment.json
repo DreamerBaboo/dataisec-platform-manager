@@ -366,7 +366,9 @@
       "reclaimPolicy": "Reclaim Policy",
       "volumeBindingMode": "Volume Binding Mode",
       "nodeHostname": "Node Hostname",
-      "preview": "Configuration Preview"
+      "preview": "Configuration Preview",
+      "storageClassConfiguration": "Storage Class Configuration",
+      "persistentVolumes": "Persistent Volumes"
     },
     "configMap": {
       "title": "ConfigMap Configuration",

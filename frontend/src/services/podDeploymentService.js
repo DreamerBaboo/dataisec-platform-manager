@@ -245,6 +245,38 @@ export const podDeploymentService = {
       throw error;
     }
   },
+
+  // Get nodes
+  async getNodes() {
+    try {
+      console.log('📥 Fetching nodes');
+      const response = await axios.get(
+        `${API_URL}/api/k8s/nodes`,
+        getAuthHeaders()
+      );
+      console.log('✅ Nodes fetched:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Failed to fetch nodes:', error);
+      throw error;
+    }
+  },
+
+  // Get node details
+  async getNodeDetails(nodeName) {
+    try {
+      console.log('📥 Fetching node details:', nodeName);
+      const response = await axios.get(
+        `${API_URL}/api/k8s/nodes/${nodeName}`,
+        getAuthHeaders()
+      );
+      console.log('✅ Node details fetched:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Failed to fetch node details:', error);
+      throw error;
+    }
+  },
 };
 
 export default podDeploymentService;

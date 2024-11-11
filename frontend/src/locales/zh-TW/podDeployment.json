@@ -154,7 +154,9 @@
       "cephfs": "CephFS",
       "csi": "CSI",
       "secretName": "密鑰名稱",
-      "configMapName": "配置映射名稱"
+      "configMapName": "配置映射名稱",
+      "storageClassConfiguration": "Storage Class Configuration",
+      "persistentVolumes": "Persistent Volumes"
     },
     "configMaps": {
       "title": "配置映射",
@@ -246,7 +248,9 @@
       "volume": {
         "name": "存儲卷名稱不能為空",
         "mountPath": "掛載路徑不能為空",
-        "source": "存儲卷來源不能為空"
+        "source": "存儲卷來源不能為空",
+        "storageClassConfiguration": "Storage Class Configuration",
+        "persistentVolumes": "Persistent Volumes" 
       },
       "configMap": {
         "name": "ConfigMap 名稱不能為空",

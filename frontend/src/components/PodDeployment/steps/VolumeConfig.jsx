@@ -35,10 +35,9 @@ const VolumeConfig = ({ config, onChange, errors = {} }) => {
   const [localErrors, setLocalErrors] = useState({});
   const [createStorageClassDialog, setCreateStorageClassDialog] = useState(false);
   const [newStorageClass, setNewStorageClass] = useState({
-    name: '',
-    provisioner: 'kubernetes.io/no-provisioner',
     reclaimPolicy: 'Retain',
-    volumeBindingMode: 'WaitForFirstConsumer'
+    volumeBindingMode: 'WaitForFirstConsumer',
+    provisioner: 'kubernetes.io/no-provisioner'
   });
 
   // 當組件掛載時加載現有配置
@@ -181,7 +180,7 @@ const VolumeConfig = ({ config, onChange, errors = {} }) => {
         volumeMode: 'Filesystem',
         accessModes: ['ReadWriteOnce'],
         persistentVolumeReclaimPolicy: 'Retain',
-        storageClassName: config?.name ? `${config.name}-${config.version}-storageclass` : '',
+        storageClassName: config?.name ? `${config.name}-storageclass` : '',
         local: {
           path: '/data'
         },
@@ -306,7 +305,7 @@ const VolumeConfig = ({ config, onChange, errors = {} }) => {
     return `apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  name: ${config.name}-${config.version}-storageclass
+  name: ${config.name}-storageclass
 provisioner: kubernetes.io/no-provisioner
 reclaimPolicy: Retain
 volumeBindingMode: WaitForFirstConsumer
@@ -330,7 +329,7 @@ spec:
   accessModes:
     - ${pv.accessModes[0]}
   persistentVolumeReclaimPolicy: ${pv.persistentVolumeReclaimPolicy}
-  storageClassName: ${config.name}-${config.version}-storageclass
+  storageClassName: ${config.name}-storageclass
   local:
     path: ${pv.local.path}
   nodeAffinity:
@@ -392,15 +391,22 @@ spec:
   const handleCreateStorageClass = async () => {
     try {
       setLoading(true);
+      
+      // Storage class name is automatically set
+      const storageClassConfig = {
+        ...newStorageClass,
+        name: `${config.name}-storageclass` // Automatic name generation
+      };
+
       await podDeploymentService.createStorageClass(
         config.name,
         config.version,
-        newStorageClass
+        storageClassConfig
       );
-      
-      setShowStorageClass(true);
+
       setCreateStorageClassDialog(false);
-      
+      setShowStorageClass(true);
+
       // Refresh storage configuration
       const response = await podDeploymentService.getStorageConfig(config.name, config.version);
       if (response.storageClassYaml) {
@@ -431,20 +437,14 @@ spec:
       {/* StorageClass 配置 */}
       <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="h6">
-          Storage Class Configuration
+          {t('podDeployment:podDeployment.volume.storageClassConfiguration')}
         </Typography>
-        <Button
-          variant="contained"
-          onClick={() => setShowStorageClass(prev => !prev)}
-        >
-          {showStorageClass ? 'Hide Storage Class' : 'Create Storage Class'}
-        </Button>
       </Box>
 
       {showStorageClass && (
         <Paper sx={{ p: 2, mb: 2 }}>
           <Typography variant="h6" gutterBottom>
-            Storage Class Configuration
+            {t('podDeployment:podDeployment.volume.storageClassConfiguration')}
           </Typography>
           <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
             {generateStorageClassYaml()}
@@ -601,17 +601,16 @@ spec:
         </DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
+            {/* Display storage class name */}
             <Grid item xs={12}>
               <TextField
                 fullWidth
+                disabled
+                value={`${config.name}-storageclass`}
                 label={t('podDeployment:podDeployment.volume.storageClassName')}
-                value={newStorageClass.name}
-                onChange={(e) => setNewStorageClass(prev => ({
-                  ...prev,
-                  name: e.target.value
-                }))}
               />
             </Grid>
+            {/* Reclaim Policy selection */}
             <Grid item xs={12}>
               <FormControl fullWidth>
                 <InputLabel>

@@ -15,6 +15,7 @@ import {
 } from '@mui/material';
 import { useAppTranslation } from '../../../hooks/useAppTranslation';
 import axios from 'axios';
+import { podDeploymentService } from '../../../services/podDeploymentService';
 
 const RepositoryConfig = ({ config, onChange, errors }) => {
   const { t } = useAppTranslation();
@@ -89,42 +90,65 @@ const RepositoryConfig = ({ config, onChange, errors }) => {
     }
   }, [config.repository]);
 
-  const handleRepositoryChange = (event, newValue) => {
-    onChange({
-      ...config,
-      repository: newValue,
-      tag: '',
-      yamlTemplate: {
-        ...config.yamlTemplate,
-        placeholders: {
-          ...config.yamlTemplate.placeholders,
-          repository: newValue
+  const handleRepositoryChange = async (event, newValue) => {
+    try {
+      const updatedConfig = {
+        ...config,
+        repository: newValue,
+        tag: '',
+        yamlTemplate: {
+          ...config.yamlTemplate,
+          placeholders: {
+            ...config.yamlTemplate?.placeholders,
+            repository: newValue,
+            tag: ''
+          }
         }
-      }
-    });
+      };
+
+      onChange(updatedConfig);
+
+      await podDeploymentService.saveDeploymentConfig(
+        config.name,
+        config.version,
+        updatedConfig
+      );
+
+      console.log('✅ Repository saved to config.json:', newValue);
+    } catch (error) {
+      console.error('Failed to save repository to config.json:', error);
+    }
   };
 
-  const handleTagChange = (event) => {
-    const newTag = event.target.value;
-    onChange({
-      ...config,
-      tag: newTag,
-      yamlTemplate: {
-        ...config.yamlTemplate,
-        placeholders: {
-          ...config.yamlTemplate.placeholders,
-          tag: newTag
-        }
-      }
-    });
-  };
+  const handleTagChange = async (event) => {
+    try {
+      const newTag = event.target.value;
 
-  // const handlePortChange = (event) => {
-  //   onChange({
-  //     ...config,
-  //     port: event.target.value
-  //   });
-  // };
+      const updatedConfig = {
+        ...config,
+        tag: newTag,
+        yamlTemplate: {
+          ...config.yamlTemplate,
+          placeholders: {
+            ...config.yamlTemplate?.placeholders,
+            tag: newTag
+          }
+        }
+      };
+
+      onChange(updatedConfig);
+
+      await podDeploymentService.saveDeploymentConfig(
+        config.name,
+        config.version,
+        updatedConfig
+      );
+
+      console.log('✅ Tag saved to config.json:', newTag);
+    } catch (error) {
+      console.error('Failed to save tag to config.json:', error);
+    }
+  };
 
   const handleSearchChange = (event) => {
     const term = event.target.value;
@@ -185,17 +209,6 @@ const RepositoryConfig = ({ config, onChange, errors }) => {
               </Select>
             </FormControl>
           </Grid>
-          {/* <Grid item xs={12} md={3}>
-            <TextField
-              fullWidth
-              type="number"
-              label={t('podDeployment:repository.port')}
-              value={config.port || ''}
-              onChange={handlePortChange}
-              error={!!errors?.port}
-              helperText={errors?.port}
-            />
-          </Grid> */}
         </Grid>
       </Paper>
       {error && (

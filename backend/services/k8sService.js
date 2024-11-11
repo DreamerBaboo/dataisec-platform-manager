@@ -327,16 +327,43 @@ class K8sService {
 
   async getNodes() {
     try {
-      const response = await this.k8sApi.listNode();
-      return response.body.items.map(node => ({
+      const { body } = await this.k8sApi.listNode();
+      return body.items.map(node => ({
         name: node.metadata.name,
         status: node.status.conditions.find(c => c.type === 'Ready')?.status === 'True' ? 'Ready' : 'NotReady',
-        labels: node.metadata.labels,
-        capacity: node.status.capacity,
-        allocatable: node.status.allocatable
+        roles: Object.keys(node.metadata.labels)
+          .filter(label => label.startsWith('node-role.kubernetes.io/'))
+          .map(label => label.replace('node-role.kubernetes.io/', '')),
+        version: node.status.nodeInfo.kubeletVersion,
+        internalIP: node.status.addresses.find(addr => addr.type === 'InternalIP')?.address,
+        hostname: node.status.addresses.find(addr => addr.type === 'Hostname')?.address
       }));
     } catch (error) {
       console.error('Failed to get nodes:', error);
+      throw error;
+    }
+  }
+
+  // Get node details
+  async getNodeDetails(nodeName) {
+    try {
+      const { body } = await this.k8sApi.readNode(nodeName);
+      return {
+        name: body.metadata.name,
+        status: body.status.conditions.find(c => c.type === 'Ready')?.status === 'True' ? 'Ready' : 'NotReady',
+        roles: Object.keys(body.metadata.labels)
+          .filter(label => label.startsWith('node-role.kubernetes.io/'))
+          .map(label => label.replace('node-role.kubernetes.io/', '')),
+        version: body.status.nodeInfo.kubeletVersion,
+        internalIP: body.status.addresses.find(addr => addr.type === 'InternalIP')?.address,
+        hostname: body.status.addresses.find(addr => addr.type === 'Hostname')?.address,
+        capacity: body.status.capacity,
+        allocatable: body.status.allocatable,
+        conditions: body.status.conditions,
+        nodeInfo: body.status.nodeInfo
+      };
+    } catch (error) {
+      console.error('Failed to get node details:', error);
       throw error;
     }
   }
@@ -465,7 +492,7 @@ class K8sService {
     }
   }
 
-  // 保��儲存配置
+  // 保存儲存配置
   async saveStorageConfig(name, version, storageClassYaml, persistentVolumeYaml) {
     try {
       const deploymentDir = path.join(__dirname, '../deploymentTemplate', name);

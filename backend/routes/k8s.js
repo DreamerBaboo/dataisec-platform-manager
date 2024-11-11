@@ -163,4 +163,27 @@ router.post('/namespaces', authenticateToken, async (req, res) => {
   }
 });
 
+// Get nodes
+router.get('/nodes', authenticateToken, async (req, res) => {
+  try {
+    const nodes = await k8sService.getNodes();
+    res.json(nodes);
+  } catch (error) {
+    console.error('Failed to get nodes:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get node details
+router.get('/nodes/:name', authenticateToken, async (req, res) => {
+  try {
+    const { name } = req.params;
+    const node = await k8sService.getNodeDetails(name);
+    res.json(node);
+  } catch (error) {
+    console.error('Failed to get node details:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router; 
