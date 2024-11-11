@@ -885,6 +885,57 @@ allowVolumeExpansion: false`;
   }
 };
 
+// Delete storage configuration
+const deleteStorageConfig = async (req, res) => {
+  try {
+    const { name, version, type } = req.params;
+
+    console.log('🗑️ Deleting storage config:', { name, version, type });
+
+    // 構建存儲配置路徑
+    const storagePath = path.join(__dirname, '../deploymentTemplate', name, 'storage');
+    let filesToDelete = [];
+
+    if (type === 'all') {
+      // Delete both storage class and PV files
+      filesToDelete = [
+        path.join(storagePath, `${name}-${version}-storageClass.yaml`),
+        path.join(storagePath, `${name}-${version}-persistentVolumes.yaml`)
+      ];
+    } else if (type === 'storageClass') {
+      filesToDelete = [path.join(storagePath, `${name}-${version}-storageClass.yaml`)];
+    } else if (type === 'persistentVolume') {
+      filesToDelete = [path.join(storagePath, `${name}-${version}-persistentVolumes.yaml`)];
+    } else {
+      return res.status(400).json({
+        error: 'Invalid storage type'
+      });
+    }
+
+    // Delete files
+    for (const file of filesToDelete) {
+      try {
+        await fs.unlink(file);
+        console.log(`✅ Deleted file: ${file}`);
+      } catch (error) {
+        if (error.code !== 'ENOENT') {
+          throw error;
+        }
+      }
+    }
+
+    console.log('✅ Storage config deleted successfully');
+
+    res.json({
+      message: 'Storage configuration deleted successfully'
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to delete storage config:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   generatePreview,
   createDeployment,
@@ -909,5 +960,6 @@ module.exports = {
   saveVersionConfig,
   getStorageConfig,
   saveStorageConfig,
-  createStorageClass
+  createStorageClass,
+  deleteStorageConfig
 }; 

@@ -277,6 +277,39 @@ export const podDeploymentService = {
       throw error;
     }
   },
+
+  // Delete storage configuration
+  async deleteStorageConfig(name, version, type) {
+    try {
+      console.log('🗑️ Deleting storage config:', { name, version, type });
+      const response = await axios.delete(
+        `${API_URL}/api/pod-deployments/${name}/versions/${version}/storage/${type}`,
+        getAuthHeaders()
+      );
+      console.log('✅ Storage configuration deleted:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Failed to delete storage config:', error);
+      throw error;
+    }
+  },
+
+  // Save deploy script
+  async saveDeployScript(name, version, filename, content) {
+    try {
+      console.log('💾 Saving deploy script:', { name, version, filename });
+      const response = await axios.post(
+        `${API_URL}/api/pod-deployments/${name}/versions/${version}/deploy-scripts`,
+        { filename, content },
+        getAuthHeaders()
+      );
+      console.log('✅ Deploy script saved:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Failed to save deploy script:', error);
+      throw error;
+    }
+  },
 };
 
 export default podDeploymentService;

@@ -7,7 +7,7 @@ metadata:
 spec:
   capacity:
     storage: 1Gi
-  volumeMode: Block
+  volumeMode: Filesystem
   accessModes:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
@@ -21,4 +21,29 @@ spec:
         - key: kubernetes.io/hostname
           operator: In
           values:
-          - kind-control-plane
+          - 
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: dataisec-console-pv01
+  labels:
+    type: local
+spec:
+  capacity:
+    storage: 1Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: dataisec-console-storageclass
+  local:
+    path: /data
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - 

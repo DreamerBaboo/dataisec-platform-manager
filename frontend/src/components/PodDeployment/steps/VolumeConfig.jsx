@@ -18,12 +18,13 @@ import {
   DialogContent,
   DialogActions
 } from '@mui/material';
-import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { Add as AddIcon, Delete as DeleteIcon, Visibility as VisibilityIcon, VisibilityOff as VisibilityOffIcon } from '@mui/icons-material';
 import { useAppTranslation } from '../../../hooks/useAppTranslation';
 import axios from 'axios';
 import YAML from 'yaml';
 import PropTypes from 'prop-types';
 import { podDeploymentService } from '../../../services/podDeploymentService';
+import path from 'path';
 
 const VolumeConfig = ({ config, onChange, errors = {} }) => {
   const { t } = useAppTranslation();
@@ -39,6 +40,7 @@ const VolumeConfig = ({ config, onChange, errors = {} }) => {
     volumeBindingMode: 'WaitForFirstConsumer',
     provisioner: 'kubernetes.io/no-provisioner'
   });
+  const [showStoragePreview, setShowStoragePreview] = useState(false);
 
   // 當組件掛載時加載現有配置
   useEffect(() => {
@@ -365,7 +367,7 @@ spec:
   accessModes:
     - ${pv.accessModes[0]}
   persistentVolumeReclaimPolicy: ${pv.persistentVolumeReclaimPolicy}
-  storageClassName: ${config?.name}-${config?.version}-storageclass
+  storageClassName: ${config?.name}-storageclass
   local:
     path: ${pv.local.path}
   nodeAffinity:
@@ -420,6 +422,64 @@ spec:
     }
   };
 
+  // Delete storage class and PV files
+  const handleDeleteStorageClass = async () => {
+    try {
+      setLoading(true);
+      await podDeploymentService.deleteStorageConfig(
+        config.name,
+        config.version,
+        'all' // Delete both storage class and PV files
+      );
+      setShowStorageClass(false);
+      setPersistentVolumes([]);
+    } catch (error) {
+      console.error('Failed to delete storage configuration:', error);
+      setError(t('podDeployment:errors.failedToDeleteStorage'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Delete PV file if no PVs configured
+  useEffect(() => {
+    const deletePVFileIfEmpty = async () => {
+      if (persistentVolumes.length === 0) {
+        try {
+          await podDeploymentService.deleteStorageConfig(
+            config.name,
+            config.version,
+            'persistentVolume'
+          );
+        } catch (error) {
+          console.error('Failed to delete empty PV file:', error);
+        }
+      }
+    };
+
+    deletePVFileIfEmpty();
+  }, [persistentVolumes.length, config.name, config.version]);
+
+  // Save to deploy-scripts folder when navigating
+  const handleNext = async () => {
+    try {
+      const deployScriptsPath = path.join('deploymentTemplate', config.name, 'deploy-scripts');
+      const combinedYaml = generatePreview();
+      
+      if (combinedYaml) {
+        await podDeploymentService.saveDeployScript(
+          config.name,
+          config.version,
+          'storage.yaml',
+          combinedYaml
+        );
+      }
+    } catch (error) {
+      console.error('Failed to save deploy script:', error);
+      setError(t('podDeployment:errors.failedToSaveDeployScript'));
+    }
+  };
+
   return (
     <Box>
       {loading && (
@@ -434,37 +494,87 @@ spec:
         </Alert>
       )}
 
-      {/* StorageClass 配置 */}
+      {/* Storage Preview Toggle Button */}
+      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
+        <Button
+          variant="outlined"
+          startIcon={showStoragePreview ? <VisibilityOffIcon /> : <VisibilityIcon />}
+          onClick={() => setShowStoragePreview(!showStoragePreview)}
+        >
+          {showStoragePreview 
+            ? t('podDeployment:podDeployment.yamlTemplate.hidePreview')
+            : t('podDeployment:podDeployment.yamlTemplate.showPreview')
+          }
+        </Button>
+      </Box>
+
+      {/* StorageClass Configuration */}
       <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="h6">
           {t('podDeployment:podDeployment.volume.storageClassConfiguration')}
         </Typography>
+        {showStorageClass && (
+          <Button
+            variant="outlined"
+            color="error"
+            onClick={handleDeleteStorageClass}
+          >
+            {t('common:common.delete')}
+          </Button>
+        )}
       </Box>
 
-      {showStorageClass && (
-        <Paper sx={{ p: 2, mb: 2 }}>
+      {/* Storage Preview */}
+      {showStoragePreview && (showStorageClass || persistentVolumes.length > 0) && (
+        <Paper sx={{ p: 2, mb: 3 }}>
           <Typography variant="h6" gutterBottom>
+            {t('podDeployment:podDeployment.volume.preview')}
+          </Typography>
+          <pre style={{ 
+            margin: 0, 
+            whiteSpace: 'pre-wrap',
+            backgroundColor: '#f5f5f5',
+            padding: '16px',
+            borderRadius: '4px',
+            fontSize: '14px'
+          }}>
+            {generatePreview()}
+          </pre>
+        </Paper>
+      )}
+
+      {/* StorageClass Content */}
+      {showStorageClass && (
+        <Paper sx={{ p: 2, mb: 3 }}>
+          <Typography variant="subtitle1" gutterBottom>
             {t('podDeployment:podDeployment.volume.storageClassConfiguration')}
           </Typography>
-          <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
+          <pre style={{ 
+            margin: 0, 
+            whiteSpace: 'pre-wrap',
+            backgroundColor: '#f5f5f5',
+            padding: '16px',
+            borderRadius: '4px',
+            fontSize: '14px'
+          }}>
             {generateStorageClassYaml()}
           </pre>
         </Paper>
       )}
 
-      {/* PersistentVolume 配置 - 只在有 StorageClass 時顯示 */}
+      {/* PersistentVolume Configuration */}
       {showStorageClass && (
         <Box sx={{ mt: 3 }}>
           <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="h6">
-              Persistent Volumes
+              {t('podDeployment:podDeployment.volume.persistentVolumes')}
             </Typography>
             <Button
               startIcon={<AddIcon />}
               onClick={handleAddPersistentVolume}
               variant="contained"
             >
-              Add Persistent Volume
+              {t('podDeployment:podDeployment.volume.add')}
             </Button>
           </Box>
 
@@ -568,18 +678,7 @@ spec:
         </Box>
       )}
 
-      {/* YAML 預覽 */}
-      {(showStorageClass || persistentVolumes.length > 0) && (
-        <Paper sx={{ p: 2, mt: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            Configuration Preview
-          </Typography>
-          <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
-            {generatePreview()}
-          </pre>
-        </Paper>
-      )}
-
+      {/* Create Storage Class Dialog */}
       {!showStorageClass && (
         <Box sx={{ mt: 2 }}>
           <Button

@@ -675,4 +675,7 @@ router.get('/:name/storage', authenticateToken, podDeploymentController.getStora
 router.post('/:name/versions/:version/storage', authenticateToken, podDeploymentController.saveStorageConfig);
 router.post('/:name/versions/:version/storage-class', authenticateToken, podDeploymentController.createStorageClass);
 
+// Add delete storage route
+router.delete('/:name/versions/:version/storage/:type', authenticateToken, podDeploymentController.deleteStorageConfig);
+
 module.exports = router; 
