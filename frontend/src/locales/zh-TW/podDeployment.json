@@ -26,7 +26,7 @@
       "secretConfig": "Secret 配置",
       "affinityConfig": "親和性配置",
       "review": "審核",
-      "deploy": "部署",
+      "deploy": "署",
       "uploadTemplate": "上傳模板",
       "uploadTemplateFile": "請上傳模板文件",
       "uploadTemplateSuccess": "模板上傳成功",
@@ -199,6 +199,49 @@
         "deployment": "部署配置",
         "node": "節點配置",
         "misc": "其他配置"
+      },
+      "quotaTitle": "命名空間配額",
+      "storageClassTitle": "儲存類別",
+      "persistentVolumeTitle": "持久化儲存",
+      "configMapTitle": "配置映射",
+      "secretTitle": "密鑰",
+      "showYaml": "顯示 YAML",
+      "hideYaml": "隱藏 YAML",
+      "yamlPreview": "YAML 預覽",
+      "loading": "正在載入 YAML...",
+      "noYaml": "沒有可用的 YAML 文件",
+      "yamlFiles": "YAML 文件",
+      "configurationFiles": "配置文件",
+      "filePreview": "文件預覽",
+      "saveSuccess": "YAML 文件保存成功",
+      "saveError": "保存 YAML 文件失敗",
+      "loadError": "載入 YAML 文件失敗",
+      "noConfigAvailable": "沒有可用的配置",
+      "categories": {
+        "quota": "資源配額",
+        "storage": "儲存配置",
+        "configMap": "配置映射",
+        "secret": "密鑰配置",
+        "deployment": "部署配置"
+      },
+      "actions": {
+        "showPreview": "顯示預覽",
+        "hidePreview": "隱藏預覽",
+        "save": "保存 YAML",
+        "close": "關閉預覽",
+        "viewYaml": "查看 YAML"
+      },
+      "status": {
+        "loading": "正在載入 YAML 文件...",
+        "saving": "正在保存 YAML 文件...",
+        "saved": "YAML 文件已保存",
+        "error": "發生錯誤"
+      },
+      "tooltips": {
+        "showYaml": "顯示 YAML 內容",
+        "hideYaml": "隱藏 YAML 內容",
+        "saveYaml": "保存 YAML 文件",
+        "viewFile": "查看文件內容"
       }
     },
     "logs": {
@@ -225,7 +268,7 @@
       "errors": "配置驗證錯誤",
       "name": {
         "required": "部署名稱不能為空",
-        "format": "部署名稱只能包含小���母、數字和連字符，且必須以字母或數字開頭和結尾"
+        "format": "部署名稱只能包含小母、數字和連字符，且必須以字母或數字開頭和結尾"
       },
       "namespace": {
         "required": "命名空間不能為空"

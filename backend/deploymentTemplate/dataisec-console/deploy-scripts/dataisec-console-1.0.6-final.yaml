@@ -1,6 +1,6 @@
 # values.yaml
 name: dataisec-console
-replicaCount: 2 #[1, 2, 3, 4, 5, 6]
+replicaCount: 1 #[1, 2, 3, 4, 5, 6]
 
 image:
   repository: 192.168.170.135:5000/dataisec-console #[localhost] #[5000, 5001]
@@ -32,10 +32,10 @@ ingress:
 
 resources:
   limits:
-    cpu: 2000m #[1000m, 2000m, 3000m, 4000m, 5000m]
+    cpu: 1000m #[1000m, 2000m, 3000m, 4000m, 5000m]
     memory: 2Gi #[2Gi]
   requests:
-    cpu: 300m #[100m, 200m, 300m, 400m, 500m]
+    cpu: 500m #[100m, 200m, 300m, 400m, 500m]
     memory: 128Mi #[128Mi]
 
 autoscaling:

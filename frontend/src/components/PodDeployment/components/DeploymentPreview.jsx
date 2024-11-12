@@ -1,399 +1,446 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
   Paper,
   Grid,
-  Alert,
   Button,
   Tabs,
   Tab,
-  Divider,
-  List,
-  ListItem,
-  ListItemText,
-  IconButton
+  CircularProgress,
+  Divider
 } from '@mui/material';
+import {
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon
+} from '@mui/icons-material';
 import Editor from '@monaco-editor/react';
 import { useAppTranslation } from '../../../hooks/useAppTranslation';
-import { useSnackbar } from 'notistack';
-import yaml from 'js-yaml';
-import {
-  Code as CodeIcon,
-  Visibility as VisibilityIcon,
-  Save as SaveIcon 
-} from '@mui/icons-material';
 import { podDeploymentService } from '../../../services/podDeploymentService';
+import YAML from 'yaml';
 
-const PLACEHOLDER_CATEGORIES = {
-  basic: ['name', 'namespace', 'version'],
-  image: ['repository', 'repository_port', 'tag'],
-  service: ['service_port', 'target_service_port', 'node_port', 'web_port'],
-  resources: ['cpu_limit', 'memory_limit', 'cpu_request', 'memory_request'],
-  deployment: ['replica_count'],
-  node: ['node_selector', 'site_node'],
-  misc: ['company_name']
+const YAML_TYPES = {
+  QUOTA: 'quota',
+  STORAGE_CLASS: 'storageClass',
+  PERSISTENT_VOLUME: 'persistentVolume',
+  CONFIGMAP: 'configMap',
+  SECRET: 'secret',
+  FINAL: 'final'
 };
 
-const CONFIG_SECTIONS = {
-  basic: {
-    title: 'Basic Configuration',
-    fields: ['name', 'namespace', 'version']
-  },
-  resources: {
-    title: 'Resource Configuration',
-    fields: ['cpu', 'memory', 'storage']
-  },
-  affinity: {
-    title: 'Affinity Rules',
-    fields: ['nodeAffinity', 'podAffinity', 'podAntiAffinity']
-  },
-  volumes: {
-    title: 'Volume Configuration',
-    fields: ['persistentVolumes', 'configMapVolumes', 'secretVolumes']
-  },
-  configMaps: {
-    title: 'ConfigMaps',
-    fields: ['data', 'binaryData']
-  },
-  secrets: {
-    title: 'Secrets',
-    fields: ['data']
-  }
+// Define the order of YAML files
+const YAML_ORDER = [
+  YAML_TYPES.QUOTA,
+  YAML_TYPES.STORAGE_CLASS,
+  YAML_TYPES.PERSISTENT_VOLUME,
+  YAML_TYPES.CONFIGMAP,
+  YAML_TYPES.SECRET,
+  YAML_TYPES.FINAL
+];
+
+const PLACEHOLDER_CATEGORIES = {
+  basic: ['name', 'namespace', 'version', 'type'],
+  image: ['repository', 'tag', 'pullPolicy'],
+  resources: ['cpu_request', 'cpu_limit', 'memory_request', 'memory_limit'],
+  replicas: ['replica_count'],
+  service: ['service_port', 'target_port', 'node_port'],
+  affinity: ['node_selector', 'pod_affinity', 'pod_anti_affinity']
 };
 
 const DeploymentPreview = ({ config, onDeploy, onBack }) => {
   const { t } = useAppTranslation();
-  const { enqueueSnackbar } = useSnackbar();
-  const [showYaml, setShowYaml] = useState(false);
-  const [saveError, setSaveError] = useState(null);
-  const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('summary');
-  const [selectedYamlFile, setSelectedYamlFile] = useState(null);
+  const [yamlContents, setYamlContents] = useState({});
+  const [showYamlPreviews, setShowYamlPreviews] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
 
-  const getPlaceholderCategory = (placeholder) => {
-    for (const [category, items] of Object.entries(PLACEHOLDER_CATEGORIES)) {
-      if (items.some(item => placeholder.toLowerCase().includes(item))) {
-        return category;
-      }
-    }
-    return 'misc';
-  };
+  // Basic Configuration Section
+  const renderBasicConfig = () => (
+    <Paper sx={{ p: 3, mb: 3 }}>
+      <Typography variant="h6" gutterBottom>
+        {t('podDeployment:podDeployment.preview.basicConfig')}
+      </Typography>
+      <Grid container spacing={2}>
+        <Grid item xs={12} sm={6}>
+          <Typography variant="subtitle2" color="textSecondary">
+            {t('podDeployment:podDeployment.basic.name')}
+          </Typography>
+          <Typography>{config.name}</Typography>
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <Typography variant="subtitle2" color="textSecondary">
+            {t('podDeployment:podDeployment.basic.namespace')}
+          </Typography>
+          <Typography>{config.namespace}</Typography>
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <Typography variant="subtitle2" color="textSecondary">
+            {t('podDeployment:podDeployment.basic.version')}
+          </Typography>
+          <Typography>{config.version}</Typography>
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <Typography variant="subtitle2" color="textSecondary">
+            {t('podDeployment:podDeployment.basic.type')}
+          </Typography>
+          <Typography>{config.type}</Typography>
+        </Grid>
+      </Grid>
+    </Paper>
+  );
 
-  const generateYamlPreview = () => {
-    if (!config.yamlTemplate?.content) return '';
-
-    let preview = config.yamlTemplate.content;
-    Object.entries(config.yamlTemplate.placeholders || {}).forEach(([key, value]) => {
-      const regex = new RegExp(`\\$\\{${key}\\}`, 'gi');
-      preview = preview.replace(regex, value || '');
-    });
-    return preview;
-  };
-
-  const handleSave = async () => {
-    try {
-      setIsSaving(true);
-      setSaveError(null);
-
-      const yamlContent = generateYamlPreview();
-      
-      // Validate YAML format
-      try {
-        yaml.load(yamlContent);
-      } catch (yamlError) {
-        throw new Error(`Invalid YAML format: ${yamlError.message}`);
-      }
-
-      // Save to deploy-scripts folder with -final suffix
-      const fileName = `${config.name}-${config.version}-final.yaml`;
-      await podDeploymentService.saveDeployScript(
-        config.name,
-        config.version,
-        fileName,
-        yamlContent
-      );
-
-      enqueueSnackbar(t('podDeployment:podDeployment.preview.saveSuccess'), {
-        variant: 'success'
-      });
-
-    } catch (error) {
-      console.error('Failed to save configuration:', error);
-      setSaveError(error.message || t('podDeployment:podDeployment.preview.saveError'));
-      enqueueSnackbar(t('podDeployment:podDeployment.preview.saveError'), {
-        variant: 'error'
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const renderPlaceholdersByCategory = () => {
-    const categorizedPlaceholders = {};
-    
-    Object.entries(config.yamlTemplate?.placeholders || {}).forEach(([key, value]) => {
-      const category = getPlaceholderCategory(key);
-      if (!categorizedPlaceholders[category]) {
-        categorizedPlaceholders[category] = [];
-      }
-      categorizedPlaceholders[category].push({ key, value });
-    });
-
-    return (
+  // Placeholder Categories Section
+  const renderPlaceholderCategories = () => (
+    <Paper sx={{ p: 3 }}>
+      <Typography variant="h6" gutterBottom>
+        {t('podDeployment:podDeployment.preview.placeholders')}
+      </Typography>
       <Grid container spacing={3}>
-        {Object.entries(categorizedPlaceholders).map(([category, placeholders]) => (
-          <Grid item xs={12} md={6} key={category}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="h6" gutterBottom>
-                {t(`podDeployment:podDeployment.preview.categories.${category}`)}
-              </Typography>
-              {placeholders.map(({ key, value }) => (
-                <Box key={key} sx={{ mt: 2 }}>
-                  <Typography variant="subtitle2">{key}</Typography>
-                  <Typography>{value || '-'}</Typography>
-                </Box>
-              ))}
-            </Paper>
+        {Object.entries(PLACEHOLDER_CATEGORIES).map(([category, fields]) => (
+          <Grid item xs={12} key={category}>
+            <Typography variant="subtitle1" gutterBottom>
+              {t(`podDeployment:podDeployment.preview.categories.${category}`)}
+            </Typography>
+            <Grid container spacing={2}>
+              {fields.map(field => {
+                const value = config.yamlTemplate?.placeholders?.[field];
+                if (!value) return null;
+                return (
+                  <Grid item xs={12} sm={6} key={field}>
+                    <Typography variant="subtitle2" color="textSecondary">
+                      {t(`podDeployment:podDeployment.preview.fields.${field}`)}
+                    </Typography>
+                    <Typography>{value}</Typography>
+                  </Grid>
+                );
+              })}
+            </Grid>
+            <Divider sx={{ my: 2 }} />
           </Grid>
         ))}
       </Grid>
-    );
-  };
+    </Paper>
+  );
 
-  const generateConfigFiles = () => {
-    const files = {};
+  // Load YAML files when component mounts
+  useEffect(() => {
+    const loadYamlFiles = async () => {
+      if (!config?.name || !config?.version) return;
+      setIsLoading(true);
 
-    // 只有在有必要的配置時才生成相應的文件
-    const deploymentYaml = generateDeploymentYaml();
-    if (deploymentYaml) {
-      files['deployment.yaml'] = deploymentYaml;
-    }
+      try {
+        const yamlFiles = {
+          [YAML_TYPES.QUOTA]: `${config.name}-${config.version}-quota.yaml`,
+          [YAML_TYPES.STORAGE_CLASS]: `${config.name}-${config.version}-storageClass.yaml`,
+          [YAML_TYPES.PERSISTENT_VOLUME]: `${config.name}-${config.version}-persistentVolumes.yaml`,
+          [YAML_TYPES.CONFIGMAP]: `${config.name}-${config.version}-configmap.yaml`,
+          [YAML_TYPES.SECRET]: `${config.name}-${config.version}-secret.yaml`
+        };
+        console.log('yamlFiles: ', config);
 
-    if (config.service) {
-      files['service.yaml'] = generateServiceYaml();
-    }
-
-    if (config.configMaps?.length > 0) {
-      files['configmap.yaml'] = generateConfigMapYaml();
-    }
-
-    if (config.secrets?.length > 0) {
-      files['secret.yaml'] = generateSecretYaml();
-    }
-
-    if (config.volumes?.length > 0) {
-      files['volumes.yaml'] = generateVolumeYaml();
-    }
-
-    return files;
-  };
-
-  const generateDeploymentYaml = () => {
-    // 檢查必要的配置是否存在
-    if (!config || !config.name) {
-      console.warn('Missing required configuration');
-      return '';
-    }
-
-    // 基本部署配置
-    const deployment = {
-      apiVersion: 'apps/v1',
-      kind: 'Deployment',
-      metadata: {
-        name: config.name,
-        namespace: config.namespace || 'default'
-      },
-      spec: {
-        replicas: config.replicas || 1,
-        selector: {
-          matchLabels: {
-            app: config.name
-          }
-        },
-        template: {
-          metadata: {
-            labels: {
-              app: config.name
+        const contents = {};
+        for (const [type, filename] of Object.entries(yamlFiles)) {
+          try {
+            console.log(`📥 Loading ${type} YAML:`, filename);
+            const response = await podDeploymentService.getDeployScript(
+              config.name,
+              config.version,
+              filename
+            );
+            if (response?.content) {
+              contents[type] = response.content;
+              console.log(`✅ Loaded ${type} YAML successfully`);
             }
-          },
-          spec: {
-            containers: [{
-              name: config.name,
-              // 安全地訪問 image 配置
-              image: config.image ? `${config.image.repository || ''}:${config.image.tag || 'latest'}` : '',
-              resources: config.resources || {}
-            }]
+          } catch (error) {
+            if (error.response?.status === 404) {
+              console.log(`ℹ️ No ${type} YAML file found`);
+              continue;
+            } else {
+              console.error(`❌ Failed to load ${type} YAML:`, error);
+            }
           }
         }
+        setYamlContents(contents);
+      } catch (error) {
+        console.error('Failed to load YAML files:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    // 有條件地添加其他配置
-    if (config.affinity) {
-      deployment.spec.template.spec.affinity = config.affinity;
-    }
+    loadYamlFiles();
+  }, [config?.name, config?.version]);
 
-    if (config.volumes?.length > 0) {
-      deployment.spec.template.spec.volumes = config.volumes;
-    }
-
-    if (config.configMaps?.length > 0) {
-      if (!deployment.spec.template.spec.volumes) {
-        deployment.spec.template.spec.volumes = [];
-      }
-      config.configMaps.forEach(cm => {
-        deployment.spec.template.spec.volumes.push({
-          name: `${cm.name}-volume`,
-          configMap: {
-            name: cm.name
-          }
-        });
-      });
+  // Function to generate final YAML with replaced values
+  const generateFinalYaml = () => {
+    if (!config?.yamlTemplate?.content) {
+      console.log('❌ No template content found');
+      return '';
     }
 
     try {
-      return yaml.dump(deployment);
+      let finalContent = config.yamlTemplate.content;
+      const placeholders = config.yamlTemplate.placeholders || {};
+
+      // Replace all placeholders in the template
+      Object.entries(placeholders).forEach(([key, value]) => {
+        if (value) {
+          // Create a regex that matches ${key} with optional whitespace
+          const regex = new RegExp(`\\$\\{${key}\\}`, 'gi');
+          console.log('regex == value', regex, value);
+          finalContent = finalContent.replace(regex, value);
+        }
+      });
+      console.log('final Content:', finalContent);
+      // Add namespace if not present in template
+      if (!finalContent.includes('namespace:') && config.namespace) {
+        finalContent = finalContent.replace(
+          /metadata:\s*\n/,
+          `metadata:\n  namespace: ${config.namespace}\n`
+        );
+      }
+
+      console.log('✅ Final YAML generated successfully with placeholders replaced');
+      return finalContent;
     } catch (error) {
-      console.error('Failed to generate deployment YAML:', error);
+      console.error('❌ Failed to generate final YAML:', error);
       return '';
     }
+  };
+
+  // Add effect to save final YAML when entering preview
+  useEffect(() => {
+    const saveFinalYaml = async () => {
+      if (!config?.name || !config?.version || !config?.yamlTemplate?.content) return;
+      
+      try {
+        // Generate final YAML content with replaced placeholders
+        const finalYaml = generateFinalYaml();
+        if (!finalYaml) {
+          console.log('⚠️ No final YAML content to save');
+          return;
+        }
+        
+        // Validate YAML format
+        try {
+          YAML.parse(finalYaml);
+        } catch (yamlError) {
+          console.error('❌ Invalid YAML format:', yamlError);
+          return;
+        }
+        
+        // Save final YAML to deploy-scripts
+        await podDeploymentService.saveDeployScript(
+          config.name,
+          config.version,
+          `${config.name}-${config.version}-final.yaml`,
+          finalYaml
+        );
+        
+        console.log('✅ Final YAML saved successfully');
+        
+        // Load the final YAML into the preview
+        setYamlContents(prev => ({
+          ...prev,
+          [YAML_TYPES.FINAL]: finalYaml
+        }));
+      } catch (error) {
+        console.error('❌ Failed to save final YAML:', error);
+      }
+    };
+
+    saveFinalYaml();
+  }, [config?.name, config?.version, config?.yamlTemplate?.content, config?.yamlTemplate?.placeholders]);
+
+  const toggleYamlPreview = (type) => {
+    setShowYamlPreviews(prev => ({
+      ...prev,
+      [type]: !prev[type]
+    }));
+  };
+
+  const renderYamlPreview = (type) => {
+    const content = yamlContents[type];
+    if (!content) return null;
+
+    const titleMap = {
+      [YAML_TYPES.QUOTA]: t('podDeployment:podDeployment.preview.quotaTitle'),
+      [YAML_TYPES.STORAGE_CLASS]: t('podDeployment:podDeployment.preview.storageClassTitle'),
+      [YAML_TYPES.PERSISTENT_VOLUME]: t('podDeployment:podDeployment.preview.persistentVolumeTitle'),
+      [YAML_TYPES.CONFIGMAP]: t('podDeployment:podDeployment.preview.configMapTitle'),
+      [YAML_TYPES.SECRET]: t('podDeployment:podDeployment.preview.secretTitle'),
+      [YAML_TYPES.FINAL]: t('podDeployment:podDeployment.preview.finalYamlTitle')
+    };
+
+    // Special styling for final YAML
+    const isFinalYaml = type === YAML_TYPES.FINAL;
+    
+    return (
+      <Box sx={{ mb: 3 }}>
+        <Paper sx={{ 
+          p: 2,
+          ...(isFinalYaml && { 
+            border: '2px solid',
+            borderColor: 'primary.main'
+          })
+        }}>
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            mb: showYamlPreviews[type] ? 2 : 0 
+          }}>
+            <Typography 
+              variant="subtitle1" 
+              sx={{ 
+                fontWeight: isFinalYaml ? 'bold' : 'medium',
+                color: isFinalYaml ? 'primary.main' : 'text.primary'
+              }}
+            >
+              {titleMap[type]}
+            </Typography>
+            <Button
+              variant="outlined"
+              startIcon={showYamlPreviews[type] ? <VisibilityOffIcon /> : <VisibilityIcon />}
+              onClick={() => toggleYamlPreview(type)}
+              size="small"
+              color={isFinalYaml ? 'primary' : 'default'}
+            >
+              {showYamlPreviews[type] 
+                ? t('podDeployment:podDeployment.preview.hideYaml')
+                : t('podDeployment:podDeployment.preview.showYaml')
+              }
+            </Button>
+          </Box>
+          {showYamlPreviews[type] && (
+            <Box sx={{ mt: 2 }}>
+              <Editor
+                height={isFinalYaml ? "400px" : "300px"}
+                defaultLanguage="yaml"
+                value={content}
+                options={{ 
+                  readOnly: true,
+                  minimap: { enabled: false },
+                  scrollBeyondLastLine: false,
+                  wordWrap: 'on',
+                  wrappingIndent: 'indent',
+                  fontSize: 14
+                }}
+              />
+            </Box>
+          )}
+        </Paper>
+      </Box>
+    );
   };
 
   return (
     <Box>
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-        <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)}>
-          <Tab label="Summary" value="summary" />
-          <Tab label="YAML Files" value="yaml" />
-        </Tabs>
-      </Box>
+      <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)}>
+        <Tab label={t('podDeployment:podDeployment.preview.summaryTab')} value="summary" />
+        <Tab label={t('podDeployment:podDeployment.preview.yamlTab')} value="yaml" />
+      </Tabs>
 
       {activeTab === 'summary' && (
-        <>
-          {renderPlaceholdersByCategory()}
-          
-          <Box sx={{ mt: 4 }}>
-            <Typography variant="h6" gutterBottom>
-              Configuration Summary
-            </Typography>
-            <Grid container spacing={3}>
-              {Object.entries(CONFIG_SECTIONS).map(([section, { title, fields }]) => (
-                <Grid item xs={12} md={6} key={section}>
-                  <Paper sx={{ p: 2 }}>
-                    <Typography variant="subtitle1" gutterBottom>
-                      {title}
-                    </Typography>
-                    <List dense>
-                      {fields.map(field => {
-                        const value = config[section]?.[field];
-                        return value ? (
-                          <ListItem key={field}>
-                            <ListItemText
-                              primary={field}
-                              secondary={
-                                typeof value === 'object' 
-                                  ? JSON.stringify(value, null, 2)
-                                  : value
-                              }
-                            />
-                          </ListItem>
-                        ) : null;
-                      })}
-                    </List>
-                  </Paper>
-                </Grid>
-              ))}
-            </Grid>
-          </Box>
-        </>
+        <Box sx={{ mt: 3 }}>
+          {renderBasicConfig()}
+          {renderPlaceholderCategories()}
+        </Box>
       )}
 
       {activeTab === 'yaml' && (
-        <Grid container spacing={2}>
-          <Grid item xs={12} md={4}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="subtitle1" gutterBottom>
-                Configuration Files
-              </Typography>
-              <List>
-                {Object.keys(generateConfigFiles()).map(filename => (
-                  <ListItem
-                    key={filename}
-                    button
-                    selected={selectedYamlFile === filename}
-                    onClick={() => setSelectedYamlFile(filename)}
-                  >
-                    <ListItemText primary={filename} />
-                    <IconButton size="small">
-                      <VisibilityIcon />
-                    </IconButton>
-                  </ListItem>
-                ))}
-              </List>
-            </Paper>
-          </Grid>
-          <Grid item xs={12} md={8}>
-            {selectedYamlFile && (
-              <Paper sx={{ p: 2 }}>
-                <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="subtitle1">
-                    {selectedYamlFile}
-                  </Typography>
-                  <Button
-                    startIcon={<SaveIcon />}
-                    onClick={() => handleSave(selectedYamlFile)}
-                    disabled={isSaving}
-                  >
-                    Save
-                  </Button>
-                </Box>
-                <Editor
-                  height="600px"
-                  defaultLanguage="yaml"
-                  value={generateConfigFiles()[selectedYamlFile]}
-                  options={{ readOnly: true }}
-                />
-              </Paper>
-            )}
-          </Grid>
-        </Grid>
-      )}
-
-      <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
-        <Button
-          variant="outlined"
-          onClick={() => setShowYaml(!showYaml)}
-        >
-          {showYaml ? t('podDeployment:podDeployment.preview.hideYaml') : t('podDeployment:podDeployment.preview.showYaml')}
-        </Button>
-        <Button
-          variant="contained"
-          onClick={handleSave}
-          disabled={isSaving}
-        >
-          {isSaving ? t('common:common.saving') : t('common:common.save')}
-        </Button>
-      </Box>
-
-      {showYaml && (
-        <Box sx={{ mt: 2 }}>
-          <Paper sx={{ p: 2 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-              <Button
-                size="small"
-                onClick={() => setShowYaml(false)}
-              >
-                {t('common:common.close')}
-              </Button>
+        <Box sx={{ mt: 3 }}>
+          {isLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+              <CircularProgress />
             </Box>
-            <Editor
-              height="400px"
-              defaultLanguage="yaml"
-              value={generateYamlPreview()}
-              options={{ readOnly: true }}
-            />
-          </Paper>
+          ) : (
+            <>
+              {/* Namespace Quota */}
+              {renderYamlPreview(
+                YAML_TYPES.QUOTA,
+                t('podDeployment:podDeployment.preview.quotaTitle')
+              )}
+
+              {/* Storage Class */}
+              {renderYamlPreview(
+                YAML_TYPES.STORAGE_CLASS,
+                t('podDeployment:podDeployment.preview.storageClassTitle')
+              )}
+
+              {/* Persistent Volume */}
+              {renderYamlPreview(
+                YAML_TYPES.PERSISTENT_VOLUME,
+                t('podDeployment:podDeployment.preview.persistentVolumeTitle')
+              )}
+
+              {/* ConfigMap */}
+              {renderYamlPreview(
+                YAML_TYPES.CONFIGMAP,
+                t('podDeployment:podDeployment.preview.configMapTitle')
+              )}
+
+              {/* Secret */}
+              {renderYamlPreview(
+                YAML_TYPES.SECRET,
+                t('podDeployment:podDeployment.preview.secretTitle')
+              )}
+
+              {/* Final YAML with replaced values */}
+              <Box sx={{ mt: 4, mb: 2 }}>
+                <Paper sx={{ 
+                  p: 2,
+                  border: '2px solid',
+                  borderColor: 'primary.main'
+                }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center', 
+                    mb: 2 
+                  }}>
+                    <Typography 
+                      variant="h6" 
+                      sx={{ 
+                        fontWeight: 'bold',
+                        color: 'primary.main'
+                      }}
+                    >
+                      {t('podDeployment:podDeployment.preview.finalYamlTitle')}
+                    </Typography>
+                    <Button
+                      variant="outlined"
+                      color="primary"
+                      startIcon={showYamlPreviews[YAML_TYPES.FINAL] ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                      onClick={() => toggleYamlPreview(YAML_TYPES.FINAL)}
+                    >
+                      {showYamlPreviews[YAML_TYPES.FINAL] 
+                        ? t('podDeployment:podDeployment.preview.hideYaml')
+                        : t('podDeployment:podDeployment.preview.showYaml')
+                      }
+                    </Button>
+                  </Box>
+                  {showYamlPreviews[YAML_TYPES.FINAL] && (
+                    <Box sx={{ mt: 2 }}>
+                      <Editor
+                        height="400px"
+                        defaultLanguage="yaml"
+                        value={yamlContents[YAML_TYPES.FINAL] || generateFinalYaml()}
+                        options={{ 
+                          readOnly: true,
+                          minimap: { enabled: false },
+                          scrollBeyondLastLine: false,
+                          wordWrap: 'on',
+                          wrappingIndent: 'indent',
+                          fontSize: 14
+                        }}
+                      />
+                    </Box>
+                  )}
+                </Paper>
+              </Box>
+            </>
+          )}
         </Box>
       )}
 

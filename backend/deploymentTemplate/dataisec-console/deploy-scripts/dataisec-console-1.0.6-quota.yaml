@@ -5,9 +5,9 @@ metadata:
   namespace: default123
 spec:
   hard:
-    requests.cpu: "400m"
+    requests.cpu: "1000m"
     requests.memory: "256Mi"
-    limits.cpu: "6000m"
+    limits.cpu: "2000m"
     limits.memory: "4Gi"
     pods: "2"
     configmaps: "3"

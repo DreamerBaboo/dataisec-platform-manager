@@ -690,4 +690,16 @@ router.post('/:name/versions/:version/configmaps', authenticateToken, podDeploym
 // Delete deploy script
 router.delete('/:name/versions/:version/deploy-scripts/:filename', authenticateToken, podDeploymentController.deleteDeployScript);
 
+// Add route for getting YAML files
+router.get('/:name/deploy-scripts/:filename', authenticateToken, podDeploymentController.getDeploymentYaml);
+
+// Get deploy script
+router.get('/:name/versions/:version/deploy-scripts/:filename', authenticateToken, podDeploymentController.getDeployScript);
+
+// Deploy scripts routes
+router.get('/:name/versions/:version/deploy-scripts', authenticateToken, podDeploymentController.listDeployScripts);
+router.get('/:name/versions/:version/deploy-scripts/:filename', authenticateToken, podDeploymentController.getDeployScript);
+router.post('/:name/versions/:version/deploy-scripts', authenticateToken, podDeploymentController.saveDeployScript);
+router.delete('/:name/versions/:version/deploy-scripts/:filename', authenticateToken, podDeploymentController.deleteDeployScript);
+
 module.exports = router; 

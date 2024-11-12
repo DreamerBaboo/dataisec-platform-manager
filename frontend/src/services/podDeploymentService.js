@@ -359,6 +359,22 @@ export const podDeploymentService = {
       throw error;
     }
   },
+
+  // Get deploy script
+  async getDeployScript(name, version, filename) {
+    try {
+      console.log('📥 Getting deploy script:', { name, version, filename });
+      const response = await axios.get(
+        `${API_URL}/api/pod-deployments/${name}/versions/${version}/deploy-scripts/${filename}`,
+        getAuthHeaders()
+      );
+      console.log('✅ Deploy script retrieved:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Failed to get deploy script:', error);
+      throw error;
+    }
+  },
 };
 
 export default podDeploymentService;

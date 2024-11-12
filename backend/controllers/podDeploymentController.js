@@ -944,26 +944,27 @@ const saveDeployScript = async (req, res) => {
 
     console.log('💾 Saving deploy script:', { name, version, filename });
 
-    // Create deploy-scripts directory if it doesn't exist
+    // Build path to deploy-scripts folder
     const deployScriptsPath = path.join(
       __dirname,
-      '../deploymentTemplate',
+      '..',  // Go up one level from controllers
+      'deploymentTemplate',
       name,
       'deploy-scripts'
     );
+
+    // Ensure deploy-scripts directory exists
     await fs.mkdir(deployScriptsPath, { recursive: true });
 
-    // Save the script file
     const filePath = path.join(deployScriptsPath, filename);
     await fs.writeFile(filePath, content);
 
-    console.log('✅ Deploy script saved successfully:', filePath);
+    console.log('✅ Deploy script saved successfully at:', filePath);
 
     res.json({
       message: 'Deploy script saved successfully',
       path: filePath
     });
-
   } catch (error) {
     console.error('❌ Failed to save deploy script:', error);
     res.status(500).json({ error: error.message });
@@ -1073,25 +1074,20 @@ const deleteDeployScript = async (req, res) => {
 
     console.log('🗑️ Deleting deploy script:', { name, version, filename });
 
-    // Build path to deploy script
-    const deployScriptsPath = path.join(
+    const filePath = path.join(
       __dirname,
-      '../deploymentTemplate',
+      '..',  // Go up one level from controllers
+      'deploymentTemplate',
       name,
-      'deploy-scripts'
+      'deploy-scripts',
+      filename
     );
 
-    const filePath = path.join(deployScriptsPath, filename);
-
     try {
-      // Check if file exists before attempting to delete
-      await fs.access(filePath);
-      // Delete the file
       await fs.unlink(filePath);
       console.log('✅ Deploy script deleted:', filePath);
     } catch (error) {
       if (error.code === 'ENOENT') {
-        // File doesn't exist - consider this a success
         console.log('⚠️ File does not exist:', filePath);
         return res.json({
           message: 'File does not exist or already deleted',
@@ -1105,9 +1101,134 @@ const deleteDeployScript = async (req, res) => {
       message: 'Deploy script deleted successfully',
       path: filePath
     });
-
   } catch (error) {
     console.error('❌ Failed to delete deploy script:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// List deploy scripts
+const listDeployScripts = async (req, res) => {
+  try {
+    const { name, version } = req.params;
+
+    console.log('📋 Listing deploy scripts:', { name, version });
+
+    const deployScriptsPath = path.join(
+      __dirname,
+      '..',  // Go up one level from controllers
+      'deploymentTemplate',
+      name,
+      'deploy-scripts'
+    );
+
+    try {
+      const files = await fs.readdir(deployScriptsPath);
+      const yamlFiles = files.filter(file => 
+        file.startsWith(`${name}-${version}-`) && 
+        (file.endsWith('.yaml') || file.endsWith('.yml'))
+      );
+
+      console.log('✅ Found deploy scripts:', yamlFiles);
+      res.json(yamlFiles);
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        console.log('⚠️ No deploy-scripts directory found');
+        return res.json([]);
+      }
+      throw error;
+    }
+  } catch (error) {
+    console.error('❌ Failed to list deploy scripts:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Add new method to read YAML files
+const getDeploymentYaml = async (req, res) => {
+  try {
+    const { name, version, type } = req.params;
+    
+    // Map type to filename
+    const fileMap = {
+      quota: `${name}-${version}-quota.yaml`,
+      storageClass: `${name}-${version}-storageClass.yaml`,
+      persistentVolume: `${name}-${version}-persistentVolumes.yaml`,
+      configMap: `${name}-${version}-configmap.yaml`,
+      secret: `${name}-${version}-secret.yaml`,
+      final: `${name}-${version}-final.yaml`
+    };
+
+    const filename = fileMap[type];
+    if (!filename) {
+      return res.status(400).json({ error: 'Invalid YAML type' });
+    }
+
+    const filePath = path.join(
+      __dirname,
+      '../deploymentTemplate',
+      name,
+      'deploy-scripts',
+      filename
+    );
+
+    try {
+      const content = await fs.readFile(filePath, 'utf8');
+      res.json({ content });
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        return res.status(404).json({ error: 'YAML file not found' });
+      }
+      throw error;
+    }
+  } catch (error) {
+    console.error('Failed to get deployment YAML:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Get deploy script
+const getDeployScript = async (req, res) => {
+  try {
+    const { name, version, filename } = req.params;
+    
+    console.log('📥 Getting deploy script:', { name, version, filename });
+
+    // Build path to deploy-scripts folder
+    const deployScriptsPath = path.join(
+      __dirname,
+      '..',  // Go up one level from controllers
+      'deploymentTemplate',
+      name,
+      'deploy-scripts'
+    );
+
+    // Ensure deploy-scripts directory exists
+    try {
+      await fs.mkdir(deployScriptsPath, { recursive: true });
+    } catch (error) {
+      console.error('Failed to create deploy-scripts directory:', error);
+    }
+
+    const filePath = path.join(deployScriptsPath, filename);
+    console.log('Looking for file at:', filePath);
+
+    try {
+      const content = await fs.readFile(filePath, 'utf8');
+      console.log('✅ Deploy script found and read successfully');
+      res.json({ content });
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        console.log('⚠️ File not found:', filePath);
+        return res.status(404).json({
+          error: 'Deploy script not found',
+          path: filePath
+        });
+      }
+      throw error;
+    }
+  } catch (error) {
+    console.error('❌ Failed to get deploy script:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -1141,5 +1262,8 @@ module.exports = {
   saveDeployScript,
   getConfigMapConfig,
   saveConfigMapConfig,
-  deleteDeployScript
+  deleteDeployScript,
+  getDeploymentYaml,
+  getDeployScript,
+  listDeployScripts
 }; 
