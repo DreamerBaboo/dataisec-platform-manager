@@ -153,25 +153,67 @@ const ConfigMapEditor = ({ config, onChange, errors = {} }) => {
     }
   };
 
-  // Handle cleanup when component unmounts
-  useEffect(() => {
-    return () => {
-      if (configMaps.length === 0) {
-        const cleanup = async () => {
-          try {
-            await podDeploymentService.deleteDeployScript(
-              config.name,
-              config.version,
-              `${config.name}-${config.version}-configmap.yaml`
-            );
-          } catch (error) {
-            console.error('Failed to cleanup ConfigMaps:', error);
-          }
-        };
-        cleanup();
+  // Add cleanup function
+  const cleanupConfigMapYaml = async () => {
+    if (!config?.name || !config?.version) return;
+
+    try {
+      await podDeploymentService.deleteDeployScript(
+        config.name,
+        config.version,
+        `${config.name}-${config.version}-configmap.yaml`
+      );
+      console.log('✅ ConfigMap YAML deleted successfully');
+    } catch (error) {
+      // Ignore 404 errors (file doesn't exist)
+      if (error.response?.status !== 404) {
+        console.error('Failed to cleanup ConfigMap YAML:', error);
       }
-    };
-  }, [configMaps.length, config?.name, config?.version]);
+    }
+  };
+
+  // Handle ConfigMap deletion
+  const handleDeleteConfigMap = async (index) => {
+    try {
+      const updatedConfigMaps = configMaps.filter((_, i) => i !== index);
+      setConfigMaps(updatedConfigMaps);
+
+      // Save updated ConfigMaps to config.json first
+      await podDeploymentService.saveDeploymentConfig(
+        config.name,
+        config.version,
+        {
+          ...config,
+          configMaps: updatedConfigMaps
+        }
+      );
+
+      // Update parent config
+      onChange({
+        ...config,
+        configMaps: updatedConfigMaps
+      });
+
+      // If there are still ConfigMaps, update the YAML file
+      if (updatedConfigMaps.length > 0) {
+        const configMapYaml = generateConfigMapYaml(updatedConfigMaps);
+        await podDeploymentService.saveDeployScript(
+          config.name,
+          config.version,
+          `${config.name}-${config.version}-configmap.yaml`,
+          configMapYaml
+        );
+      } else {
+        // Only delete YAML file if no ConfigMaps left after deletion
+        await cleanupConfigMapYaml();
+      }
+    } catch (error) {
+      console.error('Failed to delete ConfigMap:', error);
+      setLocalErrors({
+        submit: t('podDeployment:configMap.errors.deleteFailed')
+      });
+    }
+  };
 
   const handleCreateConfigMap = () => {
     setSelectedType('');
@@ -710,10 +752,7 @@ const ConfigMapEditor = ({ config, onChange, errors = {} }) => {
             setNewConfigMap(cm);
             setCreateDialogOpen(true);
           }}
-          onDelete={async (cm) => {
-            const updatedConfigMaps = configMaps.filter((_, i) => i !== index);
-            await saveConfig(updatedConfigMaps);
-          }}
+          onDelete={() => handleDeleteConfigMap(index)}
         />
       ))}
 
