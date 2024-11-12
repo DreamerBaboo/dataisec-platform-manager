@@ -23,6 +23,7 @@ import {
   Visibility as VisibilityIcon,
   Save as SaveIcon 
 } from '@mui/icons-material';
+import { podDeploymentService } from '../../../services/podDeploymentService';
 
 const PLACEHOLDER_CATEGORIES = {
   basic: ['name', 'namespace', 'version'],
@@ -104,24 +105,14 @@ const DeploymentPreview = ({ config, onDeploy, onBack }) => {
         throw new Error(`Invalid YAML format: ${yamlError.message}`);
       }
 
+      // Save to deploy-scripts folder with -final suffix
       const fileName = `${config.name}-${config.version}-final.yaml`;
-
-      const response = await fetch(`/api/deployment-templates/${config.name}/save-final`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          content: yamlContent,
-          fileName: fileName
-        })
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to save configuration');
-      }
+      await podDeploymentService.saveDeployScript(
+        config.name,
+        config.version,
+        fileName,
+        yamlContent
+      );
 
       enqueueSnackbar(t('podDeployment:podDeployment.preview.saveSuccess'), {
         variant: 'success'
@@ -129,7 +120,7 @@ const DeploymentPreview = ({ config, onDeploy, onBack }) => {
 
     } catch (error) {
       console.error('Failed to save configuration:', error);
-      setSaveError(error.message);
+      setSaveError(error.message || t('podDeployment:podDeployment.preview.saveError'));
       enqueueSnackbar(t('podDeployment:podDeployment.preview.saveError'), {
         variant: 'error'
       });

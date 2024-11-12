@@ -389,13 +389,13 @@ class K8sService {
     try {
       console.log('Saving StorageClass YAML');
       const deploymentDir = path.join(__dirname, '../deploymentTemplate', name);
-      const storageDir = path.join(deploymentDir, 'storage');
+      const deployScriptsDir = path.join(deploymentDir, 'deploy-scripts');
       
-      // 確保目錄存在
-      await fs.mkdir(storageDir, { recursive: true });
+      // Ensure directory exists
+      await fs.mkdir(deployScriptsDir, { recursive: true });
       
-      // 保存 YAML 文件
-      const filePath = path.join(storageDir, `${name}-${version}-storageClass.yaml`);
+      // Save YAML file in deploy-scripts folder
+      const filePath = path.join(deployScriptsDir, `${name}-${version}-storageClass.yaml`);
       await fs.writeFile(filePath, yaml);
       
       console.log('StorageClass YAML saved to:', filePath);
@@ -414,7 +414,7 @@ class K8sService {
         __dirname,
         '../deploymentTemplate',
         name,
-        'storage',
+        'deploy-scripts',
         `${name}-${version}-storageClass.yaml`
       );
       
@@ -496,22 +496,22 @@ class K8sService {
   async saveStorageConfig(name, version, storageClassYaml, persistentVolumeYaml) {
     try {
       const deploymentDir = path.join(__dirname, '../deploymentTemplate', name);
-      const storageDir = path.join(deploymentDir, 'storage');
+      const deployScriptsDir = path.join(deploymentDir, 'deploy-scripts');
       
-      // 確保目錄存在
-      await fs.mkdir(storageDir, { recursive: true });
+      // Ensure directory exists
+      await fs.mkdir(deployScriptsDir, { recursive: true });
       
-      // 保存 YAML 文件
+      // Save YAML files in deploy-scripts folder
       if (storageClassYaml) {
         await fs.writeFile(
-          path.join(storageDir, `${name}-${version}-storageClass.yaml`),
+          path.join(deployScriptsDir, `${name}-${version}-storageClass.yaml`),
           storageClassYaml
         );
       }
       
       if (persistentVolumeYaml) {
         await fs.writeFile(
-          path.join(storageDir, `${name}-${version}-persistentVolumes.yaml`),
+          path.join(deployScriptsDir, `${name}-${version}-persistentVolumes.yaml`),
           persistentVolumeYaml
         );
       }
@@ -530,20 +530,20 @@ class K8sService {
   // 獲取儲存配置
   async getStorageConfig(name, version) {
     try {
-      const storageDir = path.join(
+      const deployScriptsDir = path.join(
         __dirname,
         '../deploymentTemplate',
         name,
-        'storage'
+        'deploy-scripts'
       );
       
       const [storageClassYaml, persistentVolumeYaml] = await Promise.all([
         fs.readFile(
-          path.join(storageDir, `${name}-${version}-storageClass.yaml`),
+          path.join(deployScriptsDir, `${name}-${version}-storageClass.yaml`),
           'utf8'
         ).catch(() => ''),
         fs.readFile(
-          path.join(storageDir, `${name}-${version}-persistentVolumes.yaml`),
+          path.join(deployScriptsDir, `${name}-${version}-persistentVolumes.yaml`),
           'utf8'
         ).catch(() => '')
       ]);
@@ -638,6 +638,43 @@ class K8sService {
       if (error.response?.statusCode === 404) {
         return false;
       }
+      throw error;
+    }
+  }
+
+  // Delete storage configuration
+  async deleteStorageConfig(name, version, type) {
+    try {
+      const deployScriptsDir = path.join(
+        __dirname,
+        '../deploymentTemplate',
+        name,
+        'deploy-scripts'
+      );
+
+      const fileName = type === 'storageClass' 
+        ? `${name}-${version}-storageClass.yaml`
+        : `${name}-${version}-persistentVolumes.yaml`;
+
+      const filePath = path.join(deployScriptsDir, fileName);
+
+      try {
+        await fs.unlink(filePath);
+        console.log(`Storage ${type} YAML deleted:`, filePath);
+      } catch (err) {
+        if (err.code !== 'ENOENT') {
+          throw err;
+        }
+        // File doesn't exist - consider this a success
+        console.log(`Storage ${type} YAML doesn't exist:`, filePath);
+      }
+
+      return {
+        message: `Storage ${type} configuration deleted successfully`,
+        path: filePath
+      };
+    } catch (error) {
+      console.error('Failed to delete storage configuration:', error);
       throw error;
     }
   }

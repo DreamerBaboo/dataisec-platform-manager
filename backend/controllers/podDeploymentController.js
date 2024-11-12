@@ -766,7 +766,7 @@ const getStorageConfig = async (req, res) => {
     console.log('📥 Getting storage config:', { name, version });
 
     // 構建存儲配置路徑
-    const storagePath = path.join(__dirname, '../deploymentTemplate', name, 'storage');
+    const storagePath = path.join(__dirname, '../deploymentTemplate', name, 'deploy-scripts');
     const storageClassPath = path.join(storagePath, `${name}-${version}-storageClass.yaml`);
     const persistentVolumePath = path.join(storagePath, `${name}-${version}-persistentVolumes.yaml`);
 
@@ -820,7 +820,7 @@ const saveStorageConfig = async (req, res) => {
     console.log('💾 Saving storage config:', { name, version });
 
     // 確保存儲目錄存在
-    const storagePath = path.join(__dirname, '../deploymentTemplate', name, 'storage');
+    const storagePath = path.join(__dirname, '../deploymentTemplate', name, 'deploy-scripts');
     await fs.mkdir(storagePath, { recursive: true });
 
     // 保存 StorageClass 配置
@@ -866,7 +866,7 @@ volumeBindingMode: ${storageClassConfig.volumeBindingMode}
 allowVolumeExpansion: false`;
 
     // 保存 StorageClass YAML
-    const storagePath = path.join(__dirname, '../deploymentTemplate', name, 'storage');
+    const storagePath = path.join(__dirname, '../deploymentTemplate', name, 'deploy-scripts');
     await fs.mkdir(storagePath, { recursive: true });
 
     const storageClassPath = path.join(storagePath, `${name}-${version}-storageClass.yaml`);
@@ -893,7 +893,7 @@ const deleteStorageConfig = async (req, res) => {
     console.log('🗑️ Deleting storage config:', { name, version, type });
 
     // 構建存儲配置路徑
-    const storagePath = path.join(__dirname, '../deploymentTemplate', name, 'storage');
+    const storagePath = path.join(__dirname, '../deploymentTemplate', name, 'deploy-scripts');
     let filesToDelete = [];
 
     if (type === 'all') {

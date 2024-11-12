@@ -1,0 +1,114 @@
+# values.yaml
+name: dataisec-console
+replicaCount: 2 #[1, 2, 3, 4, 5, 6]
+
+image:
+  repository: 192.168.170.135:5000/dataisec-console #[localhost] #[5000, 5001]
+  tag: 0.1.0 #[latest]
+  pullPolicy: IfNotPresent
+  insecureRegistry: true
+
+imagePullSecrets: []
+nameOverride: "dataisec-console"
+fullnameOverride: "dataisec-console"
+
+
+service:
+  type: NodePort
+  port: 3000 #[3000]
+  targetPort: 3000 #[3000]
+  nodePort: 32000 #[32000]
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+
+resources:
+  limits:
+    cpu: 2000m #[1000m, 2000m, 3000m, 4000m, 5000m]
+    memory: 2Gi #[2Gi]
+  requests:
+    cpu: 300m #[100m, 200m, 300m, 400m, 500m]
+    memory: 128Mi #[128Mi]
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 1
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: "dataisec"
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+livenessProbe:
+  enabled: true
+  httpGet:
+    path: /
+    port: 3000
+    scheme: HTTPS
+  initialDelaySeconds: 30  # 从默认的10秒增加到60秒
+  periodSeconds: 20
+  timeoutSeconds: 5
+  failureThreshold: 10
+  successThreshold: 1
+
+readinessProbe:
+  enabled: true
+  httpGet:
+    path: /
+    port: 3000
+    scheme: HTTPS
+  periodSeconds: 20
+  initialDelaySeconds: 60  # 从默认的10秒增加到60秒
+  timeoutSeconds: 5
+  failureThreshold: 10
+  successThreshold: 1
+
+
+nodeSelector:
+  kubernetes.io/hostname: {node-role.opensearch: master} #[{node-role.opensearch: master}]
+
+tolerations: []
+
+affinity: {}
+
+# Custom environment variables for your application
+env:
+  - name: SITE_NODE
+    value: localhost #[localhost]
+  - name: WEB_PORT
+    value: 3000 #[3000]
+  - name: DB_NODE
+    value: https://opensearch-cluster-master-headless.opensearch.svc.cluster.local:9200
+  - name: COMPANY_NAME
+    value: Dataisec #[Dataisec]
+  - name: SESSION_SECRET
+    value: secqweqweret #[secqweqweret]
+
+# Application specific configurations can go here
+appConfig:
+  featureFlagA: true
+  maxConnections: 100
