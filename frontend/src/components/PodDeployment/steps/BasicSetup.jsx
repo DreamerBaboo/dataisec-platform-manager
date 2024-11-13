@@ -194,7 +194,11 @@ spec:
           config.name,
           config.version
         );
-        onChange(versionConfig.config);
+        const updatedConfig = {
+          ...versionConfig.config,
+          deploymentMode: versionConfig.config.deploymentMode || 'k8s'
+        };
+        onChange(updatedConfig);
       } catch (error) {
         console.error('Failed to load version config:', error);
       }
@@ -264,20 +268,14 @@ spec:
     const newVersion = event.target.value?.trim();
     if (!newVersion || !config.name) return;
 
-    console.log('🔍 Version field blur:', {
-      currentVersion: config.version,
-      newVersion: newVersion,
-      isNewVersion: !versions.includes(newVersion)
-    });
-
-    // 如果是新版本，創建新的配置
     if (!versions.includes(newVersion)) {
       try {
-        // 創建新版本的配置
+        // 創建新版本的配置，確保包含 deploymentMode
         const newConfig = {
           ...config,
           version: newVersion,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          deploymentMode: config.deploymentMode || 'k8s' // 確保有默認值
         };
 
         console.log('📝 Creating new version config:', newConfig);
@@ -290,7 +288,7 @@ spec:
             newConfig
           );
 
-          // 更新版本列表
+          // 更新版本列
           const response = await podDeploymentService.getDeploymentVersions(config.name);
           const updatedVersions = Array.isArray(response.versions) ? response.versions : [];
           setVersions(updatedVersions);
@@ -339,6 +337,35 @@ spec:
       ...config,
       [field]: event.target.value
     });
+  };
+
+  // 修改部署模式處理函數
+  const handleDeploymentModeChange = (event) => {
+    const isHelm = event.target.checked;
+    const newConfig = {
+      ...config,
+      deploymentMode: isHelm ? 'helm' : 'k8s'
+    };
+    
+    // 更新本地配置
+    onChange(newConfig);
+
+    // 如果已經有版本，則保存更新後的配置
+    if (config.name && config.version) {
+      try {
+        podDeploymentService.saveDeploymentConfig(
+          config.name,
+          config.version,
+          newConfig
+        );
+      } catch (error) {
+        console.error('Failed to save deployment mode:', error);
+        setLocalErrors(prev => ({
+          ...prev,
+          deploymentMode: t('podDeployment:podDeployment.errors.saveFailed')
+        }));
+      }
+    }
   };
 
   return (
@@ -405,15 +432,26 @@ spec:
         </Grid>
 
         <Grid item xs={12}>
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={config.enableResourceQuota || false}
-                onChange={handleResourceQuotaChange}
-              />
-            }
-            label={t('podDeployment:podDeployment.basic.enableResourceQuota')}
-          />
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={config.enableResourceQuota || false}
+                  onChange={handleResourceQuotaChange}
+                />
+              }
+              label={t('podDeployment:podDeployment.basic.enableResourceQuota')}
+            />
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={config.deploymentMode === 'helm'}
+                  onChange={handleDeploymentModeChange}
+                />
+              }
+              label={t('podDeployment:podDeployment.basic.useHelmChart')}
+            />
+          </Box>
         </Grid>
 
         {isNewDeployment && config.name && (
