@@ -694,12 +694,16 @@ router.delete('/:name/versions/:version/deploy-scripts/:filename', authenticateT
 router.get('/:name/deploy-scripts/:filename', authenticateToken, podDeploymentController.getDeploymentYaml);
 
 // Get deploy script
-router.get('/:name/versions/:version/deploy-scripts/:filename', authenticateToken, podDeploymentController.getDeployScript);
+// router.get('/:name/versions/:version/deploy-scripts/:filename', authenticateToken, podDeploymentController.getDeployScript);
 
 // Deploy scripts routes
 router.get('/:name/versions/:version/deploy-scripts', authenticateToken, podDeploymentController.listDeployScripts);
 router.get('/:name/versions/:version/deploy-scripts/:filename', authenticateToken, podDeploymentController.getDeployScript);
 router.post('/:name/versions/:version/deploy-scripts', authenticateToken, podDeploymentController.saveDeployScript);
 router.delete('/:name/versions/:version/deploy-scripts/:filename', authenticateToken, podDeploymentController.deleteDeployScript);
+// GET route for helm scripts
+router.get('/:name/:version/helm-scripts/:filename', podDeploymentController.getHelmDeployScript);
+// POST route for helm scripts
+router.post('/:name/:version/helm-scripts/:filename', podDeploymentController.saveHelmDeployScript);
 
 module.exports = router; 

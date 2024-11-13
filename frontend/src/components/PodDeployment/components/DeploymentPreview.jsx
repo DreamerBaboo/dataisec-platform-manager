@@ -136,17 +136,18 @@ const DeploymentPreview = ({ config, onDeploy, onBack }) => {
           [YAML_TYPES.CONFIGMAP]: `${config.name}-${config.version}-configmap.yaml`,
           [YAML_TYPES.SECRET]: `${config.name}-${config.version}-secret.yaml`
         };
-        console.log('yamlFiles: ', config);
+        console.log('yamlFiles: ', yamlFiles);
 
         const contents = {};
         for (const [type, filename] of Object.entries(yamlFiles)) {
           try {
-            console.log(`📥 Loading ${type} YAML:`, filename);
             const response = await podDeploymentService.getDeployScript(
               config.name,
               config.version,
               filename
             );
+            
+            console.log ('content : ', response?.content);
             if (response?.content) {
               contents[type] = response.content;
               console.log(`✅ Loaded ${type} YAML successfully`);
@@ -191,7 +192,7 @@ const DeploymentPreview = ({ config, onDeploy, onBack }) => {
           finalContent = finalContent.replace(regex, value);
         }
       });
-      console.log('final Content:', finalContent);
+      //console.log('final Content:', finalContent);
       // Add namespace if not present in template
       if (!finalContent.includes('namespace:') && config.namespace) {
         finalContent = finalContent.replace(
@@ -229,13 +230,25 @@ const DeploymentPreview = ({ config, onDeploy, onBack }) => {
           return;
         }
         
-        // Save final YAML to deploy-scripts
-        await podDeploymentService.saveDeployScript(
+        if (config.deploymentMode === 'helm') {
+          // Save final YAML to deploy-scripts
+          console.log ('THIS IS HELM');
+          await podDeploymentService.saveHelmDeployScript(
+            config.name,
+            config.version,
+            `${config.name}-${config.version}-final.yaml`,
+            finalYaml
+          )
+        } 
+        else{
+          console.log ('THIS IS KUBERNETES');
+          await podDeploymentService.saveDeployScript(
           config.name,
           config.version,
           `${config.name}-${config.version}-final.yaml`,
           finalYaml
-        );
+          )
+        }
         
         console.log('✅ Final YAML saved successfully');
         

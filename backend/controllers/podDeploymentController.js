@@ -971,6 +971,40 @@ const saveDeployScript = async (req, res) => {
   }
 };
 
+// Save deploy script
+const saveHelmDeployScript = async (req, res) => {
+  try {
+    const { name, version, filename } = req.params;
+    const { content } = req.body;
+    
+    console.log('📥 Saving helm deploy script:', { name, version, filename });
+
+    // Build path to helm-scripts folder
+    const helmScriptsPath = path.join(
+      __dirname,
+      '..',
+      'deploymentTemplate',
+      name
+    );
+
+    // Ensure helm-scripts directory exists
+    try {
+      await fs.mkdir(helmScriptsPath, { recursive: true });
+    } catch (error) {
+      console.error('Failed to create helm-scripts directory:', error);
+    }
+
+    const filePath = path.join(helmScriptsPath, filename);
+    await fs.writeFile(filePath, content, 'utf8');
+    
+    console.log('✅ Helm deploy script saved successfully');
+    res.json({ message: 'Helm deploy script saved successfully' });
+  } catch (error) {
+    console.error('❌ Failed to save helm deploy script:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 // Get ConfigMap configuration
 const getConfigMapConfig = async (req, res) => {
   try {
@@ -1233,6 +1267,51 @@ const getDeployScript = async (req, res) => {
   }
 };
 
+const getHelmDeployScript = async (req, res) => {
+  try {
+    const { name, version, filename } = req.params;
+    
+    console.log('📥 Getting deploy script:', { name, version, filename });
+
+    // Build path to deploy-scripts folder
+    const deployScriptsPath = path.join(
+      __dirname,
+      '..',  // Go up one level from controllers
+      'deploymentTemplate',
+      name,
+      'deploy-secripts'
+    );
+
+    // Ensure deploy-scripts directory exists
+    try {
+      await fs.mkdir(deployScriptsPath, { recursive: true });
+    } catch (error) {
+      console.error('Failed to create deploy-scripts directory:', error);
+    }
+
+    const filePath = path.join(deployScriptsPath, filename);
+    console.log('Looking for file at:', filePath);
+
+    try {
+      const content = await fs.readFile(filePath, 'utf8');
+      console.log('✅ Deploy script found and read successfully');
+      res.json({ content });
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        console.log('⚠️ File not found:', filePath);
+        return res.status(404).json({
+          error: 'Deploy script not found',
+          path: filePath
+        });
+      }
+      throw error;
+    }
+  } catch (error) {
+    console.error('❌ Failed to get deploy script:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   generatePreview,
   createDeployment,
@@ -1265,5 +1344,8 @@ module.exports = {
   deleteDeployScript,
   getDeploymentYaml,
   getDeployScript,
-  listDeployScripts
+  listDeployScripts,
+  saveHelmDeployScript,
+  getHelmDeployScript
+
 }; 

@@ -375,6 +375,19 @@ export const podDeploymentService = {
       throw error;
     }
   },
+
+  saveHelmDeployScript: async (name, version, filename, content) => {
+    try {
+      const response = await axios.post(
+        `${API_URL}/api/pod-deployments/${name}/${version}/helm-scripts/${filename}`,
+        { content }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Failed to save helm deploy script:', error);
+      throw error;
+    }
+  },
 };
 
 export default podDeploymentService;
