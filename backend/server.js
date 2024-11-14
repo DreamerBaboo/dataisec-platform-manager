@@ -39,6 +39,8 @@ const podDeploymentRouter = require('./routes/podDeployment');
 const deploymentTemplatesRouter = require('./routes/deploymentTemplates');
 const dockerRouter = require('./routes/docker');
 const k8sRouter = require('./routes/k8s');
+const helmRouter = require('./routes/helmRoutes');
+
 
 
 // API routes
@@ -51,6 +53,7 @@ app.use('/api/deployment-templates', deploymentTemplatesRouter);
 // app.use('/api/pod-deployment', podDeploymentRouter);  // 確保路徑匹配 
 app.use('/api/docker', dockerRouter);
 app.use('/api/k8s', k8sRouter);
+app.use('/api/helm', helmRouter);
 
 // 添加錯誤處理中間件
 app.use((err, req, res, next) => {

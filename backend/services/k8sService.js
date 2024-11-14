@@ -678,6 +678,17 @@ class K8sService {
       throw error;
     }
   }
+
+  async executeCommand(command) {
+    try {
+      console.log('🎮 Executing kubectl command:', command);
+      const { stdout, stderr } = await exec(`kubectl ${command}`);
+      return { stdout, stderr };
+    } catch (error) {
+      console.error('❌ kubectl command failed:', error);
+      throw new Error(`kubectl command execution failed: ${error.message}`);
+    }
+  }
 }
 
 module.exports = new K8sService(); 

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../middleware/auth');
 const k8sService = require('../services/k8sService');
+const { executeKubectlCommand } = require('../controllers/k8sController');
 
 // 獲取節點列表
 router.get('/nodes', authenticateToken, async (req, res) => {
@@ -185,5 +186,7 @@ router.get('/nodes/:name', authenticateToken, async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+router.post('/execute', executeKubectlCommand);
 
 module.exports = router; 

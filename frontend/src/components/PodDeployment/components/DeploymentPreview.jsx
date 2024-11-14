@@ -8,16 +8,23 @@ import {
   Tabs,
   Tab,
   CircularProgress,
-  Divider
+  Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  IconButton
 } from '@mui/material';
 import {
   Visibility as VisibilityIcon,
-  VisibilityOff as VisibilityOffIcon
+  VisibilityOff as VisibilityOffIcon,
+  Terminal as TerminalIcon,
+  Close as CloseIcon
 } from '@mui/icons-material';
 import Editor from '@monaco-editor/react';
 import { useAppTranslation } from '../../../hooks/useAppTranslation';
 import { podDeploymentService } from '../../../services/podDeploymentService';
 import YAML from 'yaml';
+import CommandExecutor from './CommandExecutor';
 
 const YAML_TYPES = {
   QUOTA: 'quota',
@@ -53,6 +60,7 @@ const DeploymentPreview = ({ config, onDeploy, onBack }) => {
   const [yamlContents, setYamlContents] = useState({});
   const [showYamlPreviews, setShowYamlPreviews] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [openCommandExecutor, setOpenCommandExecutor] = useState(false);
 
   // Basic Configuration Section
   const renderBasicConfig = () => (
@@ -347,6 +355,14 @@ const DeploymentPreview = ({ config, onDeploy, onBack }) => {
     );
   };
 
+  const handleOpenCommandExecutor = () => {
+    setOpenCommandExecutor(true);
+  };
+
+  const handleCloseCommandExecutor = () => {
+    setOpenCommandExecutor(false);
+  };
+
   return (
     <Box>
       <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)}>
@@ -469,6 +485,42 @@ const DeploymentPreview = ({ config, onDeploy, onBack }) => {
           {t('common:common.deploy')}
         </Button>
       </Box>
+
+      {/* 添加命令執行器按鈕 */}
+      <Button
+        variant="outlined"
+        startIcon={<TerminalIcon />}
+        onClick={handleOpenCommandExecutor}
+        sx={{ mt: 2 }}
+      >
+        打開命令執行器
+      </Button>
+
+      {/* 命令執行器對話框 */}
+      <Dialog
+        open={openCommandExecutor}
+        onClose={handleCloseCommandExecutor}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          命令執行器
+          <IconButton
+            aria-label="close"
+            onClick={handleCloseCommandExecutor}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          <CommandExecutor />
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 };
