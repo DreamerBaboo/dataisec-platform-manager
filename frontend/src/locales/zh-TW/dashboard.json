@@ -1,4 +1,13 @@
 {
+  "common": {
+    "cluster": "集群",
+    "node": "節點",
+    "service": "服務",
+    "lastUpdate": "最後更新"
+  },
+  "messages": {
+    "noMetricsAvailable": "無可用指標"
+  },
   "dashboard": {
     "title": "系統儀表板",
     "overview": {
@@ -23,20 +32,40 @@
         "title": "CPU 使用率",
         "total": "總 CPU",
         "used": "已使用 CPU",
-        "available": "可用 CPU"
+        "available": "可用 CPU",
+        "free": "空閒 CPU"
       },
       "memory": {
         "title": "記憶體使用率",
         "total": "總記憶體",
         "used": "已使用記憶體",
-        "available": "可用記憶體"
+        "available": "可用記憶體",
+        "free": "空閒記憶體"
       },
       "storage": {
         "title": "儲存使用率",
         "total": "總儲存空間",
         "used": "已使用儲存空間",
-        "available": "可用儲存空間"
-      }
+        "available": "可用儲存空間",
+        "free": "空閒儲存空間"
+      },
+      "network": {
+        "receive": "接收流量",
+        "transmit": "傳送流量"
+      },
+      "disk": {
+        "title": "磁碟使用率",
+        "total": "總磁碟空間",
+        "used": "已使用磁碟空間",
+        "available": "可用磁碟空間",
+        "free": "空閒磁碟空間"
+      },
+      "networkUsage": "網路使用率",
+      "memoryUsage": "記憶體使用率",
+      "cpuUsage": "CPU 使用率",
+      "storageUsage": "儲存使用率",
+      "used": "已使用",
+      "free": "空閒"
     },
     "health": {
       "title": "組件健康狀態",
@@ -46,6 +75,16 @@
         "error": "錯誤",
         "unknown": "未知"
       }
-    }
+    },
+    "podsSelected": "容器組選取",
+    "podNamespaceDistribution": "容器組命名空間分布",
+    "namespace": "命名空間",
+    "allNamespaces": "所有命名空間",
+    "searchPods": "搜尋容器組",
+    "podStatusDistribution": "容器組狀態分布",
+    "restarts": "重啟次數",
+    "podName": "容器組名稱",
+    "status": "狀態",
+    "age": "容器組年齡"
   }
 } 

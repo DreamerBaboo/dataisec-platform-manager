@@ -528,6 +528,19 @@ const loadImages = async (req, res) => {
   }
 };
 
+// 新增提取鏡像名稱的輔助函數
+const extractImageNameAndTag = (originalName) => {
+  console.log('🔍 Extracting name from:', originalName);
+  
+  // 使用最後一個 '/' 分割來獲取最終的名稱和標籤
+  const parts = originalName.split('/');
+  const nameWithTag = parts[parts.length - 1];
+  
+  console.log('📝 Extracted name and tag:', nameWithTag);
+  return nameWithTag;
+};
+
+// 更新 retagImages 函數
 const retagImages = async (req, res) => {
   try {
     await checkDockerPermissions();
@@ -536,12 +549,37 @@ const retagImages = async (req, res) => {
     
     const results = [];
     for (const image of images) {
-      const newTag = `${repository}:${port}/${image.name}:${image.tag}`;
+      // 提取最終的鏡像名稱和標籤
+      const extractedNameTag = extractImageNameAndTag(image.originalName);
+      const newTag = `${repository}:${port}/${extractedNameTag}`;
       console.log(`🔄 Retagging ${image.originalName} to ${newTag}`);
       
-      // 使用包裝函數執行 Docker 命令
-      await executeDockerCommand(`docker tag ${image.originalName} ${newTag}`);
-      await executeDockerCommand(`docker push ${newTag}`);
+      const result = {
+        original: image.originalName,
+        new: newTag,
+        status: 'success',
+        kept: keepOriginal,
+        extractedName: extractedNameTag,
+        errors: []
+      };
+
+      // 執行 tag 命令
+      try {
+        await executeDockerCommand(`docker tag ${image.originalName} ${newTag}`);
+        console.log(`✅ Tagged image successfully: ${newTag}`);
+      } catch (tagError) {
+        console.error(`❌ Error tagging image: ${tagError.message}`);
+        result.errors.push({ operation: 'tag', error: tagError.message });
+      }
+
+      // 執行 push 命令
+      try {
+        await executeDockerCommand(`docker push ${newTag}`);
+        console.log(`✅ Pushed image successfully: ${newTag}`);
+      } catch (pushError) {
+        console.error(`❌ Error pushing image: ${pushError.message}`);
+        result.errors.push({ operation: 'push', error: pushError.message });
+      }
       
       // 根據 keepOriginal 決定是否刪除原始鏡像
       if (!keepOriginal) {
@@ -550,22 +588,23 @@ const retagImages = async (req, res) => {
           console.log(`🗑️ Removed original image: ${image.originalName}`);
         } catch (removeError) {
           console.warn(`⚠️ Could not remove original image: ${removeError.message}`);
+          result.errors.push({ operation: 'remove', error: removeError.message });
         }
       } else {
         console.log(`📦 Keeping original image: ${image.originalName}`);
       }
+
+      // 更新結果狀態
+      if (result.errors.length > 0) {
+        result.status = 'partial';
+      }
       
-      results.push({
-        original: image.originalName,
-        new: newTag,
-        status: 'success',
-        kept: keepOriginal
-      });
+      results.push(result);
     }
 
     console.log('✅ All images processed:', results);
     res.json({ 
-      message: 'Images retagged and pushed successfully',
+      message: 'Images processing completed',
       results 
     });
   } catch (error) {
@@ -577,9 +616,38 @@ const retagImages = async (req, res) => {
       });
     }
     res.status(500).json({
-      message: 'Failed to retag images',
+      message: 'Failed to process images',
       error: error.message
     });
+  }
+};
+
+// 獲取本地倉庫中的鏡像列表
+const getRepositories = async (req, res) => {
+  try {
+    const { stdout } = await execPromise('docker images --format "{{.Repository}}"');
+    const repositories = [...new Set(stdout.trim().split('\n'))];
+    res.json(repositories);
+  } catch (error) {
+    console.error('❌ Error getting repositories:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// 獲取指定倉庫的標籤列表
+const getTags = async (req, res) => {
+  try {
+    const { repository } = req.query;
+    if (!repository) {
+      return res.status(400).json({ error: 'Repository parameter is required' });
+    }
+    
+    const { stdout } = await execPromise(`docker images ${repository} --format "{{.Tag}}"`);
+    const tags = stdout.trim().split('\n').filter(tag => tag !== '<none>');
+    res.json(tags);
+  } catch (error) {
+    console.error('❌ Error getting tags:', error);
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -592,5 +660,7 @@ module.exports = {
   packageImages,
   extractImages,
   loadImages,
-  retagImages
+  retagImages,
+  getRepositories,
+  getTags
 }; 

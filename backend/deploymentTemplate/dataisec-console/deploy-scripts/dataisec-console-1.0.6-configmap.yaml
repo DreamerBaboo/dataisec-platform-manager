@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dataisec-console-keyvalue-cm
+  namespace: dataisec
+data:
+  asas: ass

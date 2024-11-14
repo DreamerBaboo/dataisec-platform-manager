@@ -77,6 +77,14 @@
         "password": "郵件密碼",
         "from": "寄件地址"
       }
+    },
+    "profile": {
+      "title": "用戶設定",
+      "username": "用戶名",
+      "email": "電子郵件"
+    },
+    "theme": {
+      "dark": "深色"
     }
   }
 } 

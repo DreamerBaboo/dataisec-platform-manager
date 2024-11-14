@@ -1,0 +1,17 @@
+{
+  "name": "dataisec",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "cd backend && npm start",
+    "dev": "concurrently \"cd frontend && npm run dev\" \"cd backend && npm run dev\"",
+    "build": "npm run build:clean && npm run build:frontend && npm run build:copy",
+    "build:clean": "cd backend && rm -rf public && mkdir public",
+    "build:frontend": "cd frontend && npm run build",
+    "build:copy": "cp -r frontend/dist/* backend/public/",
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  }
+}

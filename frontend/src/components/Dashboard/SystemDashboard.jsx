@@ -3,6 +3,8 @@ import { Box, Tabs, Tab, CircularProgress, IconButton, Tooltip, Paper } from '@m
 import { useTranslation } from 'react-i18next';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import MetricsDisplay from './MetricsDisplay';
+import { useAppTranslation } from '../../hooks/useAppTranslation';
+import { getApiUrl } from '../../config/api';
 
 const REFRESH_INTERVAL = 30000; // 30 seconds
 
@@ -13,7 +15,7 @@ const SystemDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState(null);
   const refreshTimerRef = useRef(null);
-  const { t } = useTranslation();
+  const { t } = useAppTranslation();
 
   // 檢查頁面是否活躍
   const usePageVisibility = () => {
@@ -58,8 +60,8 @@ const SystemDashboard = () => {
     try {
       setLoading(true);
       const url = selectedNode === 'cluster' 
-        ? 'http://localhost:3001/api/metrics/system'
-        : `http://localhost:3001/api/metrics/system/node/${selectedNode}`;
+        ? getApiUrl('api/metrics/system')
+        : getApiUrl(`api/metrics/system/node/${selectedNode}`);
 
       const response = await fetch(url, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
@@ -148,7 +150,7 @@ const SystemDashboard = () => {
                 <Tab
                   key={node}
                   value={node}
-                  label={node === 'cluster' ? t('cluster') : node}
+                  label={node === 'cluster' ? t('dashboard:common.cluster') : node}
                 />
               ))}
             </Tabs>
@@ -167,10 +169,10 @@ const SystemDashboard = () => {
                 color: 'text.secondary',
                 whiteSpace: 'nowrap'
               }}>
-                {t('lastUpdate')}: {lastUpdate.toLocaleTimeString()}
+                {t('dashboard:common.lastUpdate')}: {lastUpdate.toLocaleTimeString()}
               </Box>
             )}
-            <Tooltip title={t('refresh')}>
+            <Tooltip title={t('common:common.refresh')}>
               <span>
                 <IconButton 
                   onClick={handleRefresh}

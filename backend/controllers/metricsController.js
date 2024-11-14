@@ -45,13 +45,13 @@ const getClusterMetrics = async (req, res) => {
               },
               // 其他指標保持不變
               memory_total: {
-                max: {
-                  field: 'system.memory.total'
+                sum: {
+                  field: 'kubernetes.node.memory.capacity.bytes'
                 }
               },
               memory_used: {
                 avg: {
-                  field: 'system.memory.used.bytes'
+                  field: 'kubernetes.node.memory.usage.bytes'
                 }
               },
               memory_free: {
@@ -61,22 +61,22 @@ const getClusterMetrics = async (req, res) => {
               },
               network_in: {
                 sum: {
-                  field: 'system.network.in.bytes'
+                  field: 'kubernetes.node.network.rx.bytes'
                 }
               },
               network_out: {
                 sum: {
-                  field: 'system.network.out.bytes'
+                  field: 'kubernetes.node.network.tx.bytes'
                 }
               },
               fs_total: {
-                max: {
-                  field: 'system.filesystem.total'
+                sum: {
+                  field: 'kubernetes.node.fs.capacity.bytes'
                 }
               },
               fs_used: {
-                avg: {
-                  field: 'system.filesystem.used.bytes'
+                sum: {
+                  field: 'kubernetes.node.fs.used.bytes'
                 }
               },
               fs_free: {

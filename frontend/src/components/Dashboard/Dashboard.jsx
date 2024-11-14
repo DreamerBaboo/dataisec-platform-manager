@@ -5,6 +5,8 @@ import axios from 'axios';
 import RGL, { WidthProvider } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
+import { useAppTranslation } from '../../hooks/useAppTranslation';
+import { getApiUrl } from '../../config/api';
 
 const ReactGridLayout = WidthProvider(RGL);
 
@@ -24,6 +26,8 @@ const Dashboard = () => {
 
   const theme = useTheme();
   const chartRefs = useRef({});
+
+  const { t } = useAppTranslation();
 
   useEffect(() => {
     fetchMetrics();
@@ -60,7 +64,7 @@ const Dashboard = () => {
 
   const fetchPods = async () => {
     try {
-      const response = await axios.get('http://localhost:3001/pods', {
+      const response = await axios.get(getApiUrl('api/pods'), {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       setPods(response.data);
@@ -130,7 +134,7 @@ const Dashboard = () => {
   return (
     <Box sx={{ flexGrow: 1, color: theme.palette.text.primary }}>
       <Typography variant="h5" gutterBottom sx={{ mb: 2 }}>
-        系統儀表板
+        {t('dashboard:dashboard.title')}
       </Typography>
       <ReactGridLayout
         className="layout"

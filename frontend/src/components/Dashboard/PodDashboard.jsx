@@ -21,7 +21,7 @@ import {
   Checkbox,
   Button
 } from '@mui/material';
-import { useTranslation } from 'react-i18next';
+import { useAppTranslation } from '../../hooks/useAppTranslation';
 import SearchIcon from '@mui/icons-material/Search';
 import CalculateIcon from '@mui/icons-material/Calculate';
 import ReactECharts from 'echarts-for-react';
@@ -40,7 +40,7 @@ const DEFAULT_LAYOUT = [
 const LAYOUT_STORAGE_KEY = 'pod-dashboard-layout';
 
 const PodDashboard = () => {
-  const { t } = useTranslation();
+  const { t } = useAppTranslation();
   const [pods, setPods] = useState([]);
   const [selectedPods, setSelectedPods] = useState([]);
   const [podMetrics, setPodMetrics] = useState(null);
@@ -65,15 +65,17 @@ const PodDashboard = () => {
   useEffect(() => {
     const fetchNamespaces = async () => {
       try {
+        console.log('開始獲取命名空間...');
         const response = await fetch('http://localhost:3001/api/pods/namespaces', {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         });
         if (response.ok) {
           const data = await response.json();
+          console.log('獲取到的命名空間:', data.namespaces);
           setNamespaces(data.namespaces);
         }
       } catch (error) {
-        console.error('Error fetching namespaces:', error);
+        console.error('獲取命名空間時發生錯誤:', error);
       }
     };
     fetchNamespaces();
@@ -83,6 +85,7 @@ const PodDashboard = () => {
   useEffect(() => {
     const fetchPods = async () => {
       try {
+        console.log('開始獲取 Pod 列表，過濾條件:', filters);
         setLoading(true);
         const queryParams = new URLSearchParams();
         if (filters.namespace !== 'all') queryParams.append('namespace', filters.namespace);
@@ -94,10 +97,11 @@ const PodDashboard = () => {
         
         if (response.ok) {
           const data = await response.json();
+          console.log('獲取到的 Pod 數量:', data.length);
           setPods(data);
         }
       } catch (error) {
-        console.error('Error fetching pods:', error);
+        console.error('獲取 Pod 列表時發生錯誤:', error);
       } finally {
         setLoading(false);
       }
@@ -111,11 +115,13 @@ const PodDashboard = () => {
   // Fetch metrics for selected pods
   const fetchSelectedPodsMetrics = useCallback(async () => {
     if (selectedPods.length === 0) {
+      console.log('沒有選中的 Pod，清空指標數據');
       setPodMetrics(null);
       return;
     }
 
     try {
+      console.log('開始獲取選中 Pod 的指標，選中的 Pod:', selectedPods);
       const response = await fetch('http://localhost:3001/api/pods/calculate-resources', {
         method: 'POST',
         headers: {
@@ -127,10 +133,11 @@ const PodDashboard = () => {
 
       if (response.ok) {
         const data = await response.json();
+        console.log('獲取到的 Pod 指標:', data);
         setPodMetrics(data);
       }
     } catch (error) {
-      console.error('Error fetching pod metrics:', error);
+      console.error('獲取 Pod 指標時發生錯誤:', error);
     }
   }, [selectedPods]);
 
@@ -259,14 +266,14 @@ const PodDashboard = () => {
           }}>
             <Typography variant="subtitle1" fontWeight="medium">
               {selectedPods.length > 1 ? 
-                `${t('cpuUsage')} (${selectedPods.length} ${t('podsSelected')})` : 
-                t('cpuUsage')}
+                `${t('dashboard:dashboard.resources.cpu.title')} (${selectedPods.length} ${t('dashboard:podsSelected')})` : 
+                t('dashboard:dashboard.resources.cpu.title')}
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Typography variant="h4" color="primary">
               {podMetrics ? 
-                `${podMetrics.cpu.cores.toFixed(2)} cores` : 
+                `${t('dashboard:dashboard.resources.cpu.total')} ${podMetrics.cpu.cores.toFixed(2)} ${t('dashboard:dashboard.resources.cpu.used')}` : 
                 '0 cores'}
             </Typography>
           </Box>
@@ -282,8 +289,8 @@ const PodDashboard = () => {
           }}>
             <Typography variant="subtitle1" fontWeight="medium">
               {selectedPods.length > 1 ? 
-                `${t('memoryUsage')} (${selectedPods.length} ${t('podsSelected')})` : 
-                t('memoryUsage')}
+                `${t('dashboard:dashboard.resources.memory.title')} (${selectedPods.length} ${t('dashboard:podsSelected')})` : 
+                t('dashboard:dashboard.resources.memory.title')}
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -329,7 +336,7 @@ const PodDashboard = () => {
                 bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.100'
               }}>
                 <Typography variant="subtitle1" fontWeight="medium">
-                  {t('podStatusDistribution')}
+                  {t('dashboard:dashboard.podStatusDistribution')}
                 </Typography>
               </Box>
               <Box sx={{ height: 'calc(100% - 48px)' }}>
@@ -352,7 +359,7 @@ const PodDashboard = () => {
                 bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.100'
               }}>
                 <Typography variant="subtitle1" fontWeight="medium">
-                  {t('podNamespaceDistribution')}
+                  {t('dashboard:dashboard.podNamespaceDistribution')}
                 </Typography>
               </Box>
               <Box sx={{ height: 'calc(100% - 48px)' }}>
@@ -372,14 +379,14 @@ const PodDashboard = () => {
         <Grid container spacing={2}>
           <Grid item xs={12} sm={6}>
             <FormControl fullWidth size="small">
-              <InputLabel>{t('namespace')}</InputLabel>
+              <InputLabel>{t('dashboard:dashboard.namespace')}</InputLabel>
               <Select
                 value={filters.namespace}
                 onChange={(e) => setFilters(prev => ({ ...prev, namespace: e.target.value }))}
-                label={t('namespace')}
+                label={t('dashboard:dashboard.namespace')}
               >
-                <MenuItem value="all">{t('allNamespaces')}</MenuItem>
-                {namespaces.map(ns => (
+                <MenuItem value="all">{t('dashboard:dashboard.allNamespaces')}</MenuItem>
+                {Array.isArray(namespaces) && namespaces.map(ns => (
                   <MenuItem key={ns} value={ns}>{ns}</MenuItem>
                 ))}
               </Select>
@@ -389,7 +396,7 @@ const PodDashboard = () => {
             <TextField
               fullWidth
               size="small"
-              placeholder={t('searchPods')}
+              placeholder={t('dashboard:dashboard.searchPods')}
               value={filters.search}
               onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
               InputProps={{
@@ -423,19 +430,19 @@ const PodDashboard = () => {
                 />
               </TableCell>
               <TableCell sx={{ bgcolor: 'background.paper' }}>
-                {t('podName')}
+                {t('dashboard:dashboard.podName')}
               </TableCell>
               <TableCell sx={{ bgcolor: 'background.paper' }}>
-                {t('namespace')}
+                {t('dashboard:dashboard.namespace')}
               </TableCell>
               <TableCell sx={{ bgcolor: 'background.paper' }}>
-                {t('status')}
+                {t('dashboard:dashboard.status')}
               </TableCell>
               <TableCell align="right" sx={{ bgcolor: 'background.paper' }}>
-                {t('restarts')}
+                {t('dashboard:dashboard.restarts')}
               </TableCell>
               <TableCell align="right" sx={{ bgcolor: 'background.paper' }}>
-                {t('age')}
+                {t('dashboard:dashboard.age')}
               </TableCell>
             </TableRow>
           </TableHead>

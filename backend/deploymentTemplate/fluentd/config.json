@@ -1,0 +1,63 @@
+{
+  "name": "fluentd",
+  "versions": {
+    "1.0.0": {
+      "createdAt": "2024-11-09T18:18:53.703Z",
+      "updatedAt": "2024-11-09T18:18:53.703Z",
+      "config": {
+        "name": "fluentd",
+        "version": "1.0.0",
+        "namespace": "default",
+        "enableResourceQuota": false,
+        "resourceQuota": {
+          "requestsCpu": "1",
+          "requestsMemory": "1Gi",
+          "limitsCpu": "2",
+          "limitsMemory": "2Gi",
+          "pods": "10",
+          "configmaps": "10",
+          "pvcs": "5",
+          "services": "10",
+          "secrets": "10",
+          "deployments": "5",
+          "replicasets": "10",
+          "statefulsets": "5",
+          "jobs": "10",
+          "cronjobs": "5"
+        }
+      }
+    }
+  },
+  "latestVersion": "1.0.0",
+  "configurations": {
+    "basic": {
+      "name": "fluentd",
+      "namespace": "",
+      "replicas": 1
+    },
+    "template": {
+      "content": "",
+      "placeholders": {},
+      "defaultValues": {},
+      "categories": {}
+    },
+    "image": {
+      "repository": "",
+      "tag": "latest"
+    },
+    "resources": {
+      "limits": {
+        "cpu": "",
+        "memory": ""
+      },
+      "requests": {
+        "cpu": "",
+        "memory": ""
+      }
+    },
+    "affinity": {},
+    "volumes": [],
+    "configMaps": [],
+    "secrets": []
+  }
+}

@@ -1,0 +1,63 @@
+{
+    "common": {
+        "imageList": "Image List"
+    },
+    "imageManagement": {
+        "imageDetails": {
+            "title": "Image Details",
+            "basicInfo": "Basic Information",
+            "tags": "Tags",
+            "layers": "Layers",
+            "config": "Config",
+            "id": "ID",
+            "size": "Size",
+            "created": "Created",
+            "lastUpdated": "Last Updated",
+            "environmentVariables": "Environment Variables",
+            "command": "Command",
+            "workdir": "Work directory",
+            "exposedPorts": "Exposed Ports"
+        }
+    },
+    "actions": {
+        "close": "Close",
+        "upload": "Upload",
+        "packaging": "Packaging",
+        "package": "Package",
+        "delete": "Delete",
+        "cancel": "Cancel",
+        "confirm": "Confirm",
+        "dropFilesHere": "Drop files here",
+        "dragDropImage": "Drag and drop image file",
+        "supportedFormats": "Supported formats: tar, tar.gz, tgz, zip"      
+    },
+    "message": {
+        "partialDeleteFailed": "Partial image deletion failed",
+        "packageFailed": "Image packaging failed",
+        "deleteFailed": "Image deletion failed",
+        "packageStart": "Starting image packaging...",
+        "preparing": "Preparing to package files...",
+        "noImagesFound": "No images found",
+        "errorLoadingImages": "Failed to load images",
+        "searchImages": "Search images",
+        "downloading": "Downloading",
+        "pleaseLogin": "Please login",
+        "uploadFailed": "Upload failed",
+        "uploadTimeout": "Upload timeout",
+        "networkError": "Network error",
+        "confirmLoad": "Confirm load",
+        "confirmLoadMessage": "Confirm load the following images?",
+        "newTag": "New tag",
+        "keepOriginal": "Keep original"
+    },
+    "table": {
+        "name": "Name",
+        "tag": "Tag",
+        "size": "Size",
+        "uploadDate": "Upload Date",
+        "status": "Status"
+    },
+    "status": {
+        "uploading": "Uploading"
+    }
+}

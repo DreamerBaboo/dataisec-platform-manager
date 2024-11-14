@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -8,19 +8,57 @@ import { AuthProvider, useAuth } from './utils/auth.jsx';
 import { I18nextProvider } from 'react-i18next';
 import { i18n } from './i18n';
 import { SnackbarProvider } from 'notistack';
+import { useAppTranslation } from './hooks/useAppTranslation';
+import PodDeploymentManagement from './components/PodDeployment/PodDeploymentManagement';
 
-export const ColorModeContext = React.createContext({ toggleColorMode: () => {} });
+export const ColorModeContext = React.createContext({ 
+  toggleColorMode: () => {},
+  currentMode: 'light'
+});
 
-function App() {
-  const [mode, setMode] = useState('light');
+export const LanguageContext = React.createContext({
+  currentLanguage: 'zh-TW',
+  changeLanguage: () => {}
+});
+
+function AppContent() {
+  const [mode, setMode] = useState(() => {
+    return localStorage.getItem('theme') || 'light';
+  });
+  
+  const { currentLanguage, changeLanguage } = useAppTranslation();
+
   const colorMode = useMemo(
     () => ({
       toggleColorMode: () => {
-        setMode((prevMode) => (prevMode === 'light' ? 'dark' : 'light'));
+        setMode((prevMode) => {
+          const newMode = prevMode === 'light' ? 'dark' : 'light';
+          localStorage.setItem('theme', newMode);
+          return newMode;
+        });
       },
+      currentMode: mode
     }),
-    [],
+    [mode],
   );
+
+  const languageContext = useMemo(
+    () => ({
+      currentLanguage,
+      changeLanguage: (lang) => {
+        localStorage.setItem('language', lang);
+        changeLanguage(lang);
+      }
+    }),
+    [currentLanguage, changeLanguage]
+  );
+
+  useEffect(() => {
+    const savedLanguage = localStorage.getItem('language');
+    if (savedLanguage) {
+      changeLanguage(savedLanguage);
+    }
+  }, [changeLanguage]);
 
   const theme = useMemo(
     () =>
@@ -29,13 +67,11 @@ function App() {
           mode,
           ...(mode === 'light'
             ? {
-                // Light mode colors
                 primary: { main: '#1976d2' },
                 secondary: { main: '#dc004e' },
                 background: { default: '#f5f5f5', paper: '#ffffff' },
               }
             : {
-                // Dark mode colors
                 primary: { main: '#90caf9' },
                 secondary: { main: '#f48fb1' },
                 background: { default: '#303030', paper: '#424242' },
@@ -66,10 +102,10 @@ function App() {
 
   return (
     <ColorModeContext.Provider value={colorMode}>
-      <ThemeProvider theme={theme}>
-        <SnackbarProvider maxSnack={3}>
-          <CssBaseline />
-          <I18nextProvider i18n={i18n}>
+      <LanguageContext.Provider value={languageContext}>
+        <ThemeProvider theme={theme}>
+          <SnackbarProvider maxSnack={3}>
+            <CssBaseline />
             <AuthProvider>
               <Router>
                 <Routes>
@@ -81,14 +117,24 @@ function App() {
                         <MainPage />
                       </PrivateRoute>
                     }
-                  />
+                  >
+                    <Route path="pod-deployment" element={<PodDeploymentManagement />} />
+                  </Route>
                 </Routes>
               </Router>
             </AuthProvider>
-          </I18nextProvider>
-        </SnackbarProvider>
-      </ThemeProvider>
+          </SnackbarProvider>
+        </ThemeProvider>
+      </LanguageContext.Provider>
     </ColorModeContext.Provider>
+  );
+}
+
+function App() {
+  return (
+    <I18nextProvider i18n={i18n}>
+      <AppContent />
+    </I18nextProvider>
   );
 }
 

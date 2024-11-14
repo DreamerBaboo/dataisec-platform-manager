@@ -5,18 +5,14 @@ import NotificationsIcon from '@mui/icons-material/Notifications';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import { useAuth } from '../../utils/auth';
-import { useTranslation } from 'react-i18next';
+import { useAppTranslation } from '../../hooks/useAppTranslation';
 import { ColorModeContext } from '../../App';
 
 const TopBar = ({ open, drawerWidth, handleDrawerToggle }) => {
   const { user } = useAuth();
-  const { t, i18n } = useTranslation();
+  const { t, currentLanguage, changeLanguage, languages } = useAppTranslation();
   const theme = useTheme();
   const colorMode = useContext(ColorModeContext);
-
-  const handleLanguageChange = (event) => {
-    i18n.changeLanguage(event.target.value);
-  };
 
   return (
     <AppBar
@@ -47,15 +43,18 @@ const TopBar = ({ open, drawerWidth, handleDrawerToggle }) => {
         <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
           <img src="/path/to/your/logo.png" alt="Logo" style={{ height: 40, marginRight: 16 }} />
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            {t('appName')}
+            {t('common:common.appName')}
           </Typography>
           <Select
-            value={i18n.language}
-            onChange={handleLanguageChange}
-            sx={{ mr: 2, color: 'inherit', '& .MuiSelect-icon': { color: 'inherit' } }}
+            value={currentLanguage}
+            onChange={(e) => changeLanguage(e.target.value)}
+            sx={{ mr: 2, color: 'inherit' }}
           >
-            <MenuItem value="zh">中文</MenuItem>
-            <MenuItem value="en">English</MenuItem>
+            {Object.entries(languages).map(([code, name]) => (
+              <MenuItem key={code} value={code}>
+                {name}
+              </MenuItem>
+            ))}
           </Select>
           <IconButton sx={{ ml: 1 }} onClick={colorMode.toggleColorMode} color="inherit">
             {theme.palette.mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}

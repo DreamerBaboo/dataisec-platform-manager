@@ -8,8 +8,12 @@ import {
   TextField,
   Box
 } from '@mui/material';
+import { useAppTranslation } from '../../hooks/useAppTranslation';
+
+
 
 const RepositoryConfig = ({ open, onClose }) => {
+  const { t } = useAppTranslation();
   const [repository, setRepository] = useState(localStorage.getItem('repositoryHost') || '');
   const [port, setPort] = useState(localStorage.getItem('repositoryPort') || '5000');
 
@@ -18,32 +22,35 @@ const RepositoryConfig = ({ open, onClose }) => {
     localStorage.setItem('repositoryPort', port);
     onClose({ repository, port });
   };
+  const handleClose = () => {
+      onClose();
+  };
 
   return (
     <Dialog open={open} onClose={() => onClose()} maxWidth="sm" fullWidth>
-      <DialogTitle>倉庫設定</DialogTitle>
+      <DialogTitle>{t('images:imageManagement.registry.title')}</DialogTitle>
       <DialogContent>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
           <TextField
-            label="倉庫地址"
+            label={t('images:imageManagement.registry.repository.label')}
             value={repository}
             onChange={(e) => setRepository(e.target.value)}
             fullWidth
-            placeholder="例如: localhost"
+            placeholder={t('images:imageManagement.registry.repository.placeholder')}
           />
           <TextField
-            label="倉庫端口"
+            label={t('images:imageManagement.registry.port.label')}
             value={port}
             onChange={(e) => setPort(e.target.value)}
             fullWidth
-            placeholder="例如: 5000"
+            placeholder={t('images:imageManagement.registry.port.placeholder')}
           />
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={() => onClose()}>取消</Button>
+        <Button onClick={() => handleClose()}>{t('images:imageManagement.actions.cancel')}</Button>
         <Button onClick={handleSave} variant="contained">
-          保存
+          {t('images:imageManagement.actions.save')}
         </Button>
       </DialogActions>
     </Dialog>

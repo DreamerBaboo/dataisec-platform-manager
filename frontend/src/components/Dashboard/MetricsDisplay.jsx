@@ -1,11 +1,10 @@
 import React, { useState, useCallback } from 'react';
 import { Grid, Paper, Typography, Box } from '@mui/material';
-import { useTranslation } from 'react-i18next';
 import ReactECharts from 'echarts-for-react';
 import RGL, { WidthProvider } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
-
+import { useAppTranslation } from '../../hooks/useAppTranslation';
 const ReactGridLayout = WidthProvider(RGL);
 
 const DEFAULT_LAYOUT = [
@@ -18,7 +17,7 @@ const DEFAULT_LAYOUT = [
 const LAYOUT_STORAGE_KEY = 'metrics-dashboard-layout';
 
 const MetricsDisplay = ({ metrics, selectedNode }) => {
-  const { t } = useTranslation();
+  const { t } = useAppTranslation();
   const [layout, setLayout] = useState(() => {
     // 從 localStorage 讀取保存的布局，如果沒有則使用默認布局
     const savedLayout = localStorage.getItem(LAYOUT_STORAGE_KEY);
@@ -60,7 +59,7 @@ const MetricsDisplay = ({ metrics, selectedNode }) => {
   if (!metrics || !metrics[selectedNode]) {
     return (
       <Box sx={{ mt: 2 }}>
-        <Typography>{t('noMetricsAvailable')}</Typography>
+        <Typography>{t('dashboard:messages.noMetricsAvailable')}</Typography>
       </Box>
     );
   }
@@ -95,8 +94,8 @@ const MetricsDisplay = ({ metrics, selectedNode }) => {
           orient: 'horizontal',
           bottom: 'bottom',
           data: [
-            `${t('used')} (${usedPercentage}%)`,
-            t('free')
+            `${t('dashboard:dashboard.resources.used')} (${usedPercentage}%)`,
+            t('dashboard:dashboard.resources.free')
           ]
         },
         series: [{
@@ -118,12 +117,12 @@ const MetricsDisplay = ({ metrics, selectedNode }) => {
           data: [
             { 
               value: usedValue, 
-              name: `${t('used')} (${usedPercentage}%)`,
+              name: `${t('dashboard:dashboard.resources.used')} (${usedPercentage}%)`,
               itemStyle: { color: '#ff6b6b' }
             },
             { 
               value: freeValue, 
-              name: t('free'),
+              name: t('dashboard:dashboard.resources.free'),
               itemStyle: { color: '#4ecdc4' }
             }
           ]
@@ -314,7 +313,7 @@ const MetricsDisplay = ({ metrics, selectedNode }) => {
               minHeight: '40px'
             }}>
               <Typography variant="subtitle1" fontWeight="medium">
-                {t(`${metricType}Usage`)}
+                {t('dashboard:dashboard.resources.' + `${metricType}Usage`)}
               </Typography>
             </Box>
             <Box sx={{ 
@@ -333,7 +332,7 @@ const MetricsDisplay = ({ metrics, selectedNode }) => {
                     valueType: metricType === 'network' ? 'bytesPerSecond' : 
                              metricType === 'memory' ? 'gigabytes' :
                              metricType === 'cpu' ? 'cores' : 'percentage',
-                    seriesName: metricType === 'network' ? t('networkReceive') : t(`${metricType}Usage`)
+                    seriesName: metricType === 'network' ? t('dashboard:dashboard.network.receive') : t('dashboard:dashboard.resources.' + `${metricType}Usage`)
                   }
                 )}
                 style={{ 

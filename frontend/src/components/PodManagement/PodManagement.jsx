@@ -13,10 +13,11 @@ import {
   Button,
   CircularProgress
 } from '@mui/material';
-import { useTranslation } from 'react-i18next';
+import { useAppTranslation } from '../../hooks/useAppTranslation';
+import { getApiUrl } from '../../config/api';
 
 const PodManagement = () => {
-  const { t } = useTranslation();
+  const { t } = useAppTranslation();
   const [pods, setPods] = useState([]);
   const [selectedPods, setSelectedPods] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -25,7 +26,7 @@ const PodManagement = () => {
     const fetchPods = async () => {
       try {
         setLoading(true);
-        const response = await fetch('http://localhost:3001/api/pods', {
+        const response = await fetch(getApiUrl('api/pods'), {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         });
         if (response.ok) {
@@ -76,7 +77,7 @@ const PodManagement = () => {
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>
-        {t('podManagement')}
+        {t('podManagement:pods.management.title')}
       </Typography>
       <TableContainer component={Paper} sx={{ maxHeight: 400, overflow: 'auto' }}>
         <Table stickyHeader>
@@ -89,11 +90,11 @@ const PodManagement = () => {
                   onChange={handleSelectAllClick}
                 />
               </TableCell>
-              <TableCell sx={{ bgcolor: 'background.paper' }}>{t('podName')}</TableCell>
-              <TableCell sx={{ bgcolor: 'background.paper' }}>{t('namespace')}</TableCell>
-              <TableCell sx={{ bgcolor: 'background.paper' }}>{t('status')}</TableCell>
-              <TableCell align="right" sx={{ bgcolor: 'background.paper' }}>{t('restarts')}</TableCell>
-              <TableCell align="right" sx={{ bgcolor: 'background.paper' }}>{t('age')}</TableCell>
+              <TableCell sx={{ bgcolor: 'background.paper' }}>{t('podManagement:pods.table.name')}</TableCell>
+              <TableCell sx={{ bgcolor: 'background.paper' }}>{t('podManagement:pods.table.namespace')}</TableCell>
+              <TableCell sx={{ bgcolor: 'background.paper' }}>{t('podManagement:pods.table.status')}</TableCell>
+              <TableCell align="right" sx={{ bgcolor: 'background.paper' }}>{t('podManagement:pods.table.restarts')}</TableCell>
+              <TableCell align="right" sx={{ bgcolor: 'background.paper' }}>{t('podManagement:pods.table.age')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -131,7 +132,7 @@ const PodManagement = () => {
           sx={{ mt: 2 }}
           onClick={() => console.log('Selected Pods:', selectedPods)}
         >
-          {t('performAction')} ({selectedPods.length})
+          {t('podManagement:actions.performAction')} ({selectedPods.length})
         </Button>
       )}
     </Box>

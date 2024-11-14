@@ -1,5 +1,6 @@
 {
   "common": {
+    "appName": "Dataisec Platform Manager",
     "actions": "Actions",
     "add": "Add",
     "cancel": "Cancel",
@@ -13,7 +14,13 @@
     "search": "Search",
     "success": "Success",
     "upload": "Upload",
-    "view": "View"
+    "view": "View",
+    "cluster": "Cluster",
+    "refresh": "Refresh",
+    "lastUpdate": "Last Update",
+    "next": "Next",
+    "back": "Back",
+    "deploy": "Deploy"
   },
   "errors": {
     "generalError": "An error occurred",
@@ -58,6 +65,15 @@
       "error": "Error",
       "warning": "Warning",
       "info": "Information"
+    },
+    "sideMenu": {
+      "podManagement": "Pod Management",
+      "dashboard": "Dashboard",
+      "podDashboard": "Pod Dashboard",
+      "imageManagement": "Image Management",
+      "logs": "Logs",
+      "profile": "Profile",
+      "podDeployment": "Pod Deployment"
     }
   }
 } 

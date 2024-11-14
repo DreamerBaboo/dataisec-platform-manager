@@ -1,0 +1,479 @@
+{
+  "podDeployment": {
+    "title": "Pod 部署管理",
+    "createNew": "創建新部署",
+    "steps": {
+      "basicSetup": "基本設定",
+      "resourceAllocation": "資源配置",
+      "affinity": "親和性",
+      "storageConfiguration": "存儲配置",
+      "configurationMapping": "配置映射",
+      "preview": "預覽",
+      "upload": "上傳",
+      "uploadError": "上傳模板失敗",
+      "parseError": "解析 YAML 模板失敗",
+      "save": "保存",
+      "saveSuccess": "YAML 模板保存成功",
+      "saveError": "保存 YAML 模板失敗",
+      "editTemplate": "編輯模板",
+      "searchPlaceholders": "搜索佔位符...",
+      "templateContent": "模板內容",
+      "templateConfig": "模板配置",
+      "templatePreview": "模板預覽",
+      "resourceConfig": "資源配置",
+      "volumeConfig": "儲存配置",
+      "configMapConfig": "ConfigMap 配置",
+      "secretConfig": "Secret 配置",
+      "affinityConfig": "親和性配置",
+      "review": "審核",
+      "deploy": "署",
+      "uploadTemplate": "上傳模板",
+      "uploadTemplateFile": "請上傳模板文件",
+      "uploadTemplateSuccess": "模板上傳成功",
+      "reload": "重新加載",
+      "namespaceQuota": "命名空間配額",
+      "repository": "倉庫配置",
+      "tag": "標籤",
+      "repositoryConfig": "倉庫配置",
+      "port": "端口"  
+    },
+    "filter": {
+      "namespace": "命名空間",
+      "allNamespaces": "全部命名空間",
+      "search": "搜索"
+    },
+    "tabs": {
+      "basic": "基本",
+      "resources": "資源配置",
+      "affinity": "親和性",
+      "volumes": "存儲配置",
+      "configMaps": "配置映射",
+      "secrets": "密鑰"
+    },
+    "basic": {
+      "name": "部署名稱",
+      "namespace": "命名空間",
+      "type": "部署類型",
+      "replicas": "副本數量",
+      "repository": "映像倉庫",
+      "tag": "映像標籤",
+      "pullPolicy": "拉取策略",
+      "image": "映像",
+      "version": "版本",
+      "enableResourceQuota": "啟用命名空間資源配額",
+      "resourceQuota": "資源配額設定",
+      "requestsCpu": "CPU 請求",
+      "requestsMemory": "記憶體請求",
+      "limitsCpu": "CPU 限制",
+      "limitsMemory": "記憶體限制",
+      "pods": "最大 Pod 數量",
+      "configmaps": "最大 ConfigMap 數量",
+      "pvcs": "最大 PVC 數量",
+      "services": "最大服務數量",
+      "secrets": "最大 Secret 數量",
+      "deployments": "最大部署數量",
+      "replicasets": "最大副本集數量",
+      "statefulsets": "最大有狀態集數量",
+      "jobs": "最大作業數量",
+      "cronjobs": "最大定時作業數量",
+      "resourceQuotaPreview": "資源配額預覽"
+    },
+    "table": {
+      "name": "名稱",
+      "namespace": "命名空間",
+      "replicas": "副本數",
+      "status": "狀態",
+      "actions": "操作",
+      "edit": "編輯",
+      "delete": "刪除",
+      "ready": "就緒" ,
+      "restarts": "重啟",
+      "age": "年齡",
+      "node": "節點",
+      "metrics": "指標",
+      "ip": "IP"
+    },
+    "actions": {
+      "edit": "編輯",
+      "delete": "刪除",
+      "configure": "配置",
+      "preview": "預覽",
+      "progress": "進度",
+      "logs": "日誌",
+      "performAction": "執行操作"
+    },
+    "create": {
+      "title": "創建新部署"
+    },
+    "edit": {
+      "title": "編輯部署"
+    },
+    "form": {
+      "name": "部署名稱",
+      "namespace": "命名空間",
+      "type": "部署類型",
+      "replicas": "副本數",
+      "imageRepository": "鏡像倉庫",
+      "imageTag": "鏡像標籤"
+    },
+    "resources": {
+      "requests": "資源請求",
+      "limits": "資源限制",
+      "cpu": "CPU",
+      "memory": "記憶體",
+      "cpuHelp": "例如: 100m, 0.1",
+      "memoryHelp": "例如: 128Mi, 1Gi"
+    },
+    "affinity": {
+      "title": "親和性",
+      "nodeAffinity": "節點親和性",
+      "podAffinity": "Pod 親和性",
+      "podAntiAffinity": "Pod 反親和性",
+      "nodeAffinityPlaceholder": "輸入節點親和性規則...",
+      "podAffinityPlaceholder": "輸入 Pod 親和性規則...",
+      "podAntiAffinityPlaceholder": "輸入 Pod 反親和性規則...",
+      "topologySpreadConstraint": "拓撲擴散約束",
+      "nodeSelector": "節點選擇器",
+      "labelSelector": "標籤選擇器"
+      
+    },
+    "volumes": {
+      "title": "存儲卷",
+      "add": "添加存儲卷",
+      "name": "名稱",
+      "type": "類型",
+      "path": "路徑",
+      "claimName": "PVC 名稱",
+      "mountPath": "掛載路徑",
+      "preview": "預覽",
+      "hostPath": "主機路徑",
+      "nfs": "NFS",
+      "iscsi": "ISCSI",
+      "glusterfs": "GlusterFS",
+      "rbd": "RBD",
+      "cephfs": "CephFS",
+      "csi": "CSI",
+      "secretName": "密鑰名稱",
+      "configMapName": "配置映射名稱",
+      "storageClassConfiguration": "Storage Class Configuration",
+      "persistentVolumes": "Persistent Volumes"
+    },
+    "configMaps": {
+      "title": "配置映射",
+      "add": "添加配置映射",
+      "name": "名稱",
+      "mountPath": "掛載路徑",
+      "data": "數據",
+      "key": "鍵",
+      "value": "值",
+      "addData": "添加數據",
+      "preview": "預覽",
+      "addItem": "添加項目" 
+    },
+    "secrets": {
+      "title": "密鑰",
+      "add": "添加密鑰",
+      "name": "名稱",
+      "mountPath": "掛載路徑",
+      "data": "數據",
+      "key": "鍵",
+      "value": "值",
+      "addData": "添加數據",
+      "preview": "預覽",
+      "addItem": "添加項目"
+    },
+    "preview": {
+      "title": "部署預覽",
+      "info": "請在繼續之前檢查您的部署配置。",
+      "basicInfo": "基本資訊",
+      "resources": "資源配置",
+      "volumes": "儲存配置",
+      "configurations": "其他配置",
+      "saveSuccess": "配置儲存成功",
+      "saveError": "配置儲存失敗",
+      "categories": {
+        "basic": "基本資訊",
+        "image": "映像配置",
+        "service": "服務配置",
+        "resources": "資源配置",
+        "deployment": "部署配置",
+        "node": "節點配置",
+        "misc": "其他配置"
+      },
+      "quotaTitle": "命名空間配額",
+      "storageClassTitle": "儲存類別",
+      "persistentVolumeTitle": "持久化儲存",
+      "configMapTitle": "配置映射",
+      "secretTitle": "密鑰",
+      "showYaml": "顯示 YAML",
+      "hideYaml": "隱藏 YAML",
+      "yamlPreview": "YAML 預覽",
+      "loading": "正在載入 YAML...",
+      "noYaml": "沒有可用的 YAML 文件",
+      "yamlFiles": "YAML 文件",
+      "configurationFiles": "配置文件",
+      "filePreview": "文件預覽",
+      "saveSuccess": "YAML 文件保存成功",
+      "saveError": "保存 YAML 文件失敗",
+      "loadError": "載入 YAML 文件失敗",
+      "noConfigAvailable": "沒有可用的配置",
+      "categories": {
+        "quota": "資源配額",
+        "storage": "儲存配置",
+        "configMap": "配置映射",
+        "secret": "密鑰配置",
+        "deployment": "部署配置"
+      },
+      "actions": {
+        "showPreview": "顯示預覽",
+        "hidePreview": "隱藏預覽",
+        "save": "保存 YAML",
+        "close": "關閉預覽",
+        "viewYaml": "查看 YAML"
+      },
+      "status": {
+        "loading": "正在載入 YAML 文件...",
+        "saving": "正在保存 YAML 文件...",
+        "saved": "YAML 文件已保存",
+        "error": "發生錯誤"
+      },
+      "tooltips": {
+        "showYaml": "顯示 YAML 內容",
+        "hideYaml": "隱藏 YAML 內容",
+        "saveYaml": "保存 YAML 文件",
+        "viewFile": "查看文件內容"
+      }
+    },
+    "logs": {
+      "title": "容器日誌",
+      "tailLines": "顯示行數",
+      "autoRefresh": "自動刷新",
+      "stopRefresh": "停止刷新",
+      "noLogs": "暫無日誌",
+      "downloadLogs": "下載日誌",
+      "clearLogs": "清除日誌"
+    },
+    "progress": {
+      "title": "部署進度",
+      "status": "當前狀態",
+      "replicas": "{{available}}/{{total}} 個副本就緒",
+      "events": "部署事件",
+      "conditions": {
+        "Available": "可用",
+        "Progressing": "進行中",
+        "ReplicaFailure": "副本失敗"
+      }
+    },
+    "validation": {
+      "errors": "配置驗證錯誤",
+      "name": {
+        "required": "部署名稱不能為空",
+        "format": "部署名稱只能包含小母、數字和連字符，且必須以字母或數字開頭和結尾"
+      },
+      "namespace": {
+        "required": "命名空間不能為空"
+      },
+      "image": {
+        "repository": "鏡像倉庫不能為空",
+        "tag": "鏡像標籤不能為空"
+      },
+      "resources": {
+        "title": "資源配置",
+        "cpu": {
+          "format": "CPU 格式無效 (例如: 100m 或 0.1)",
+          "limit": "CPU 請求不能大於限制"
+        },
+        "memory": {
+          "format": "記憶體格式無效 (例如: 128Mi)",
+          "limit": "記憶體請求不能大於限制"
+        }
+      },
+      "volume": {
+        "name": "存儲卷名稱不能為空",
+        "mountPath": "掛載路徑不能為空",
+        "source": "存儲卷來源不能為空",
+        "storageClassConfiguration": "Storage Class Configuration",
+        "persistentVolumes": "Persistent Volumes" 
+      },
+      "configMap": {
+        "name": "ConfigMap 名稱不能為空",
+        "mountPath": "掛載路徑不能為空",
+        "data": "至少需要一個配置項"
+      },
+      "secret": {
+        "name": "Secret 名稱不能為空",
+        "mountPath": "掛載路徑不能為空",
+        "data": "至少需要一個配置項"    
+      }
+    },
+    "templates": {
+      "title": "部署模板管理",
+      "save": "保存新模板",
+      "browse": "瀏覽模板",
+      "name": "模板名稱",
+      "description": "板描述",
+      "category": "模板分類",
+      "filterByCategory": "按分類篩選",
+      "saveButton": "保存模板",
+      "loadButton": "載入模板",
+      "loadTemplate": "載入模板",
+      "saveAsTemplate": "保存為模板",
+      "categories": {
+        "application": "應程序",
+        "database": "數據庫",
+        "middleware": "中間件",
+        "monitoring": "監控",
+        "custom": "自定義"
+      },
+      "nameRequired": "模板名稱不能為空",
+      "loadError": "載入模板失敗",
+      "saveError": "保存模板失敗",
+      "deleteError": "刪除模板失敗",
+      "confirmDelete": "確定要刪除此模板嗎？",
+      "loadSuccess": "模板載入成功",
+      "saveSuccess": "模板保存成功"
+    },
+    "config": {
+      "import": "導入配置",
+      "export": "導出配置",
+      "importSuccess": "配置導入成功",
+      "exportSuccess": "配置導出成功",
+      "importError": "配置導入失敗",
+      "exportError": "配置導出失敗",
+      "invalidFile": "無效的配置文件",
+      "selectFile": "選擇配置文件",
+      "fileType": "YAML 文件"
+    },
+    "diff": {
+      "title": "配置差異比較",
+      "summary": "變更摘要",
+      "totalChanges": "共 {{count}} 處變更",
+      "modified": "已修改",
+      "deleted": "已刪除",
+      "viewChanges": "查看變更",
+      "majorChanges": "警告：檢測到重大變更",
+      "noChanges": "無變更",
+      "field": "欄位",
+      "oldValue": "原值",
+      "newValue": "新值"
+    },
+    "yamlTemplate": {
+      "upload": "上傳 YAML 模板",
+      "placeholders": "模板佔位符",
+      "preview": "模板預覽",
+      "noTemplate": "未上傳模板",
+      "uploadError": "上傳模板失敗",
+      "parseError": "解析 YAML 模板失敗",
+      "editor": "YAML 編輯器",
+      "save": "保存變更",
+      "saveSuccess": "YAML 模板保存成功",
+      "saveError": "保存 YAML 模板失敗",
+      "editTemplate": "編輯原始模板",
+      "searchPlaceholders": "搜索佔位符...",
+      "templateUploaded": "模板上傳成功",
+      "uploadTemplate": "上傳模板",
+      "close": "關閉預覽",
+      "reload": "重新加載",
+      "content": "模板內容",
+      "categories": {
+        "image": "映像配置",
+        "service": "服務配置",
+        "deployment": "部署配置",
+        "misc": "其他配置"
+      }
+    },
+    "repository": {
+      "title": "倉庫配置",
+      "search": "搜索倉庫...",
+      "repository": "倉庫",
+      "tag": "標籤",
+      "errors": {
+        "unauthorized": "未授權訪問，請重新登入",
+        "fetchFailed": "獲取倉庫列表失敗",
+        "tagsFetchFailed": "獲取標籤列表失敗",
+        "searchFailed": "搜索映像失敗"
+      }
+    },
+    "storage": {
+      "title": "儲存配置",
+      "storageClass": {
+        "title": "儲存類別",
+        "name": "名稱",
+        "provisioner": "供應者",
+        "reclaimPolicy": "回收策略",
+        "volumeBindingMode": "卷綁定模式",
+        "allowVolumeExpansion": "允許卷擴展"
+      },
+      "persistentVolume": {
+        "title": "持久卷",
+        "name": "名稱",
+        "capacity": "容量",
+        "accessMode": "訪問模式",
+        "storageClass": "儲存類別",
+        "hostPath": "主機路徑"
+      },
+      "preview": "預覽",
+      "validation": {
+        "nameRequired": "名稱為必填項",
+        "provisionerRequired": "供應者為必填項",
+        "capacityRequired": "容量為必填項",
+        "accessModeRequired": "至少需要一個訪問模式"
+      }
+    },
+    "namespace": {
+      "createTitle": "創建新命名空間",
+      "createConfirm": "是否要創建新的命名空間 '{namespace}'？",
+      "createSuccess": "命名空間創建成功",
+      "createError": "創建命名空間失敗",
+      "invalidName": "無效的命名空間名稱"
+    },
+    "configMap": {
+      "title": "ConfigMap 配置",
+      "add": "新增 ConfigMap",
+      "edit": "編輯 ConfigMap",
+      "create": "創建 ConfigMap",
+      "type": "ConfigMap 類型",
+      "types": {
+        "basic": "基本鍵值對",
+        "file": "從文件創建",
+        "directory": "從目錄創建",
+        "literal": "從字面值創建"
+      },
+      "fields": {
+        "name": "ConfigMap 名稱",
+        "key": "鍵",
+        "value": "值",
+        "fileName": "文件名稱",
+        "filePath": "文件路徑",
+        "mountPath": "掛載路徑",
+        "directoryPath": "目錄路徑",
+        "literals": "字面值"
+      },
+      "validation": {
+        "required": "此欄位為必填項",
+        "fileType": "僅支持 .txt 和 .conf 文件",
+        "invalidPath": "無效的路徑格式",
+        "duplicateKey": "鍵已存在",
+        "invalidKey": "無效的鍵格式",
+        "keyRequired": "鍵是必填項",
+        "valueRequired": "值是必填項"
+      },
+      "errors": {
+        "saveFailed": "保存 ConfigMap 失敗",
+        "deleteFailed": "刪除 ConfigMap 失敗",
+        "createFailed": "創建 ConfigMap 失敗"
+      },
+      "preview": "預覽 ConfigMap",
+      "showPreview": "顯示預覽",
+      "hidePreview": "隱藏預覽",
+      "typeInfo": {
+        "basic": "基本鍵值對。您可以添加多個具有不同鍵和值的條目。",
+        "file": "從文件創建 ConfigMap。文件內容將用作值。",
+        "directory": "從目錄中的所有文件創建 ConfigMap。",
+        "literal": "使用字面值創建 ConfigMap。"
+      },
+      "addEntry": "添加鍵值對",
+      "removeEntry": "移除條目"
+    }
+  }
+} 

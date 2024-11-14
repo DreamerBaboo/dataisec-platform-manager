@@ -1,0 +1,63 @@
+{
+    "common": {
+        "imageList": "映像列表"
+    },
+    "imageManagement": {
+        "imageDetails": {
+            "title": "圖像詳細信息",
+            "basicInfo": "基本信息",
+            "tags": "標籤",
+            "layers": "層",
+            "config": "配置",
+            "id": "ID",
+            "size": "大小",
+            "created": "創建時間",
+            "lastUpdated": "最後更新時間",
+            "environmentVariables": "環境變量",
+            "command": "命令",
+            "workdir": "工作目錄",
+            "exposedPorts": "暴露端口"
+        }
+    },
+    "actions": {
+        "close": "關閉",
+        "upload": "上傳",
+        "packaging": "打包中",
+        "package": "打包",
+        "delete": "刪除",
+        "cancel": "取消",
+        "confirm": "確認",
+        "dropFilesHere": "將文件拖放到此處",
+        "dragDropImage": "拖放映像文件",
+        "supportedFormats": "支持的格式：tar, tar.gz, tgz, zip" 
+    },
+    "message": {
+        "partialDeleteFailed": "部分映像刪除失敗",
+        "packageFailed": "打包映像失敗",
+        "deleteFailed": "映像刪除失敗",
+        "packageStart": "開始打包映像...",
+        "preparing": "準備打包文件...",
+        "noImagesFound": "未找到映像",
+        "errorLoadingImages": "載入映像失敗",
+        "searchImages": "搜尋映像",
+        "downloading": "下載中",
+        "pleaseLogin": "請先登入",
+        "uploadFailed": "上傳失敗",
+        "uploadTimeout": "上傳超時",
+        "networkError": "網絡錯誤",
+        "confirmLoad": "確認載入",
+        "confirmLoadMessage": "確認載入以下映像？",
+        "newTag": "新標籤",
+        "keepOriginal": "保持原標籤"
+    },
+    "table": {
+        "name": "名稱",
+        "tag": "標籤",
+        "size": "大小",
+        "uploadDate": "上傳時間",
+        "status": "狀態"
+    },
+    "status": {
+        "uploading": "上傳中"
+    }
+}

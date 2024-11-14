@@ -77,6 +77,14 @@
         "password": "Email Password",
         "from": "From Address"
       }
+    },
+    "profile": {
+      "title": "Profile Settings",
+      "username": "Username",
+      "email": "Email"
+    },
+    "theme": {
+      "dark": "Dark"
     }
   }
 } 

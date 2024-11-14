@@ -1,0 +1,36 @@
+{
+  "name": "metric",
+  "versions": {},
+  "latestVersion": "1.0.0",
+  "configurations": {
+    "basic": {
+      "name": "metric",
+      "namespace": "",
+      "replicas": 1
+    },
+    "template": {
+      "content": "",
+      "placeholders": {},
+      "defaultValues": {},
+      "categories": {}
+    },
+    "image": {
+      "repository": "",
+      "tag": "latest"
+    },
+    "resources": {
+      "limits": {
+        "cpu": "",
+        "memory": ""
+      },
+      "requests": {
+        "cpu": "",
+        "memory": ""
+      }
+    },
+    "affinity": {},
+    "volumes": [],
+    "configMaps": [],
+    "secrets": []
+  }
+}

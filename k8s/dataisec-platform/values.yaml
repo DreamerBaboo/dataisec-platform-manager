@@ -1,0 +1,75 @@
+# 全局設置
+global:
+  environment: production
+  imageRegistry: ""
+
+# 後端服務配置
+backend:
+  name: dataisec-backend
+  image:
+    repository: dataisec/backend
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 200m
+      memory: 256Mi
+  service:
+    type: ClusterIP
+    port: 3001
+  config:
+    jwt:
+      secret: "your-jwt-secret"
+    cors:
+      allowedOrigins: ["http://localhost:5173"]
+  env:
+    NODE_ENV: production
+    PORT: 3001
+
+# 前端服務配置
+frontend:
+  name: dataisec-frontend
+  image:
+    repository: dataisec/frontend
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  service:
+    type: ClusterIP
+    port: 80
+  config:
+    apiUrl: "http://dataisec-backend:3001"
+
+# Ingress 配置
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+  hosts:
+    - host: dataisec.local
+      paths:
+        - path: /
+          pathType: Prefix
+          service: frontend
+        - path: /api
+          pathType: Prefix
+          service: backend
+
+# 持久化存儲配置
+persistence:
+  enabled: true
+  storageClass: "standard"
+  size: 10Gi 
