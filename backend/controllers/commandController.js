@@ -21,50 +21,119 @@ const getCommands = async (req, res) => {
       });
     }
 
-    // 構建部署腳本目錄路徑
+    // 定義執行順序
+    const executionOrder = [
+      'quota',
+      'storageclass',
+      'persistentvolume',
+      'configmap',
+      'secret',
+      'deployment',
+      'final'
+    ];
+
+    // 定義命令類型的翻譯鍵
+    const commandDescriptions = {
+      'quota': {
+        titleKey: 'commandExecutor.commands.quota.title',
+        descriptionKey: 'commandExecutor.commands.quota.description'
+      },
+      'storageclass': {
+        titleKey: 'commandExecutor.commands.storageclass.title',
+        descriptionKey: 'commandExecutor.commands.storageclass.description'
+      },
+      'persistentvolume': {
+        titleKey: 'commandExecutor.commands.persistentvolume.title',
+        descriptionKey: 'commandExecutor.commands.persistentvolume.description'
+      },
+      'configmap': {
+        titleKey: 'commandExecutor.commands.configmap.title',
+        descriptionKey: 'commandExecutor.commands.configmap.description'
+      },
+      'secret': {
+        titleKey: 'commandExecutor.commands.secret.title',
+        descriptionKey: 'commandExecutor.commands.secret.description'
+      },
+      'deployment': {
+        titleKey: 'commandExecutor.commands.deployment.title',
+        descriptionKey: 'commandExecutor.commands.deployment.description'
+      },
+      'final': {
+        titleKey: 'commandExecutor.commands.final.title',
+        descriptionKey: 'commandExecutor.commands.final.description'
+      }
+    };
+
     const scriptsPath = path.join(__dirname, '..', 'deploymentTemplate', name, 'deploy-scripts');
+    const deploymentPath = path.join(__dirname, '..', 'deploymentTemplate', name);
     console.log('📂 腳本目錄路徑:', scriptsPath);
+    console.log('📂 部署目錄路徑:', deploymentPath);
     
     try {
-      // 讀取目錄內容
-      const files = await fs.readdir(scriptsPath);
-      console.log('📑 找到的文件:', files);
+      // 讀取兩個目錄的檔案
+      const [scriptsFiles, deploymentFiles] = await Promise.all([
+        fs.readdir(scriptsPath).catch(() => []),
+        fs.readdir(deploymentPath).catch(() => [])
+      ]);
       
-      // 過濾出包含版本號的 YAML 文件
-      const yamlFiles = files.filter(file => 
+      // 過濾符合版本的 YAML 檔案
+      const scriptYamlFiles = scriptsFiles.filter(file => 
         file.includes(version) && 
         (file.endsWith('.yaml') || file.endsWith('.yml'))
-      );
-      console.log('📄 符合條件的 YAML 文件:', yamlFiles);
+      ).map(file => ({ file, isDeployment: false }));
+      
+      const deploymentYamlFiles = deploymentFiles.filter(file => 
+        file.includes(version) && 
+        file.includes('final') &&
+        (file.endsWith('.yaml') || file.endsWith('.yml'))
+      ).map(file => ({ file, isDeployment: true }));
+      
+      // 合併所有檔案
+      const allYamlFiles = [...scriptYamlFiles, ...deploymentYamlFiles];
+      console.log('📄 符合條件的 YAML 文件:', allYamlFiles);
 
-      // 定義執行順序
-      const executionOrder = [
-        'quota',
-        'storageclass',
-        'persistentvolume',
-        'configmap',
-        'secret',
-        'deployment',
-        'service',
-        'ingress'
-      ];
-
-      // 生成命令
-      const commands = yamlFiles
+      // 生成命令列表
+      const commands = allYamlFiles
         .sort((a, b) => {
-          const typeA = a.split('-')[2]?.toLowerCase() || '';
-          const typeB = b.split('-')[2]?.toLowerCase() || '';
+          const typeA = a.file.includes('final') ? 'final' : a.file.split('-')[2]?.toLowerCase() || '';
+          const typeB = b.file.includes('final') ? 'final' : b.file.split('-')[2]?.toLowerCase() || '';
           return executionOrder.indexOf(typeA) - executionOrder.indexOf(typeB);
         })
-        .map(file => {
-          const type = file.split('-')[2]?.toLowerCase();
-          const filePath = `./backend/deploymentTemplate/${name}/deploy-scripts/${file}`;
-          const command = {
-            title: `執行 ${type} 配置`,
-            command: `kubectl apply -f ${filePath}`
+        .map(({ file, isDeployment }) => {
+          // 檢查是否為根目錄下的 final yaml
+          const isFinalInRoot = !isDeployment && file.match(/^[^-]+-[^-]+-final\.(yaml|yml)$/);
+          
+          // 提取類型
+          const typeMatch = file.match(/-([^-]+)\.(yaml|yml)$/);
+          const type = isFinalInRoot ? 'final' :
+                      file.includes('final') ? 'final' : 
+                      (typeMatch ? typeMatch[1].toLowerCase() : 'unknown');
+          
+          // 根據檔案類型決定路徑
+          const baseFolder = isFinalInRoot ? '' : (isDeployment ? '' : 'deploy-scripts');
+          const filePath = path.join(
+            './backend/deploymentTemplate',
+            name,
+            baseFolder,
+            file
+          ).replace(/\\/g, '/');
+          
+          const command = isDeployment
+            ? `helm upgrade --install ${name} ./backend/deploymentTemplate/${name} --values ${filePath}`
+            : `kubectl apply -f ${filePath}`;
+
+          const descriptions = commandDescriptions[type] || {
+            titleKey: `commandExecutor.commands.${type}.title`,
+            descriptionKey: `commandExecutor.commands.${type}.description`
           };
-          console.log('🔧 生成命令:', command);
-          return command;
+
+          return {
+            type,
+            command,
+            fileName: file,
+            titleKey: descriptions.titleKey,
+            descriptionKey: descriptions.descriptionKey
+          };
         });
 
       console.log('📤 返回命令列表:', commands);
@@ -72,18 +141,15 @@ const getCommands = async (req, res) => {
 
     } catch (error) {
       console.error('❌ 讀取目錄失敗:', error);
-      if (error.code === 'ENOENT') {
-        return res.status(404).json({
-          error: 'Directory not found',
-          details: `No deploy-scripts directory found for ${name}`
-        });
-      }
-      throw error;
+      res.status(500).json({
+        error: 'Failed to read directory',
+        details: error.message
+      });
     }
   } catch (error) {
     console.error('❌ 處理請求失敗:', error);
     res.status(500).json({
-      error: 'Failed to generate commands',
+      error: 'Failed to process request',
       details: error.message
     });
   }
@@ -106,55 +172,50 @@ const executeCommand = async (req, res) => {
   }
 
   try {
-    // 設置工作目錄為專案根目錄
     const workDir = path.join(__dirname, '../..');
-    
-    console.log('🔧 準備執行命令:', {
-      command,
-      workDir,
-      timestamp: new Date().toISOString()
-    });
-
-    // 執行命令
     const { stdout, stderr } = await execAsync(command, {
       cwd: workDir,
       timeout: 30000,
       maxBuffer: 1024 * 1024
     });
 
-    if (stderr) {
-      console.warn('⚠️ 命令產生警告:', stderr);
+    // 處理輸出
+    let formattedOutput = '';
+    if (stdout) {
+      const outputLines = stdout.split('\n');
+      formattedOutput = outputLines.map(line => {
+        if (line.includes('created')) return '✅ 成功創建資源';
+        if (line.includes('configured')) return '📝 成功更新資源';
+        if (line.includes('unchanged')) return '👌 資源無需更改';
+        return line;
+      }).join('\n');
     }
 
-    const output = stdout || stderr;
-    console.log('✅ 命令執行成功:', {
-      command,
-      output,
-      timestamp: new Date().toISOString()
-    });
+    if (stderr) {
+      formattedOutput += '\n⚠️ 警告信息:\n' + stderr;
+    }
 
     res.json({ 
       success: true,
-      output: output 
+      output: formattedOutput
     });
 
   } catch (error) {
-    console.error('❌ 命令執行失敗:', {
-      command,
-      error: error.message,
-      errorCode: error.code,
-      killed: error.killed,
-      signal: error.signal,
-      timestamp: new Date().toISOString()
-    });
+    console.error('❌ 命令執行失敗:', error);
     
+    // 格式化錯誤信息
+    let errorMessage = '執行失敗: ';
+    if (error.message.includes('not found')) {
+      errorMessage += '找不到指定的資源';
+    } else if (error.message.includes('permission denied')) {
+      errorMessage += '權限不足';
+    } else {
+      errorMessage += error.message;
+    }
+
     res.status(500).json({
-      error: '命令執行失敗',
-      details: error.message,
-      command: command,
-      errorCode: error.code,
-      killed: error.killed,
-      signal: error.signal
+      error: errorMessage,
+      details: error.message
     });
   }
 };

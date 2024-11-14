@@ -6,12 +6,20 @@ import {
   ListItem, 
   ListItemIcon,
   Typography,
-  Paper 
+  Paper,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  IconButton
 } from '@mui/material';
-import { CheckCircle, Error, HourglassEmpty, PlayArrow } from '@mui/icons-material';
+import { i18n } from '../../../i18n';
+import { CheckCircle, Error, HourglassEmpty, PlayArrow, Close } from '@mui/icons-material';
 import axios from 'axios';
+import { useAppTranslation } from '../../../hooks/useAppTranslation';
 
-const CommandExecutor = ({ name, version }) => {
+const CommandExecutor = ({ name, version, open, onClose }) => {
+  const { t } = useAppTranslation('commandExecutor');
   const [commands, setCommands] = useState([]);
   const [results, setResults] = useState([]);
   const [error, setError] = useState('');
@@ -28,202 +36,197 @@ const CommandExecutor = ({ name, version }) => {
         });
         
         console.log('📥 收到命令列表:', response.data);
-        console.log('📂 部署配置:', {
-          deploymentName: name,
-          version: version,
-          commandCount: response.data.length
+        response.data.forEach((cmd, index) => {
+          console.log(`命令 ${index + 1}:`, {
+            title: cmd.titleKey,
+            description: cmd.descriptionKey,
+            type: cmd.type,
+            command: cmd.command
+          });
         });
-
+        console.log('🚀 設置命令列表:', response.data);
         setCommands(response.data);
         setResults(response.data.map(() => ({ status: 'pending', output: '' })));
         setError('');
       } catch (error) {
         console.error('❌ 獲取命令失敗:', error);
-        console.error('錯誤詳情:', {
-          message: error.message,
-          response: error.response?.data,
-          status: error.response?.status
-        });
         setError(error.response?.data?.details || error.message);
       } finally {
         setIsLoading(false);
-        console.log('🏁 命令獲取流程結束');
       }
     };
 
-    if (name && version) {
-      console.log('🔄 檢測到 name 和 version 更新，重新獲取命令');
+    if (open && name && version) {
       fetchCommands();
     }
-  }, [name, version]);
+  }, [name, version, open]);
 
   const executeCommands = async () => {
     console.log('▶️ 開始執行命令序列');
+    let hasError = false;
     
     for (let i = 0; i < commands.length; i++) {
-      const { command, title } = commands[i];
+      const { command, title, description } = commands[i];
       
       console.log(`⚡ 執行第 ${i + 1}/${commands.length} 個命令:`, {
         title,
+        description,
         command
       });
       
-      // 更新當前命令狀態為執行中
       setResults(prev => {
         const newResults = [...prev];
-        newResults[i] = { status: 'running', output: '' };
+        newResults[i] = { 
+          status: 'running', 
+          output: t('status.running'),
+          startTime: new Date().toISOString()
+        };
         return newResults;
       });
 
       try {
-        console.log('📡 發送命令到後端');
         const response = await axios.post('http://localhost:3001/api/execute', { command });
         
-        console.log('✅ 命令執行成功:', {
-          command,
-          output: response.data.output
-        });
-        
-        // 更新命令執行結果
         setResults(prev => {
           const newResults = [...prev];
           newResults[i] = { 
             status: 'success', 
-            output: response.data.output 
+            output: response.data.output,
+            endTime: new Date().toISOString()
           };
           return newResults;
         });
       } catch (error) {
-        console.error('❌ 命令執行失敗:', {
-          command,
-          error: error.message,
-          response: error.response?.data
-        });
-        
-        // 更新錯誤狀態
+        hasError = true;
         setResults(prev => {
           const newResults = [...prev];
           newResults[i] = { 
             status: 'error', 
-            output: error.response?.data?.error || error.message 
+            output: t('error') + `: ${error.response?.data?.error || error.message}`,
+            endTime: new Date().toISOString()
           };
           return newResults;
         });
-        break;
+        // 不中斷執行，繼續下一個命令
       }
     }
     
-    console.log('🏁 命令序列執行完成');
+    console.log('🏁 命令序列執行完成', hasError ? '(有錯誤發生)' : '(全部成功)');
   };
 
-  if (isLoading) {
-    return (
-      <Box sx={{ p: 2, textAlign: 'center' }}>
-        <Typography>載入命令中...</Typography>
-      </Box>
-    );
-  }
-
-  if (error) {
-    return (
-      <Box sx={{ p: 2, color: 'error.main' }}>
-        <Typography>錯誤: {error}</Typography>
-      </Box>
-    );
-  }
+  console.log('Current commands:', commands);
+  console.log('Translation function:', t);
+  console.log('Current language:', i18n.language);
 
   return (
-    <Paper elevation={2} sx={{ p: 2, m: 2 }}>
-      <Box sx={{ mb: 2 }}>
-        <Typography variant="h6" sx={{ mb: 2 }}>
-          部署命令執行器
-        </Typography>
+    <Dialog 
+      open={open} 
+      onClose={onClose}
+      maxWidth="md"
+      fullWidth
+      PaperProps={{
+        sx: { minHeight: '60vh' }
+      }}
+    >
+      <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography variant="h6">{t('commandExecutor.title')} - {name} v{version}</Typography>
+        <IconButton onClick={onClose}>
+          <Close />
+        </IconButton>
+      </DialogTitle>
+
+      <DialogContent dividers>
+        {isLoading ? (
+          <Box sx={{ p: 2, textAlign: 'center' }}>
+            <Typography>{t('commandExecutor.loading')}</Typography>
+          </Box>
+        ) : error ? (
+          <Box sx={{ p: 2, color: 'error.main' }}>
+            <Typography>{t('commandExecutor.error')}: {error}</Typography>
+          </Box>
+        ) : (
+          <Box>
+            <List sx={{ width: '100%' }}>
+              {commands.map((cmd, index) => (
+                <ListItem 
+                  key={index}
+                  sx={{
+                    flexDirection: 'column',
+                    alignItems: 'flex-start',
+                    mb: 2,
+                    bgcolor: 'background.paper',
+                    borderRadius: 1,
+                    boxShadow: 1
+                  }}
+                >
+                  <Box sx={{ width: '100%', p: 2 }}>
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="h6" color="primary">
+                        {t(cmd.titleKey)}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {t(cmd.descriptionKey)}
+                      </Typography>
+                    </Box>
+
+                    <Box sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      mb: 1,
+                      bgcolor: 'grey.50',
+                      p: 1,
+                      borderRadius: 1
+                    }}>
+                      <ListItemIcon sx={{ minWidth: 40 }}>
+                        {results[index]?.status === 'success' && <CheckCircle color="success" />}
+                        {results[index]?.status === 'error' && <Error color="error" />}
+                        {results[index]?.status === 'running' && <HourglassEmpty color="primary" />}
+                        {results[index]?.status === 'pending' && <HourglassEmpty color="disabled" />}
+                      </ListItemIcon>
+                      <Typography variant="body2" color="text.secondary">
+                        {results[index]?.status === 'pending' && t('status.pending')}
+                        {results[index]?.status === 'running' && t('status.running')}
+                        {results[index]?.status === 'success' && t('status.success')}
+                        {results[index]?.status === 'error' && t('status.error')}
+                        {results[index]?.startTime && ` | ${t('time.start')}: ${new Date(results[index].startTime).toLocaleTimeString()}`}
+                        {results[index]?.endTime && ` | ${t('time.end')}: ${new Date(results[index].endTime).toLocaleTimeString()}`}
+                      </Typography>
+                    </Box>
+
+                    {results[index]?.output && (
+                      <Box 
+                        sx={{ 
+                          p: 2,
+                          bgcolor: 'grey.100',
+                          borderRadius: 1,
+                          whiteSpace: 'pre-wrap',
+                          fontSize: '0.875rem',
+                          fontFamily: 'monospace'
+                        }}
+                      >
+                        {results[index].output}
+                      </Box>
+                    )}
+                  </Box>
+                </ListItem>
+              ))}
+            </List>
+          </Box>
+        )}
+      </DialogContent>
+
+      <DialogActions sx={{ p: 2 }}>
         <Button 
           variant="contained" 
           color="primary"
           startIcon={<PlayArrow />}
           onClick={executeCommands} 
-          disabled={commands.length === 0}
-          sx={{ mb: 2 }}
+          disabled={commands.length === 0 || isLoading}
         >
-          執行所有命令
+          {t('commandExecutor.executeAll')}
         </Button>
-      </Box>
-
-      {commands.length > 0 ? (
-        <List sx={{ width: '100%' }}>
-          {commands.map((cmd, index) => (
-            <ListItem 
-              key={index}
-              sx={{ 
-                flexDirection: 'column', 
-                alignItems: 'flex-start',
-                mb: 2,
-                bgcolor: 'background.paper',
-                borderRadius: 1,
-                border: '1px solid',
-                borderColor: 'divider'
-              }}
-            >
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                width: '100%',
-                mb: 1 
-              }}>
-                <ListItemIcon sx={{ minWidth: 40 }}>
-                  {results[index]?.status === 'success' && <CheckCircle color="success" />}
-                  {results[index]?.status === 'error' && <Error color="error" />}
-                  {results[index]?.status === 'running' && <HourglassEmpty color="primary" />}
-                  {results[index]?.status === 'pending' && <HourglassEmpty color="disabled" />}
-                </ListItemIcon>
-                <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                  {cmd.title}
-                </Typography>
-              </Box>
-              
-              <Box sx={{ pl: 5, width: '100%' }}>
-                <Box 
-                  component="pre" 
-                  sx={{ 
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word',
-                    p: 1,
-                    bgcolor: 'grey.100',
-                    borderRadius: 1,
-                    fontSize: '0.875rem',
-                    width: '100%'
-                  }}
-                >
-                  <Typography component="code" sx={{ display: 'block' }}>
-                    {cmd.command}
-                  </Typography>
-                  {results[index]?.output && (
-                    <Typography 
-                      component="code" 
-                      sx={{ 
-                        display: 'block',
-                        mt: 1,
-                        pt: 1,
-                        borderTop: '1px dashed',
-                        borderColor: 'divider',
-                        color: results[index].status === 'error' ? 'error.main' : 'success.main'
-                      }}
-                    >
-                      {results[index].output}
-                    </Typography>
-                  )}
-                </Box>
-              </Box>
-            </ListItem>
-          ))}
-        </List>
-      ) : (
-        <Typography color="text.secondary" sx={{ textAlign: 'center' }}>
-          沒有可執行的命令
-        </Typography>
-      )}
-    </Paper>
+      </DialogActions>
+    </Dialog>
   );
 };
 

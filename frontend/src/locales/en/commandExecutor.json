@@ -1,0 +1,61 @@
+{
+  "commandExecutor": {
+    "title": "Deployment Command Executor",
+    "loading": "Loading commands...",
+    "error": "Error",
+    "executeAll": "Execute All Commands",
+    "status": {
+    "pending": "Pending",
+    "running": "Running...",
+    "success": "Success",
+    "error": "Failed"
+     },
+    "time": {
+        "start": "Start Time",
+        "end": "End Time"
+    },
+    "commands": {
+        "quota": {
+        "title": "Set Namespace Resource Quota",
+        "description": "Configure CPU, memory and other resource limits for namespace"
+        },
+        "storageclass": {
+        "title": "Create Storage Class",
+        "description": "Set up persistent storage types and parameters"
+        },
+        "persistentvolumes": {
+        "title": "Configure Persistent Volume",
+        "description": "Create persistent storage space"
+        },
+        "configmap": {
+        "title": "Deploy ConfigMap",
+        "description": "Set application configuration parameters"
+        },
+        "secret": {
+        "title": "Deploy Secrets",
+        "description": "Set sensitive configuration information for the application"
+        },
+        "deployment": {
+        "title": "Deploy Application",
+        "description": "Deploy main application containers and services"
+        },
+        "final": {
+        "title": "Deploy Final Configuration",
+        "description": "Deploy final application configuration using Helm"
+        }
+    },
+    "execution": {
+        "success": {
+        "created": "✅ Resource created successfully",
+        "configured": "📝 Resource updated successfully",
+        "unchanged": "👌 Resource unchanged"
+        },
+        "error": {
+        "notFound": "Resource not found",
+        "permissionDenied": "Permission denied",
+        "generic": "Execution failed"
+        },
+        "warning": "⚠️ Warning"
+    }
+  }
+} 

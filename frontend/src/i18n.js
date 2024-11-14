@@ -17,6 +17,7 @@ import enValidation from './locales/en/validation.json';
 import enPodManagement from './locales/en/podmanagement.json';
 import enImageManagement from './locales/en/imagemanagement.json';
 import enPodDeployment from './locales/en/poddeployment.json';
+import enCommandExecutor from './locales/en/commandExecutor.json';
 import zhAuth from './locales/zh-TW/auth.json';
 import zhCommon from './locales/zh-TW/common.json';
 import zhComponents from './locales/zh-TW/components.json';
@@ -32,6 +33,8 @@ import zhValidation from './locales/zh-TW/validation.json';
 import zhPodManagement from './locales/zh-TW/podmanagement.json';
 import zhImageManagement from './locales/zh-TW/imagemanagement.json';
 import zhPodDeployment from './locales/zh-TW/poddeployment.json';
+import zhCommandExecutor from './locales/zh-TW/commandExecutor.json';
+
 
 
 i18n
@@ -53,7 +56,8 @@ i18n
         validation: enValidation,
         podManagement: enPodManagement,
         imageManagement: enImageManagement,
-        podDeployment: enPodDeployment
+        podDeployment: enPodDeployment,
+        commandExecutor: enCommandExecutor
       },
       'zh-TW': {
         auth: zhAuth,
@@ -70,7 +74,8 @@ i18n
         validation: zhValidation,
         podManagement: zhPodManagement,
         imageManagement: zhImageManagement,
-        podDeployment: zhPodDeployment
+        podDeployment: zhPodDeployment,
+        commandExecutor: zhCommandExecutor
       }
     },
     lng: 'zh-TW',
