@@ -1,6 +1,6 @@
 ---
 clusterName: "opensearch-cluster"
-nodeGroup: "data"
+nodeGroup: "master"
 
 # The service that non master groups will try to connect to when joining the cluster
 # This should be set to clusterName + "-" + nodeGroup for your master group
@@ -9,12 +9,12 @@ masterService: "opensearch-cluster-master"
 # OpenSearch roles that will be applied to this nodeGroup
 # These will be set as environment variable "node.roles". E.g. node.roles=master,ingest,data,remote_cluster_client
 roles:
-#  - master
-  - data
-  - ingest
-  - remote_cluster_client
+  - master
+#  - data
+#  - ingest
+#  - remote_cluster_client
 
-replicas: {REPLICA_COUNT}
+replicas: 1 #[1,2,3,4,5,6]
 
 # if not set, falls back to parsing .Values.imageTag, then .Chart.appVersion.
 majorVersion: ""
@@ -102,7 +102,7 @@ config:
 # syntax here
 extraEnvs:
   - name: OPENSEARCH_INITIAL_ADMIN_PASSWORD
-    value: "Cobr@8029@@123D"
+    value: "Cobr@8029@@123D" #["Cobr@8029@@123D"]
 #  - name: MY_ENVIRONMENT_VAR
 #    value: the_value_goes_here
 
@@ -125,8 +125,8 @@ hostAliases: []
 #   - "bar.local"
 
 image:
-  repository:  {REPOSITORY}:{REPOSITORY_PORT}/opensearch
-  tag: "2.12.0"
+  repository:  ${REPOSITORY}
+  tag: 2.12.0 #["2.12.0"]
   pullPolicy: IfNotPresent
   insecureRegistry: true
 
@@ -136,21 +136,21 @@ podAnnotations: {}
 # additionals labels
 labels: {}
 
-opensearchJavaOpts: {JAVA_HEAP}
+opensearchJavaOpts: "-Xmx8G -Xms8G" #[-Xmx2G -Xms2G, -Xmx4G -Xms4G, -Xmx6G -Xms6G, -Xmx8G -Xms8G, -Xmx16G -Xms16G, -Xmx32G -Xms32G]
 
 resources:
   requests:
-    cpu: {CPU_REQUEST}
-    memory: {MEMORY_REQUEST}
+    cpu: 500m #[200m, 300m, 400m, 500m, 600m, 700m, 800m, 900m, 1000m, ]
+    memory: 2Gi #[2Gi, 4Gi, 8Gi]
   limits:
-    cpu: {CPU_LIMIT}
-    memory: {MEMORY_LIMIT}
+    cpu: 2000m #[2000m, 3000m, 4000m, 5000m, 6000m, 7000m, 8000m]
+    memory: 4Gi #[2Gi, 4Gi, 8Gi, 10Gi, 12Gi, 16Gi, 18Gi, 20Gi, 24Gi, 32Gi]
 initResources:
   limits:
-    cpu: "25m"
+    cpu: "100m"
     memory: "128Mi"
   requests:
-    cpu: "25m"
+    cpu: "250m"
     memory: "128Mi"
 
 sidecarResources: {}
@@ -205,10 +205,10 @@ persistence:
   #   set, choosing the default provisioner.  (gp2 on AWS, standard on
   #   GKE, AWS & OpenStack)
   #
-  storageClass: "{STORAGE_CLASS}"
+  storageClass: local-storage #[local-storage]
   accessModes:
-    - ReadWriteOnce
-  size: {PERSISTENCE_SIZE}
+    - ReadOnlyMany #[ReadWriteOnce, ReadWriteMany, ReadOnlyMany]
+  size: 4Ti #[1Ti, 2Ti, 3Ti, 4Ti, 5Ti, 6Ti, 7Ti, 8Ti, 9T, 10Ti, 20Ti, 30Ti]
   annotations: {}
 
 extraVolumes: []
@@ -344,7 +344,7 @@ sysctlVmMaxMapCount: 262144
 schedulerName: ""
 
 imagePullSecrets: []
-nodeSelector: {node-role.opensearch: data}
+nodeSelector: {node-role.opensearch: master} #[{node-role.opensearch: master},{node-role.opensearch: data}]
 tolerations: []
 
 # Enabling this will publically expose your OpenSearch instance.

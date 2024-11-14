@@ -18,7 +18,7 @@ import { CheckCircle, Error, HourglassEmpty, PlayArrow, Close } from '@mui/icons
 import axios from 'axios';
 import { useAppTranslation } from '../../../hooks/useAppTranslation';
 
-const CommandExecutor = ({ name, version, open, onClose }) => {
+const CommandExecutor = ({ name, version, namespace, open, onClose }) => {
   const { t } = useAppTranslation('commandExecutor');
   const [commands, setCommands] = useState([]);
   const [results, setResults] = useState([]);
@@ -29,12 +29,16 @@ const CommandExecutor = ({ name, version, open, onClose }) => {
     const fetchCommands = async () => {
       try {
         setIsLoading(true);
-        console.log('🚀 開始獲取命令列表:', { name, version });
+        console.log('🚀 開始獲取命令列表:', { name, version, namespace });
         
         const response = await axios.get('http://localhost:3001/api/commands', {
-          params: { name, version }
+          params: { 
+            name, 
+            version,
+            namespace
+          }
         });
-        
+        console.log('🚀 獲取命令列表:', { name, version, namespace });
         console.log('📥 收到命令列表:', response.data);
         response.data.forEach((cmd, index) => {
           console.log(`命令 ${index + 1}:`, {
@@ -56,10 +60,10 @@ const CommandExecutor = ({ name, version, open, onClose }) => {
       }
     };
 
-    if (open && name && version) {
+    if (open && name && version && namespace) {
       fetchCommands();
     }
-  }, [name, version, open]);
+  }, [name, version, namespace, open]);
 
   const executeCommands = async () => {
     console.log('▶️ 開始執行命令序列');
@@ -71,7 +75,8 @@ const CommandExecutor = ({ name, version, open, onClose }) => {
       console.log(`⚡ 執行第 ${i + 1}/${commands.length} 個命令:`, {
         title,
         description,
-        command
+        command,
+        namespace
       });
       
       setResults(prev => {
@@ -129,7 +134,14 @@ const CommandExecutor = ({ name, version, open, onClose }) => {
       }}
     >
       <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="h6">{t('commandExecutor.title')} - {name} v{version}</Typography>
+        <Box>
+          <Typography variant="h6">
+            {t('commandExecutor.title')} - {name} v{version}
+          </Typography>
+          <Typography variant="caption" color="textSecondary">
+            {t('commandExecutor.namespace')}: {namespace || 'default'}
+          </Typography>
+        </Box>
         <IconButton onClick={onClose}>
           <Close />
         </IconButton>

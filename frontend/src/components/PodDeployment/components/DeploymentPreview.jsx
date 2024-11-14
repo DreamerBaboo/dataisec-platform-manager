@@ -490,6 +490,7 @@ const DeploymentPreview = ({ config, onDeploy, onBack }) => {
       <CommandExecutor 
         name={config.name}
         version={config.version}
+        namespace={config.yamlTemplate?.placeholders?.namespace || 'default'}
         open={openExecutor}
         onClose={handleCloseExecutor}
       />

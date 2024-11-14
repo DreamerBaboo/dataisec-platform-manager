@@ -36,6 +36,8 @@ const PLACEHOLDER_CATEGORIES = {
   image: ['repository', 'tag'],
   service: ['service_port', 'target_service_port', 'node_port', 'web_port'],
   deployment: ['replica_count'],
+  resource: ['cpu_', 'memory_', 'java_heap'],
+  storage: ['storage_class', 'storage_access_mode', 'persistence_size'],
   misc: ['company_name']
 };
 
@@ -197,7 +199,12 @@ const TemplateConfig = ({ config, onChange, errors }) => {
   };
 
   const getPlaceholderCategory = (placeholder) => {
-    if (placeholder === 'namespace') return null;
+    if (placeholder === 'namespace' || 
+        placeholder === 'storage_class' ||
+        placeholder === 'storage_access_mode' ||
+        placeholder === 'persistence_size') {
+      return null;
+    }
 
     if (placeholder.includes('cpu_') || 
         placeholder.includes('memory_') || 
@@ -205,7 +212,7 @@ const TemplateConfig = ({ config, onChange, errors }) => {
         placeholder.includes('site_node') ||
         placeholder.includes('limit') ||
         placeholder.includes('request')) {
-      return null;
+      return 'resource';
     }
 
     for (const [category, items] of Object.entries(PLACEHOLDER_CATEGORIES)) {
@@ -317,11 +324,26 @@ const TemplateConfig = ({ config, onChange, errors }) => {
           }
         };
 
+        // 保存到配置文件
         await podDeploymentService.saveDeploymentConfig(
           config.name,
           config.version,
           updatedConfig
         );
+
+        // 保存到 YAML 模板
+        await podDeploymentService.saveStorageConfig(
+          config.name,
+          config.version,
+          {
+            placeholders: updatedConfig.yamlTemplate.placeholders
+          }
+        );
+
+        console.log('✅ Namespace saved successfully:', {
+          namespace: namespaceValue,
+          config: updatedConfig
+        });
 
         onChange(updatedConfig);
       }
@@ -558,7 +580,7 @@ const TemplateConfig = ({ config, onChange, errors }) => {
           sx={{ mb: 2 }}
         />
 
-        <Grid container spacing={3}>
+        <Grid container spacing={2}>
           {Object.entries(PLACEHOLDER_CATEGORIES).map(([category, _]) => {
             const categoryPlaceholders = Object.keys(config.yamlTemplate?.placeholders || {})
               .filter(key => {
@@ -568,18 +590,36 @@ const TemplateConfig = ({ config, onChange, errors }) => {
                        placeholderCategory === category && 
                        key !== 'namespace' && 
                        key !== 'repository' && 
-                       key !== 'tag';
+                       key !== 'tag' &&
+                       key !== 'storage_class' &&
+                       key !== 'storage_access_mode' &&
+                       key !== 'persistence_size';
               });
 
             if (categoryPlaceholders.length === 0) return null;
 
             return (
               <Grid item xs={12} md={6} key={category}>
-                <Paper variant="outlined" sx={{ p: 2 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 2, textTransform: 'capitalize' }}>
+                <Paper 
+                  variant="outlined" 
+                  sx={{ 
+                    p: 1.5,
+                    '& .MuiGrid-container': {
+                      rowGap: 1
+                    }
+                  }}
+                >
+                  <Typography 
+                    variant="subtitle2" 
+                    sx={{ 
+                      mb: 1.5,
+                      textTransform: 'capitalize',
+                      px: 0.5
+                    }}
+                  >
                     {t(`podDeployment:podDeployment.yamlTemplate.categories.${category}`)}
                   </Typography>
-                  <Grid container spacing={2}>
+                  <Grid container spacing={1}>
                     {categoryPlaceholders.map((placeholder) => (
                       <Grid item xs={12} key={placeholder}>
                         {renderPlaceholderField(placeholder)}

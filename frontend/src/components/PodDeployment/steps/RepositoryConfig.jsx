@@ -114,9 +114,24 @@ const RepositoryConfig = ({ config, onChange, errors }) => {
         updatedConfig
       );
 
-      console.log('✅ Repository saved to config.json:', newValue);
+      await podDeploymentService.saveStorageConfig(
+        config.name,
+        config.version,
+        {
+          placeholders: updatedConfig.yamlTemplate.placeholders
+        }
+      );
+
+      console.log('✅ Repository saved successfully:', {
+        repository: newValue,
+        configJson: true,
+        yaml: true
+      });
+
+      setError(null);
     } catch (error) {
-      console.error('Failed to save repository to config.json:', error);
+      console.error('Failed to save repository:', error);
+      setError(t('podDeployment:repository.errors.saveFailed'));
     }
   };
 
@@ -144,9 +159,24 @@ const RepositoryConfig = ({ config, onChange, errors }) => {
         updatedConfig
       );
 
-      console.log('✅ Tag saved to config.json:', newTag);
+      await podDeploymentService.saveStorageConfig(
+        config.name,
+        config.version,
+        {
+          placeholders: updatedConfig.yamlTemplate.placeholders
+        }
+      );
+
+      console.log('✅ Tag saved successfully:', {
+        tag: newTag,
+        configJson: true,
+        yaml: true
+      });
+
+      setError(null);
     } catch (error) {
-      console.error('Failed to save tag to config.json:', error);
+      console.error('Failed to save tag:', error);
+      setError(t('podDeployment:repository.errors.saveFailed'));
     }
   };
 
@@ -180,7 +210,7 @@ const RepositoryConfig = ({ config, onChange, errors }) => {
             <Autocomplete
               fullWidth
               options={repositories}
-              value={config.repository || null}
+              value={config.yamlTemplate?.placeholders?.repository || null}
               onChange={handleRepositoryChange}
               renderInput={(params) => (
                 <TextField
@@ -197,11 +227,11 @@ const RepositoryConfig = ({ config, onChange, errors }) => {
             <FormControl fullWidth>
               <InputLabel>{t('podDeployment:repository.tag')}</InputLabel>
               <Select
-                value={config.tag || ''}
+                value={config.yamlTemplate?.placeholders?.tag || ''}
                 onChange={handleTagChange}
                 label={t('podDeployment:repository.tag')}
                 error={!!errors?.tag}
-                disabled={!config.repository}
+                disabled={!config.yamlTemplate?.placeholders?.repository}
               >
                 {tags.map((tag) => (
                   <MenuItem key={tag} value={tag}>{tag}</MenuItem>

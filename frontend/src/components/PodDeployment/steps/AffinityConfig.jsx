@@ -6,7 +6,8 @@ import {
   TextField,
   Paper,
   Alert,
-  Autocomplete
+  Autocomplete,
+  CircularProgress
 } from '@mui/material';
 import { useAppTranslation } from '../../../hooks/useAppTranslation';
 import { podDeploymentService } from '../../../services/podDeploymentService';
@@ -24,8 +25,27 @@ const AffinityConfig = ({ config, onChange, errors = {} }) => {
   const fetchNodes = async () => {
     try {
       setLoading(true);
-      const response = await podDeploymentService.getNodes();
-      setNodes(response || []);
+      const response = await fetch('/api/k8s/nodes', {
+        headers: { 
+          'Authorization': `Bearer ${localStorage.getItem('token')}` 
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch nodes');
+      }
+
+      const nodeData = await response.json();
+      const formattedNodes = nodeData.map(node => ({
+        name: node.name,
+        hostname: node.hostname || '',
+        internalIP: node.internalIP || '',
+        roles: node.roles || [],
+        status: node.status,
+        label: `${node.hostname || ''} (${node.name})`
+      }));
+      
+      setNodes(formattedNodes);
     } catch (error) {
       console.error('Failed to fetch nodes:', error);
       setLocalErrors(prev => ({
@@ -71,6 +91,55 @@ const AffinityConfig = ({ config, onChange, errors = {} }) => {
   };
 
   const renderAffinityField = (field, label, placeholder) => {
+    if (field === 'site_node') {
+      return (
+        <Autocomplete
+          options={nodes}
+          getOptionLabel={(option) => {
+            if (typeof option === 'string') return option;
+            return option.label || option.hostname || option.name;
+          }}
+          value={config.yamlTemplate?.placeholders?.[field] || ''}
+          onChange={(_, newValue) => {
+            const valueToSave = newValue ? (newValue.hostname || newValue.name || newValue) : '';
+            handleAffinityChange(field, valueToSave);
+          }}
+          loading={loading}
+          renderOption={(props, option) => (
+            <li {...props}>
+              <Box>
+                <Typography>{option.hostname}</Typography>
+                <Typography variant="caption" color="textSecondary">
+                  Node: {option.name}
+                  {option.roles?.length > 0 && ` • Roles: ${option.roles.join(', ')}`}
+                  {option.internalIP && ` • IP: ${option.internalIP}`}
+                </Typography>
+              </Box>
+            </li>
+          )}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              fullWidth
+              label={label}
+              placeholder={loading ? t('common:loading') : placeholder}
+              error={!!errors?.[field] || !!localErrors?.[field]}
+              helperText={errors?.[field] || localErrors?.[field]}
+              InputProps={{
+                ...params.InputProps,
+                endAdornment: (
+                  <>
+                    {loading && <CircularProgress color="inherit" size={20} />}
+                    {params.InputProps.endAdornment}
+                  </>
+                ),
+              }}
+            />
+          )}
+        />
+      );
+    }
+
     const hasDefaultValues = config.yamlTemplate?.defaultValues?.[field];
 
     if (hasDefaultValues) {
@@ -107,6 +176,12 @@ const AffinityConfig = ({ config, onChange, errors = {} }) => {
     );
   };
 
+  // 檢查佔位符是否存在
+  const hasPlaceholder = (field) => {
+    const placeholders = Object.keys(config.yamlTemplate?.placeholders || {});
+    return placeholders.includes(field);
+  };
+
   return (
     <Box>
       <Typography variant="h6" gutterBottom>
@@ -115,8 +190,8 @@ const AffinityConfig = ({ config, onChange, errors = {} }) => {
 
       <Paper sx={{ p: 3 }}>
         <Grid container spacing={3}>
-          {/* Node Selector */}
-          <Grid item xs={12} md={6}>
+          {/* Node Selector - 始終顯示 */}
+          <Grid item xs={12} md={hasPlaceholder('site_node') ? 6 : 12}>
             {renderAffinityField(
               'node_selector',
               t('podDeployment:podDeployment.affinity.nodeSelector'),
@@ -124,14 +199,16 @@ const AffinityConfig = ({ config, onChange, errors = {} }) => {
             )}
           </Grid>
 
-          {/* Site Node */}
-          <Grid item xs={12} md={6}>
-            {renderAffinityField(
-              'site_node',
-              t('podDeployment:podDeployment.affinity.siteNode'),
-              t('podDeployment:podDeployment.affinity.siteNodePlaceholder')
-            )}
-          </Grid>
+          {/* Site Node - 只在佔位符存在時顯示 */}
+          {hasPlaceholder('site_node') && (
+            <Grid item xs={12} md={6}>
+              {renderAffinityField(
+                'site_node',
+                t('podDeployment:podDeployment.affinity.siteNode'),
+                t('podDeployment:podDeployment.affinity.siteNodePlaceholder')
+              )}
+            </Grid>
+          )}
         </Grid>
       </Paper>
 

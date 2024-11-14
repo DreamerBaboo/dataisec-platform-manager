@@ -1,19 +1,19 @@
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: dataisec-console-pv00
+  name: opensearch-master-pv-1
   labels:
     type: local
 spec:
   capacity:
-    storage: 2Gi
+    storage: 2Ti
   volumeMode: Filesystem
   accessModes:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
-  storageClassName: dataisec-console-storageclass
+  storageClassName: opensearch-master-storageclass
   local:
-    path: /data
+    path: /data/opensearch
   nodeAffinity:
     required:
       nodeSelectorTerms:

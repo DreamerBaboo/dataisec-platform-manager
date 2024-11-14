@@ -21,6 +21,7 @@ import DeploymentPreview from './DeploymentPreview';
 import NamespaceQuotaConfig from '../steps/NamespaceQuotaConfig';
 import RepositoryConfig from '../steps/RepositoryConfig';
 import { podDeploymentService } from '../../../services/podDeploymentService';
+import CommandExecutor from './CommandExecutor';
 
 const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
   const { t } = useAppTranslation();
@@ -53,6 +54,7 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
     namespaceQuota: false,
     preview: true
   });
+  const [isCommandExecutorOpen, setIsCommandExecutorOpen] = useState(false);
 
   const steps = [
     'basicSetup',
@@ -337,7 +339,7 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
     });
   }, [deploymentConfig, activeStep]);
 
-  // 修改版本監聽器
+  // ��改版本監聽器
   useEffect(() => {
     const loadVersionConfig = async () => {
       if (!deploymentConfig.name || !deploymentConfig.version) return;
@@ -406,6 +408,14 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
           </Box>
         </Box>
       )}
+
+      <CommandExecutor
+        name={deploymentConfig.name}
+        version={deploymentConfig.version}
+        namespace={deploymentConfig.yamlTemplate?.placeholders?.namespace || 'default'}
+        open={isCommandExecutorOpen}
+        onClose={() => setIsCommandExecutorOpen(false)}
+      />
     </Box>
   );
 };

@@ -26,7 +26,7 @@
       "secretConfig": "Secret 配置",
       "affinityConfig": "親和性配置",
       "review": "審核",
-      "deploy": "署",
+      "deploy": "部署",
       "uploadTemplate": "上傳模板",
       "uploadTemplateFile": "請上傳模板文件",
       "uploadTemplateSuccess": "模板上傳成功",
@@ -63,9 +63,9 @@
       "enableResourceQuota": "啟用命名空間資源配額",
       "resourceQuota": "資源配額設定",
       "requestsCpu": "CPU 請求",
-      "requestsMemory": "記憶體請求",
+      "requestsMemory": "內存請求",
       "limitsCpu": "CPU 限制",
-      "limitsMemory": "記憶體限制",
+      "limitsMemory": "內存限制",
       "pods": "最大 Pod 數量",
       "configmaps": "最大 ConfigMap 數量",
       "pvcs": "最大 PVC 數量",
@@ -76,7 +76,8 @@
       "statefulsets": "最大有狀態集數量",
       "jobs": "最大作業數量",
       "cronjobs": "最大定時作業數量",
-      "resourceQuotaPreview": "資源配額預覽"
+      "resourceQuotaPreview": "資源配額預覽",
+      "javaHeap": "Java 堆內存設置 (-Xms/-Xmx)"
     },
     "table": {
       "name": "名稱",
@@ -155,8 +156,9 @@
       "csi": "CSI",
       "secretName": "密鑰名稱",
       "configMapName": "配置映射名稱",
-      "storageClassConfiguration": "Storage Class Configuration",
-      "persistentVolumes": "Persistent Volumes"
+      "storageClassConfiguration": "存儲類配置",
+      "persistentVolumes": "持久卷",
+      "createStorageClass": "創建存儲類"
     },
     "configMaps": {
       "title": "配置映射",
@@ -202,7 +204,7 @@
       },
       "quotaTitle": "命名空間配額",
       "storageClassTitle": "儲存類別",
-      "persistentVolumeTitle": "持久化儲存",
+      "persistentVolumeTitle": "持久化存",
       "configMapTitle": "配置映射",
       "secretTitle": "密鑰",
       "showYaml": "顯示 YAML",
@@ -216,7 +218,7 @@
       "saveSuccess": "YAML 文件保存成功",
       "saveError": "保存 YAML 文件失敗",
       "loadError": "載入 YAML 文件失敗",
-      "noConfigAvailable": "沒有可用的配置",
+      "noConfigAvailable": "沒有可用的���置",
       "categories": {
         "quota": "資源配額",
         "storage": "儲存配置",
@@ -415,7 +417,7 @@
       "preview": "預覽",
       "validation": {
         "nameRequired": "名稱為必填項",
-        "provisionerRequired": "供應者為必填項",
+        "provisionerRequired": "供應為必填項",
         "capacityRequired": "容量為必填項",
         "accessModeRequired": "至少需要一個訪問模式"
       }
@@ -474,6 +476,21 @@
       },
       "addEntry": "添加鍵值對",
       "removeEntry": "移除條目"
+    },
+    "volume": {
+      "storageConfiguration": "存儲配置",
+      "storageClass": "存儲類",
+      "accessMode": "訪問模式",
+      "persistenceSize": "持久化存儲大小",
+      "createStorageClass": "創建存儲類",
+      "deleteStorageClass": "刪除存儲類",
+      "preview": "預覽配置",
+      "createStorageClassTitle": "創建存儲類",
+      "reclaimPolicy": "回收策略",
+      "volumeBindingMode": "卷綁定模式",
+      "provisioner": "供應者",
+      "storageClassCreated": "存儲類創建成功",
+      "storageClassCreateFailed": "存儲類創建失敗"
     }
   }
 } 
