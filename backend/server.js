@@ -40,6 +40,7 @@ const deploymentTemplatesRouter = require('./routes/deploymentTemplates');
 const dockerRouter = require('./routes/docker');
 const k8sRouter = require('./routes/k8s');
 const helmRouter = require('./routes/helmRoutes');
+const commandRoutes = require('./routes/commandRoutes');
 
 
 
@@ -54,6 +55,9 @@ app.use('/api/deployment-templates', deploymentTemplatesRouter);
 app.use('/api/docker', dockerRouter);
 app.use('/api/k8s', k8sRouter);
 app.use('/api/helm', helmRouter);
+app.use('/api', commandRoutes);
+// 使用中間件解析 JSON 請求
+app.use(express.json());
 
 // 添加錯誤處理中間件
 app.use((err, req, res, next) => {

@@ -60,7 +60,7 @@ const DeploymentPreview = ({ config, onDeploy, onBack }) => {
   const [yamlContents, setYamlContents] = useState({});
   const [showYamlPreviews, setShowYamlPreviews] = useState({});
   const [isLoading, setIsLoading] = useState(false);
-  const [openCommandExecutor, setOpenCommandExecutor] = useState(false);
+  const [showCommandExecutor, setShowCommandExecutor] = useState(false);
 
   // Basic Configuration Section
   const renderBasicConfig = () => (
@@ -356,11 +356,7 @@ const DeploymentPreview = ({ config, onDeploy, onBack }) => {
   };
 
   const handleOpenCommandExecutor = () => {
-    setOpenCommandExecutor(true);
-  };
-
-  const handleCloseCommandExecutor = () => {
-    setOpenCommandExecutor(false);
+    setShowCommandExecutor(true);
   };
 
   return (
@@ -496,31 +492,13 @@ const DeploymentPreview = ({ config, onDeploy, onBack }) => {
         打開命令執行器
       </Button>
 
-      {/* 命令執行器對話框 */}
-      <Dialog
-        open={openCommandExecutor}
-        onClose={handleCloseCommandExecutor}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>
-          命令執行器
-          <IconButton
-            aria-label="close"
-            onClick={handleCloseCommandExecutor}
-            sx={{
-              position: 'absolute',
-              right: 8,
-              top: 8
-            }}
-          >
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent>
-          <CommandExecutor />
-        </DialogContent>
-      </Dialog>
+      {/* 顯示命令執行器 */}
+      {showCommandExecutor && (
+        <CommandExecutor 
+          name={config.name}
+          version={config.version}
+        />
+      )}
     </Box>
   );
 };
