@@ -312,28 +312,52 @@ spec:
   const generatePreview = () => {
     if (!showStorageClass) return '';
 
-    const storageClassYaml = generateStorageClassYaml();
+    let yamlContent = '';
 
-    const persistentVolumeYaml = persistentVolumes.map(pv => {
-      const selectedNode = pv?.nodeAffinity?.required?.nodeSelectorTerms?.[0]?.matchExpressions?.[0]?.values?.[0] || '';
-      
-      return `
-apiVersion: v1
+    // 添加 StorageClass YAML
+    if (showStorageClass) {
+      yamlContent += `apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: ${config?.name || 'default'}-storageclass
+provisioner: kubernetes.io/no-provisioner
+reclaimPolicy: Retain
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: false`;
+    }
+
+    // 添加 PersistentVolume YAML
+    if (persistentVolumes && persistentVolumes.length > 0) {
+      persistentVolumes.forEach((pv, index) => {
+        if (index > 0 || yamlContent) {
+          yamlContent += '\n---\n';
+        }
+
+        // 確保所有必要的屬性都存在
+        const pvName = pv?.name || `${config?.name || 'default'}-pv-${index + 1}`;
+        const pvPath = pv?.local?.path || '/data';
+        const pvCapacity = pv?.capacity?.storage || '1Gi';
+        const pvVolumeMode = pv?.volumeMode || 'Filesystem';
+        const pvAccessMode = pv?.accessModes?.[0] || 'ReadWriteOnce';
+        const pvReclaimPolicy = pv?.persistentVolumeReclaimPolicy || 'Retain';
+        const selectedNode = pv?.nodeAffinity?.required?.nodeSelectorTerms?.[0]?.matchExpressions?.[0]?.values?.[0] || '';
+
+        yamlContent += `apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: ${pv.name}
+  name: ${pvName}
   labels:
-    type: ${pv.labels.type}
+    type: local
 spec:
   capacity:
-    storage: ${pv.capacity.storage}
-  volumeMode: ${pv.volumeMode}
+    storage: ${pvCapacity}
+  volumeMode: ${pvVolumeMode}
   accessModes:
-    - ${pv.accessModes[0]}
-  persistentVolumeReclaimPolicy: ${pv.persistentVolumeReclaimPolicy}
-  storageClassName: ${config?.name}-storageclass
+    - ${pvAccessMode}
+  persistentVolumeReclaimPolicy: ${pvReclaimPolicy}
+  storageClassName: ${config?.name || 'default'}-storageclass
   local:
-    path: ${pv.local.path}
+    path: ${pvPath}
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -342,16 +366,10 @@ spec:
           operator: In
           values:
           - ${selectedNode}`;
-    }).join('\n---\n');
-
-    if (storageClassYaml && persistentVolumeYaml) {
-      return `${storageClassYaml}\n---\n${persistentVolumeYaml}`;
-    } else if (storageClassYaml) {
-      return storageClassYaml;
-    } else if (persistentVolumeYaml) {
-      return persistentVolumeYaml;
+      });
     }
-    return '';
+
+    return yamlContent;
   };
 
   const handleCreateStorageClass = async () => {
@@ -578,6 +596,18 @@ spec:
     );
   };
 
+  // 添加刪除持久卷的處理函數
+  const handleDeletePersistentVolume = (index) => {
+    const newPVs = persistentVolumes.filter((_, i) => i !== index);
+    setPersistentVolumes(newPVs);
+
+    // 如果刪除後沒有持久卷，可能需要更新相關狀態
+    if (newPVs.length === 0) {
+      // 可選：在沒有 PV 時自動刪除存儲類
+      // setShowStorageClass(false);
+    }
+  };
+
   return (
     <Box>
       {loading && (
@@ -660,8 +690,37 @@ spec:
           {t('podDeployment:podDeployment.volume.storageImplementation')}
         </Typography>
         <Paper sx={{ p: 3 }}>
-          {/* Preview Toggle Button */}
-          <Box sx={{ mb: 3, display: 'flex', justifyContent: 'flex-end' }}>
+          {/* Top Action Buttons Row */}
+          <Box sx={{ 
+            mb: 3, 
+            display: 'flex', 
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 2  // 添加按鈕之間的間距
+          }}>
+            {/* Left side - Create Storage Button */}
+            {!showStorageClass && (
+              <Button
+                variant="contained"
+                onClick={() => setCreateStorageClassDialog(true)}
+                startIcon={<AddIcon />}
+              >
+                {t('podDeployment:podDeployment.volume.createStorageClass')}
+              </Button>
+            )}
+            {/* If storage class exists, show delete button on the left */}
+            {showStorageClass && (
+              <Button
+                variant="outlined"
+                color="error"
+                onClick={handleDeleteStorageClass}
+                startIcon={<DeleteIcon />}
+              >
+                {t('common:common.delete')}
+              </Button>
+            )}
+            
+            {/* Right side - Preview Button */}
             <Button
               variant="outlined"
               startIcon={showStoragePreview ? <VisibilityOffIcon /> : <VisibilityIcon />}
@@ -674,35 +733,34 @@ spec:
             </Button>
           </Box>
 
-          {/* Create Storage Class Button */}
-          {!showStorageClass && (
+          {/* YAML Preview */}
+          {showStoragePreview && (
             <Box sx={{ mb: 3 }}>
-              <Button
-                variant="contained"
-                onClick={() => setCreateStorageClassDialog(true)}
-                startIcon={<AddIcon />}
+              <Paper 
+                variant="outlined" 
+                sx={{ 
+                  p: 2,
+                  backgroundColor: 'grey.50',
+                  '& pre': {
+                    margin: 0,
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word'
+                  }
+                }}
               >
-                {t('podDeployment:podDeployment.volume.createStorageClass')}
-              </Button>
+                <pre>
+                  <code>{generatePreview()}</code>
+                </pre>
+              </Paper>
             </Box>
           )}
 
           {/* Storage Class Configuration */}
           {showStorageClass && (
             <Box sx={{ mb: 3 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="subtitle1">
-                  {t('podDeployment:podDeployment.volume.storageClass')}
-                </Typography>
-                <Button
-                  variant="outlined"
-                  color="error"
-                  onClick={handleDeleteStorageClass}
-                  startIcon={<DeleteIcon />}
-                >
-                  {t('common:common.delete')}
-                </Button>
-              </Box>
+              <Typography variant="subtitle1" sx={{ mb: 2 }}>
+                {t('podDeployment:podDeployment.volume.storageClass')}
+              </Typography>
               {/* ... StorageClass 配置內容 ... */}
             </Box>
           )}
@@ -719,7 +777,7 @@ spec:
                   onClick={handleAddPersistentVolume}
                   startIcon={<AddIcon />}
                 >
-                  {t('podDeployment:podDeployment.volume.add')}
+                  {t('podDeployment:podDeployment.volumes.add')}
                 </Button>
               </Box>
 

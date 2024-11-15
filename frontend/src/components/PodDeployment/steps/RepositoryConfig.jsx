@@ -57,7 +57,7 @@ const RepositoryConfig = ({ config, onChange, errors }) => {
       const token = localStorage.getItem('token');
       if (!token) {
         console.error('No token found');
-        setError(t('podDeployment:repository.errors.unauthorized'));
+        setError(t('podDeployment:podDeployment.repository.errors.unauthorized'));
         return;
       }
 
@@ -71,9 +71,9 @@ const RepositoryConfig = ({ config, onChange, errors }) => {
     } catch (err) {
       console.error('Failed to fetch tags:', err);
       if (err.response?.status === 401) {
-        setError(t('podDeployment:repository.errors.unauthorized'));
+        setError(t('podDeployment:podDeployment.repository.errors.unauthorized'));
       } else {
-        setError(t('podDeployment:repository.errors.tagsFetchFailed'));
+        setError(t('podDeployment:podDeployment.repository.errors.tagsFetchFailed'));
       }
     } finally {
       setLoading(false);
@@ -131,7 +131,7 @@ const RepositoryConfig = ({ config, onChange, errors }) => {
       setError(null);
     } catch (error) {
       console.error('Failed to save repository:', error);
-      setError(t('podDeployment:repository.errors.saveFailed'));
+      setError(t('podDeployment:podDeployment.repository.errors.saveFailed'));
     }
   };
 
@@ -176,7 +176,7 @@ const RepositoryConfig = ({ config, onChange, errors }) => {
       setError(null);
     } catch (error) {
       console.error('Failed to save tag:', error);
-      setError(t('podDeployment:repository.errors.saveFailed'));
+      setError(t('podDeployment:podDeployment.repository.errors.saveFailed'));
     }
   };
 
@@ -193,14 +193,14 @@ const RepositoryConfig = ({ config, onChange, errors }) => {
   return (
     <Box>
       <Typography variant="h6" gutterBottom>
-        {t('podDeployment:repository.title')}
+        {t('podDeployment:podDeployment.repository.title')}
       </Typography>
       <Paper sx={{ p: 3 }}>
         <Grid container spacing={3}>
           <Grid item xs={12}>
             <TextField
               fullWidth
-              label={t('podDeployment:repository.search')}
+              label={t('podDeployment:podDeployment.repository.search')}
               value={searchTerm}
               onChange={handleSearchChange}
               variant="outlined"
@@ -215,7 +215,7 @@ const RepositoryConfig = ({ config, onChange, errors }) => {
               renderInput={(params) => (
                 <TextField
                   {...params}
-                  label={t('podDeployment:repository.repository')}
+                  label={t('podDeployment:podDeployment.repository.repository')}
                   error={!!errors?.repository}
                   helperText={errors?.repository}
                 />
@@ -225,11 +225,11 @@ const RepositoryConfig = ({ config, onChange, errors }) => {
           </Grid>
           <Grid item xs={12} md={3}>
             <FormControl fullWidth>
-              <InputLabel>{t('podDeployment:repository.tag')}</InputLabel>
+              <InputLabel>{t('podDeployment:podDeployment.repository.tag')}</InputLabel>
               <Select
                 value={config.yamlTemplate?.placeholders?.tag || ''}
                 onChange={handleTagChange}
-                label={t('podDeployment:repository.tag')}
+                label={t('podDeployment:podDeployment.repository.tag')}
                 error={!!errors?.tag}
                 disabled={!config.yamlTemplate?.placeholders?.repository}
               >
