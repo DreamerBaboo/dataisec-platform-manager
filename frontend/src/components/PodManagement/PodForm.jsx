@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { TextField, Button, Box, Typography, MenuItem } from '@mui/material';
 import axios from 'axios';
+import { getApiUrl } from '../../utils/api';
 
 const PodForm = ({ onSubmit }) => {
   const [podConfig, setPodConfig] = useState({
@@ -28,8 +29,11 @@ const PodForm = ({ onSubmit }) => {
       formData.append('image', file);
 
       try {
-        const response = await axios.post('http://localhost:3001/pods/upload-image', formData, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        const response = await axios.post(getApiUrl('images/upload'), formData, {
+          headers: { 
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'multipart/form-data'
+          }
         });
         setPodConfig({ ...podConfig, imageTag: response.data.tag });
       } catch (error) {
@@ -43,7 +47,7 @@ const PodForm = ({ onSubmit }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:3001/pods', podConfig, {
+      await axios.post(getApiUrl('pods/create'), podConfig, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       onSubmit();

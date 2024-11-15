@@ -1,10 +1,13 @@
-const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? '/api'  // Production: use relative path since frontend is served by backend
-  : 'http://localhost:3001/api';  // Development: use full URL for local dev server
+export const getApiUrl = (endpoint: string): string => {
+  const baseUrl = process.env.NODE_ENV === 'production' 
+    ? '/api'
+    : 'http://localhost:3001/api';
+  return `${baseUrl}/${endpoint}`.replace(/\/+/g, '/');
+};
 
 export const api = {
   get: async (endpoint: string) => {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetch(getApiUrl(endpoint), {
       headers: {
         Authorization: `Bearer ${localStorage.getItem('token')}`
       }
@@ -14,7 +17,7 @@ export const api = {
   },
 
   post: async (endpoint: string, data: any) => {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetch(getApiUrl(endpoint), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -27,7 +30,7 @@ export const api = {
   },
 
   put: async (endpoint: string, data: any) => {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetch(getApiUrl(endpoint), {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -40,7 +43,7 @@ export const api = {
   },
 
   delete: async (endpoint: string) => {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetch(getApiUrl(endpoint), {
       method: 'DELETE',
       headers: {
         Authorization: `Bearer ${localStorage.getItem('token')}`

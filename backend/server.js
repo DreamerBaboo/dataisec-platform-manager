@@ -95,26 +95,20 @@ if (process.env.NODE_ENV === 'production') {
   console.log('📁 Public directory contents:', fs.readdirSync(publicPath));
   
   // Serve frontend static files
-  app.use(express.static(publicPath));
+  app.use(express.static('public', {
+    setHeaders: (res, path) => {
+      if (path.endsWith('.js')) {
+        res.setHeader('Content-Type', 'application/javascript');
+      } else if (path.endsWith('.css')) {
+        res.setHeader('Content-Type', 'text/css');
+      }
+    },
+    index: false  // 禁用目錄索引
+  }));
   
   // Handle React routing, return all requests to React app
-  app.get('*', (req, res, next) => {
-    console.log('🔍 Requested URL:', req.url);
-    if (req.url.startsWith('/api')) {
-      return next();
-    }
-    
-    try {
-      if (fs.existsSync(indexPath)) {
-        res.sendFile(indexPath);
-      } else {
-        console.error('❌ index.html not found at:', indexPath);
-        res.status(404).send('index.html not found');
-      }
-    } catch (error) {
-      console.error('❌ Error serving index.html:', error);
-      res.status(500).send('Error serving index.html');
-    }
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
   });
 }
 

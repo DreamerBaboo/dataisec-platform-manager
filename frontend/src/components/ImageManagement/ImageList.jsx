@@ -37,6 +37,7 @@ import ImageDetails from './ImageDetails';
 import { useSnackbar } from 'notistack';
 import RepositoryConfig from './RepositoryConfig';
 import { getApiUrl } from '../../config/api';
+import axios from 'axios';
 
 const ImageList = () => {
   const { t } = useAppTranslation("imageManagement");
@@ -78,35 +79,34 @@ const ImageList = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(getApiUrl('api/images'), {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      
+      const response = await axios.get(getApiUrl('images'), {
+        headers: { 
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          'Accept': 'application/json'
+        }
       });
-      console.log('📥 Response received:', response.status, response.statusText);
       
-      if (!response.ok) {
-        console.error('❌ Response not OK:', response.status, response.statusText);
-        throw new Error('Failed to fetch images');
-      }
-      
-      const data = await response.json();
-      console.log('📦 Raw data received:', data);
+      console.log('📥 Response received:', response.status);
       
       // 確保數據格式正確
-      const formattedData = data.map(image => ({
-        id: image.id || image.ID || '',  // 支持兩種可能的 ID 格式
-        name: image.name || image.Repository || '',
-        tag: image.tag || image.Tag || 'latest',
-        size: image.size || 0,
-        uploadDate: image.createdAt,
-        status: image.status || 'available'
+      const formattedData = response.data.map(image => ({
+        id: image.id || `${image.name}-${image.tag}`,
+        name: image.name,
+        tag: image.tag,
+        size: image.size,
+        created: image.created,
+        repository: image.repository,
+        status: image.status || 'active'
       }));
       
-      console.log('✨ Formatted data:', formattedData);
+      console.log('📦 Formatted data:', formattedData);
       setImages(formattedData);
-      setFilteredImages(formattedData);
+      
     } catch (error) {
-      console.error('❌ Error fetching images:', error);
-      setError(error.message);
+      console.error('❌ Error fetching images:', error.response || error);
+      setError(error.response?.data?.message || error.message || '獲取鏡像列表失敗');
+      setImages([]);
     } finally {
       setLoading(false);
     }

@@ -17,6 +17,7 @@ import { i18n } from '../../../i18n';
 import { CheckCircle, Error, HourglassEmpty, PlayArrow, Close } from '@mui/icons-material';
 import axios from 'axios';
 import { useAppTranslation } from '../../../hooks/useAppTranslation';
+import { getApiUrl } from '../../../utils/api';
 
 const CommandExecutor = ({ name, version, open, onClose }) => {
   const { t } = useAppTranslation('commandExecutor');
@@ -31,7 +32,7 @@ const CommandExecutor = ({ name, version, open, onClose }) => {
         setIsLoading(true);
         console.log('🚀 開始獲取命令列表:', { name, version });
         
-        const response = await axios.get('http://localhost:3001/api/commands', {
+        const response = await axios.get(getApiUrl('commands'), {
           params: { name, version }
         });
         
@@ -85,7 +86,7 @@ const CommandExecutor = ({ name, version, open, onClose }) => {
       });
 
       try {
-        const response = await axios.post('http://localhost:3001/api/execute', { command });
+        const response = await axios.post(getApiUrl('execute'), { command });
         
         setResults(prev => {
           const newResults = [...prev];
