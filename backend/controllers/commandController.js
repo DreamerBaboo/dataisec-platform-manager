@@ -24,17 +24,17 @@ const getCommands = async (req, res) => {
     // 讀取 config.json 獲取命名空間
     const configPath = path.join(__dirname, '..', 'deploymentTemplate', name, 'config.json');
     let namespace = 'default'; // 默認命名空間
-    console.log ('configPath: ', configPath);
-
+    
     try {
       const configContent = await fs.readFile(configPath, 'utf8');
       const config = JSON.parse(configContent);
-      namespace = config.yamlTemplate?.placeholders?.namespace || 'default';
-      console.log ('config placeholders: ', config.yamlTemplate?.placeholders);
-      console.log ('config namespace: ', config.yamlTemplate?.placeholders?.namespace);
+
+     
+      if (config.versions[version]?.config?.namespace) {
+        namespace = config.versions[version]?.config?.namespace;
+      }
     } catch (error) {
       console.warn('⚠️ 無法讀取配置文件，使用默認命名空間:', error);
-      console.log ('namespace:', namespace);
     }
 
     // 定義執行順序
