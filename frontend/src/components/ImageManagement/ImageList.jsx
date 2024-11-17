@@ -63,17 +63,6 @@ const ImageList = () => {
   const ROWS_PER_PAGE = 10; // 默認顯示 10 行
   const TABLE_HEIGHT = ROW_HEIGHT * ROWS_PER_PAGE + HEADER_HEIGHT;
 
-  // const showNotification = (message, variant) => {
-  //   enqueueSnackbar(message, { 
-  //     variant,
-  //     autoHideDuration: 3000,
-  //     anchorOrigin: {
-  //       vertical: 'top',
-  //       horizontal: 'center'
-  //     }
-  //   });
-  // };
-
   const fetchImages = async () => {
     console.log('🔄 Starting to fetch images...');
     try {
@@ -90,7 +79,8 @@ const ImageList = () => {
       console.log('📥 Response received:', response.status);
       
       // 確保數據格式正確
-      const formattedData = response.data.map(image => ({
+      const data = Array.isArray(response.data) ? response.data : [];
+      const formattedData = data.map(image => ({
         id: image.id || `${image.name}-${image.tag}`,
         name: image.name,
         tag: image.tag,
@@ -137,8 +127,9 @@ const ImageList = () => {
       }
       
       const data = await response.json();
-      setImages(data);
-      setFilteredImages(data.filter(image => 
+      const validData = Array.isArray(data) ? data : [];
+      setImages(validData);
+      setFilteredImages(validData.filter(image => 
         image.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         image.tag.toLowerCase().includes(searchTerm.toLowerCase())
       ));
@@ -150,13 +141,11 @@ const ImageList = () => {
     }
   };
 
-  // 清除搜索內容
   const handleClearSearch = () => {
     setSearchTerm('');
     setFilteredImages(images);
   };
 
-  // 搜索處理
   const handleSearch = (value) => {
     setSearchTerm(value);
     if (!value.trim()) {
@@ -222,7 +211,7 @@ const ImageList = () => {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({ 
-          images: selected  // 發送選中的鏡像數組
+          images: selected
         })
       });
 
@@ -234,11 +223,9 @@ const ImageList = () => {
       const result = await response.json();
       console.log('✅ Delete result:', result);
 
-      // 檢查是否有任何錯誤
       const hasErrors = result.results.some(r => r.status === 'error');
       
       if (hasErrors) {
-        // 如果有錯誤，顯示部分成功的消息
         enqueueSnackbar(t('imageManagement:message.partialDeleteFailed'), {
           variant: 'warning',
           anchorOrigin: {
@@ -247,7 +234,6 @@ const ImageList = () => {
           }
         });
       } else {
-        // 全部成功
         enqueueSnackbar(t('imageManagement:message.deleteSuccess'), {
           variant: 'success',
           anchorOrigin: {
@@ -257,7 +243,6 @@ const ImageList = () => {
         });
       }
 
-      // 刷新鏡像列表
       fetchImages();
       setSelected([]);
     } catch (error) {
@@ -276,7 +261,6 @@ const ImageList = () => {
     console.log('📦 Starting package process...');
     setPackagingStatus(prev => ({ ...prev, loading: true, progress: 0 }));
     
-    // 顯示開始打包的通知
     const snackbarKey = enqueueSnackbar(t('imageManagement:message.packageStart'), {
       variant: 'info',
       persist: true,
@@ -295,7 +279,6 @@ const ImageList = () => {
     setPackagingStatus(prev => ({ ...prev, snackbarKey }));
 
     try {
-      // 從選中的項目中獲取完整的鏡像信息
       const selectedImages = selected.map(imageKey => {
         const [name, tag] = imageKey.split(':');
         return {
@@ -307,7 +290,6 @@ const ImageList = () => {
 
       console.log('📦 Images to package:', selectedImages);
 
-      // 更新通知為準備中
       closeSnackbar(snackbarKey);
       const preparingKey = enqueueSnackbar(t('imageManagement:message.preparing'), {
         variant: 'info',
@@ -338,7 +320,6 @@ const ImageList = () => {
         throw new Error(errorData.message || 'Failed to package images');
       }
 
-      // 更新通知為下載中
       closeSnackbar(preparingKey);
       const downloadingKey = enqueueSnackbar(t('imageManagement.message.downloading'), {
         variant: 'info',
@@ -355,7 +336,6 @@ const ImageList = () => {
         )
       });
 
-      // 生成當前日期字符串 YYYY-MM-DD 格式
       const today = new Date().toISOString().split('T')[0];
       const filename = `images-${today}.tar`;
       
@@ -369,7 +349,6 @@ const ImageList = () => {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
 
-      // 關閉下載通知並顯示成功通知
       closeSnackbar(downloadingKey);
         enqueueSnackbar(t('imageManagement.message.downloadSuccess'), { 
         variant: 'success',
@@ -429,14 +408,12 @@ const ImageList = () => {
     });
   };
 
-  // 使用 MUI 的排序處理函數
   const handleRequestSort = (event, property) => {
     const isAsc = orderBy === property && order === 'asc';
     setOrder(isAsc ? 'desc' : 'asc');
     setOrderBy(property);
   };
 
-  // 使用 MUI 的表頭組件
   const headCells = [
     { id: 'name', label: t('imageManagement:table.name') },
     { id: 'tag', label: t('imageManagement:table.tag') },
@@ -445,9 +422,7 @@ const ImageList = () => {
     { id: 'status', label: t('imageManagement:table.status') },
   ];
 
-  // 修改格式化大小的函數
   const formatSize = (sizeString) => {
-    // 如果是數字，使用標準的格式化邏輯
     if (typeof sizeString === 'number') {
       const sizes = ['B', 'KB', 'MB', 'GB'];
       if (sizeString === 0) return '0 B';
@@ -455,41 +430,33 @@ const ImageList = () => {
       return `${Math.round(sizeString / (1024 ** i), 2)} ${sizes[i]}`;
     }
 
-    // 如果是字符串（從倉庫獲取的格式），直接返回
     if (typeof sizeString === 'string') {
-      // 處理可能的 "123MB" 或 "123 MB" 格式
       return sizeString.replace(/([0-9.]+)([A-Z]+)/, '$1 $2');
     }
 
     return 'Unknown size';
   };
 
-  // 修改日期格式化數
   const formatDate = (dateString) => {
     if (!dateString) return '-';
     
     try {
-      // 處理不同的日期格式
       let date;
       if (dateString.includes('ago')) {
-        // 處理 "x days ago" 格式
         const now = new Date();
         const days = parseInt(dateString.match(/\d+/)[0]);
         date = new Date(now.setDate(now.getDate() - days));
       } else if (dateString.includes('About')) {
-        // 處理 "About a minute ago" 等格式
         date = new Date();
       } else {
         date = new Date(dateString);
       }
 
-      // 檢查日期是否有效
       if (isNaN(date.getTime())) {
         console.warn('Invalid date:', dateString);
-        return dateString; // 如果無法解析，返回原始字符串
+        return dateString;
       }
 
-      // 使用 Intl.DateTimeFormat 格式化日期
       return new Intl.DateTimeFormat('zh-TW', {
         year: 'numeric',
         month: '2-digit',
@@ -501,13 +468,12 @@ const ImageList = () => {
       }).format(date);
     } catch (error) {
       console.error('Error formatting date:', error);
-      return dateString; // 發生錯誤時返回原始字符串
+      return dateString;
     }
   };
 
   return (
     <Box sx={{ width: '100%' }}>
-      {/* 工具欄 */}
       <Paper sx={{ mb: 2, p: 2 }}>
         <Box sx={{ 
           display: 'flex', 
@@ -561,7 +527,6 @@ const ImageList = () => {
         </Box>
       </Paper>
 
-      {/* 表格 */}
       <Paper sx={{ width: '100%', mb: 3 }}>
         <TableContainer sx={{ maxHeight: TABLE_HEIGHT }}>
           <Table stickyHeader>
@@ -651,7 +616,6 @@ const ImageList = () => {
         </TableContainer>
       </Paper>
 
-      {/* 操作按鈕區 */}
       <Paper sx={{ p: 2, mt: 2 }}>
         <Box sx={{ 
           display: 'flex', 
@@ -693,7 +657,6 @@ const ImageList = () => {
         </Box>
       </Paper>
 
-      {/* 對話框 */}
       <ImageUpload
         open={uploadOpen}
         onClose={() => setUploadOpen(false)}
@@ -738,7 +701,6 @@ const ImageList = () => {
 };
 export default ImageList;
 
-// MUI 的排序輔助函數
 function descendingComparator(a, b, orderBy) {
   if (orderBy === 'size') {
     return b.size - a.size;
@@ -770,4 +732,3 @@ function stableSort(array, comparator) {
   });
   return stabilizedThis.map((el) => el[0]);
 }
-

@@ -7,7 +7,7 @@ global:
 backend:
   name: dataisec-backend
   image:
-    repository: dataisec/backend
+    repository: dreamerbaboo/dataisec-pod-management
     tag: latest
     pullPolicy: IfNotPresent
   replicaCount: 1
@@ -21,20 +21,88 @@ backend:
   service:
     type: ClusterIP
     port: 3001
+  
+  # 存儲配置
+  storage:
+    className: "local-storage"
+    size: "5Gi"
+    templates:
+      enabled: true
+      path: "/app/deploymentTemplate"
+      size: "1Gi"
+    helm:
+      cacheSize: "1Gi"
+  
+  # 安全上下文配置
+  securityContext:
+    container:
+      runAsUser: 1000
+      runAsGroup: 1000
+      allowPrivilegeEscalation: true
+      capabilities:
+        add: ["NET_ADMIN", "SYS_ADMIN"]
+    pod:
+      fsGroup: 1000
+      runAsUser: 1000
+      runAsGroup: 1000
+  
   config:
     jwt:
       secret: "your-jwt-secret"
     cors:
       allowedOrigins: ["http://localhost:5173"]
+  
   env:
     NODE_ENV: production
     PORT: 3001
+    OPENSEARCH_URL: "http://opensearch-cluster-master:9200"
+    OPENSEARCH_HOST: "opensearch-cluster-master"
+    OPENSEARCH_PORT: "9200"
+    OPENSEARCH_USERNAME: "admin"
+    OPENSEARCH_PASSWORD: "Cobr@8029@@123D"
+    OPENSEARCH_POD_METRICS_INDEX: "metricbeat-*"
+    OPENSEARCH_SYSTEM_METRICS_INDEX: "metricbeat-*"
+    OPENSEARCH_LOGS_INDEX: "filebeat-*"
+    OPENSEARCH_TEMPLATE_INDEX: "pod-deployment-templates"
+    OPENSEARCH_DEPLOYMENT_LOG_INDEX: "pod-deployment-logs"
+    OPENSEARCH_AUDIT_LOG_INDEX: "pod-deployment-audit"
+    LOG_LEVEL: "info"
+    LOG_FORMAT: "json"
+    WS_HEARTBEAT_INTERVAL: "30000"
+    DEPLOYMENT_TEMPLATE_PATH: "/app/deploymentTemplate"
+    KUBECONFIG: "/app/.kube/config"
+  
+  # RBAC 配置
+  serviceAccount:
+    create: true
+    annotations: {}
+  
+  # Docker 配置
+  docker:
+    socket:
+      enabled: true
+      path: /var/run/docker.sock
+      mode: "666"
+  
+  # Kubernetes 配置
+  kubernetes:
+    config:
+      enabled: true
+      # 如果使用外部 kubeconfig，設置為 true
+      external: false
+      # 如果使用外部 kubeconfig，指定 secret 名稱
+      secretName: ""
+    
+    # Helm 配置
+    helm:
+      enabled: true
+      cacheDir: "/app/.helm"
 
 # 前端服務配置
 frontend:
   name: dataisec-frontend
   image:
-    repository: dataisec/frontend
+    repository: dreamerbaboo/dataisec-pod-management
     tag: latest
     pullPolicy: IfNotPresent
   replicaCount: 1
@@ -49,7 +117,7 @@ frontend:
     type: ClusterIP
     port: 80
   config:
-    apiUrl: "http://dataisec-backend:3001"
+    apiUrl: "http://dataisec-backend:3001/api"
 
 # Ingress 配置
 ingress:
@@ -71,5 +139,5 @@ ingress:
 # 持久化存儲配置
 persistence:
   enabled: true
-  storageClass: "standard"
-  size: 10Gi 
+  storageClass: "local-storage"
+  size: 10Gi

@@ -14,10 +14,19 @@ spec:
       labels:
         app: {{ .Values.backend.name }}
     spec:
+      serviceAccountName: {{ .Values.backend.name }}-sa
+      securityContext:
+        fsGroup: 1000
+        runAsUser: 1000
+        runAsGroup: 1000
       containers:
         - name: {{ .Values.backend.name }}
           image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
           imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: true
+            capabilities:
+              add: ["NET_ADMIN", "SYS_ADMIN"]
           ports:
             - containerPort: {{ .Values.backend.service.port }}
           env:
@@ -30,5 +39,41 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.backend.name }}-secret
                   key: jwt-secret
+            - name: DEPLOYMENT_TEMPLATE_PATH
+              value: "/app/deploymentTemplate"
+            - name: KUBECONFIG
+              value: "/app/.kube/config"
+          volumeMounts:
+            - name: docker-sock
+              mountPath: /var/run/docker.sock
+            - name: kube-config
+              mountPath: /app/.kube
+              readOnly: true
+            - name: deployment-templates
+              mountPath: /app/deploymentTemplate
+            - name: helm-cache
+              mountPath: /app/.helm
           resources:
-            {{- toYaml .Values.backend.resources | nindent 12 }} 
+            {{- toYaml .Values.backend.resources | nindent 12 }}
+          lifecycle:
+            postStart:
+              exec:
+                command:
+                - /bin/sh
+                - -c
+                - |
+                  chmod 666 /var/run/docker.sock
+      volumes:
+        - name: docker-sock
+          hostPath:
+            path: /var/run/docker.sock
+            type: Socket
+        - name: kube-config
+          secret:
+            secretName: {{ .Values.backend.name }}-kubeconfig
+            defaultMode: 0400
+        - name: deployment-templates
+          persistentVolumeClaim:
+            claimName: {{ .Values.backend.name }}-templates-pvc
+        - name: helm-cache
+          emptyDir: {}

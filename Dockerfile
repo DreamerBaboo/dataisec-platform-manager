@@ -38,6 +38,29 @@ RUN mkdir -p public
 # 最終階段
 FROM node:18-alpine
 
+# 安裝必要的工具
+RUN apk add --no-cache \
+    curl \
+    docker-cli \
+    docker \
+    openrc \
+    bash \
+    openssl \
+    shadow \
+    && ARCH=$(uname -m) \
+    && if [ "$ARCH" = "aarch64" ]; then \
+         KUBECTL_ARCH="arm64"; \
+       else \
+         KUBECTL_ARCH="amd64"; \
+       fi \
+    && curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/${KUBECTL_ARCH}/kubectl" \
+    && chmod +x kubectl \
+    && mv kubectl /usr/local/bin/ \
+    && curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 \
+    && chmod 700 get_helm.sh \
+    && VERIFY_CHECKSUM=false ./get_helm.sh \
+    && rm get_helm.sh
+
 WORKDIR /app
 
 # 複製後端文件
@@ -55,9 +78,16 @@ RUN cd public && \
       sed -i 's|/assets/|/|g' index.html; \
     fi
 
-# 創建必要的目錄
-RUN mkdir -p /app/.kube \
-    && chown -R node:node /app
+# 創建必要的目錄和設置權限
+RUN mkdir -p /app/.kube && \
+    touch /app/.kube/config && \
+    usermod -aG docker node && \
+    chown -R node:docker /app && \
+    chmod -R 755 /app && \
+    chmod 755 /usr/local/bin/kubectl && \
+    chmod 755 /usr/local/bin/helm && \
+    touch /var/run/docker.sock && \
+    chmod 666 /var/run/docker.sock
 
 # 切換到非 root 用戶
 USER node
@@ -86,11 +116,13 @@ ENV NODE_ENV=production \
     LOG_LEVEL=info \
     LOG_FORMAT=json \
     # WebSocket Configuration
-    WS_HEARTBEAT_INTERVAL=30000
+    WS_HEARTBEAT_INTERVAL=30000 \
+    # Path Configuration
+    DEPLOYMENT_TEMPLATE_PATH=/app/deploymentTemplate
 
 EXPOSE 3001
 
 # 創建掛載點
-VOLUME ["/app/.kube"]
+VOLUME ["/app/.kube", "/var/run/docker.sock"]
 
 CMD ["node", "server.js"]
