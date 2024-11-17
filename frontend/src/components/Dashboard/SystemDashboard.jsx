@@ -129,8 +129,8 @@ const SystemDashboard = () => {
   }, [selectedNode, fetchMetrics]);
 
   return (
-    <Box sx={{ width: '100%', p: 3 }}>
-      <Paper sx={{ width: '100%', mb: 3 }}>
+    <Box sx={{ width: '100%', height: '100%', minWidth: '1182px' }}>
+      <Paper sx={{ width: '100%', height: '100%' }}>
         <Box sx={{ 
           display: 'flex', 
           justifyContent: 'space-between', 

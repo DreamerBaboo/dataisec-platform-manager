@@ -306,9 +306,9 @@ const PodDashboard = () => {
   );
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{top: '64px', left: '240px', width: '100%', minWidth: '1182px' }}>
       {/* Dashboard Area */}
-      <Paper sx={{ p: 2, mb: 3 }}>
+      <Paper sx={{ width: '100%', height: '100%', p: 2, mb: 3 }}>
         <ReactGridLayout
           className="layout"
           layout={layout}

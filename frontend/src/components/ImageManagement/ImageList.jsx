@@ -473,7 +473,7 @@ const ImageList = () => {
   };
 
   return (
-    <Box sx={{ width: '100%' }}>
+    <Box sx={{ width: '100%', minWidth: '1182px' }}>
       <Paper sx={{ mb: 2, p: 2 }}>
         <Box sx={{ 
           display: 'flex', 

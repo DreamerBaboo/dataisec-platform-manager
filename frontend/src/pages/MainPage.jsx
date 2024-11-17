@@ -46,14 +46,16 @@ function MainPage() {
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
-          width: { sm: `calc(100% - ${open ? 240 : 56}px)` },
+          pl: 1,
+          width: 'calc(100% - 240px)',
+          height: 'calc(100vh - 64px)',
           ml: { sm: `${open ? 240 : 56}px` },
           mt: ['48px', '56px', '64px'],
           transition: theme.transitions.create('margin', {
             easing: theme.transitions.easing.sharp,
             duration: theme.transitions.duration.leavingScreen,
           }),
+          display: 'block',
         }}
       >
         <Routes>

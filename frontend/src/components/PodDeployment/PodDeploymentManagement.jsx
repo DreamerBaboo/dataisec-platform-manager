@@ -239,7 +239,7 @@ const PodDeploymentManagement = () => {
   }
 
   return (
-    <Box>
+    <Box sx={{ width: '100%', height: '100%', minWidth: '1182px' }}>
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={4}>
           <FormControl fullWidth>
