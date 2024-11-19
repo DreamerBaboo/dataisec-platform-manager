@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dataisec-platform
+  labels:
+    app: dataisec-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dataisec-platform
+  template:
+    metadata:
+      labels:
+        app: dataisec-platform
+    spec:
+      serviceAccountName: dataisec-platform-sa
+      nodeSelector:
+        kubernetes.io/hostname: "192.168.170.126"
+      containers:
+        - name: dataisec-platform
+          image: dreamerbaboo/dataisec-pod-management:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3001
+              name: backend
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: dataisec-platform-config
+            - secretRef:
+                name: dataisec-platform-secret
+          volumeMounts:
+            - name: containerd-socket
+              mountPath: /var/run/containerd/containerd.sock
+            # Mount service account token and certs
+            - name: kube-api-access
+              mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+              readOnly: true
+      volumes:
+        - name: containerd-socket
+          hostPath:
+            path: /run/containerd/containerd.sock
+            type: Socket
+        # Automatically mounted service account token and certs
+        - name: kube-api-access
+          projected:
+            sources:
+            - serviceAccountToken:
+                expirationSeconds: 3600
+                path: token
+            - configMap:
+                name: kube-root-ca.crt
+                items:
+                - key: ca.crt
+                  path: ca.crt
+            - downwardAPI:
+                items:
+                - path: namespace
+                  fieldRef:
+                    apiVersion: v1
+                    fieldPath: metadata.namespace

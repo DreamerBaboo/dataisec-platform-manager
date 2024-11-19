@@ -20,8 +20,9 @@ interface ApiConfig {
 
 // 獲取 API 配置
 function getApiConfig(): ApiConfig {
+  console.log('getApiConfig', import.meta.env.VITE_API_BASE_URL);
   const apiUrl = import.meta.env.VITE_API_BASE_URL || 
-    (import.meta.env.DEV ? 'http://localhost:3001' : window.location.origin);
+    (import.meta.env.NODE_ENV ? 'http://localhost:30022' : window.location.origin);
   
   const isInCluster = window.location.hostname.includes('.cluster.local');
   
@@ -61,7 +62,7 @@ export const getApiUrl = (endpoint: string): string => {
 };
 
 // 發送請求的函數
-export async function fetchApi(endpoint: string, options: RequestOptions = {}) {
+export async function fetchApi<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
   const url = getApiUrl(endpoint);
   console.log('Requesting URL:', url);
   
@@ -78,14 +79,15 @@ export async function fetchApi(endpoint: string, options: RequestOptions = {}) {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), getApiConfig().timeout);
-
+    
+    // 修正：使用已生成的 URL
     const response = await fetch(url, {
       ...fetchOptions,
       signal: controller.signal
     });
 
     clearTimeout(timeoutId);
-    return handleResponse(response);
+    return handleResponse<T>(response);
   } catch (error) {
     if (error instanceof Error) {
       if (error.name === 'AbortError') {
@@ -98,7 +100,7 @@ export async function fetchApi(endpoint: string, options: RequestOptions = {}) {
   }
 }
 
-async function handleResponse(response: Response) {
+async function handleResponse<T>(response: Response): Promise<T> {
   console.log('Response details:', {
     url: response.url,
     status: response.status,
@@ -120,7 +122,7 @@ async function handleResponse(response: Response) {
     throw new ApiError(415, 'Response is not JSON');
   }
 
-  return response.json();
+  return response.json() as Promise<T>;
 }
 
 function getHeaders(): Record<string, string> {
@@ -137,14 +139,14 @@ function getHeaders(): Record<string, string> {
 
 export const api = {
   get: async <T>(endpoint: string, options: RequestOptions = {}): Promise<T> => {
-    return fetchApi(endpoint, {
+    return fetchApi<T>(endpoint, {
       ...options,
       method: 'GET'
     });
   },
 
   post: async <T>(endpoint: string, data: unknown, options: RequestOptions = {}): Promise<T> => {
-    return fetchApi(endpoint, {
+    return fetchApi<T>(endpoint, {
       ...options,
       method: 'POST',
       body: JSON.stringify(data)
@@ -152,7 +154,7 @@ export const api = {
   },
 
   put: async <T>(endpoint: string, data: unknown, options: RequestOptions = {}): Promise<T> => {
-    return fetchApi(endpoint, {
+    return fetchApi<T>(endpoint, {
       ...options,
       method: 'PUT',
       body: JSON.stringify(data)
@@ -160,7 +162,7 @@ export const api = {
   },
 
   delete: async <T>(endpoint: string, options: RequestOptions = {}): Promise<T> => {
-    return fetchApi(endpoint, {
+    return fetchApi<T>(endpoint, {
       ...options,
       method: 'DELETE'
     });
@@ -177,4 +179,4 @@ export const api = {
   }
 };
 
-export default api; 
+export default api;
