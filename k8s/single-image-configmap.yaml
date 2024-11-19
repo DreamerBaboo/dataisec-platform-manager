@@ -3,6 +3,8 @@ kind: ConfigMap
 metadata:
   name: dataisec-platform-config
 data:
+  CONTAINER_RUNTIME: "nerdctl"
+  CONTAINER_NAMESPACE: "k8s.io"
   VITE_API_BASE_URL: "http://192.168.170.126:30002" 
   API_BASE_URL:  "http://192.168.125.168:3001"# 請替換為正確的服務 URL
   JWT_EXPIRES_IN: "24h"

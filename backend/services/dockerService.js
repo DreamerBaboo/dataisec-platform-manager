@@ -1,11 +1,9 @@
-const { exec } = require('child_process');
-const util = require('util');
-const execAsync = util.promisify(exec);
+const containerRuntime = require('../utils/container-runtime');
 
 class DockerService {
   async listRepositories() {
     try {
-      const { stdout } = await execAsync('docker images --format "{{.Repository}}"');
+      const stdout = await containerRuntime.listRepositories();
       const repositories = [...new Set(stdout.split('\n').filter(Boolean))];
       return repositories;
     } catch (error) {
@@ -17,7 +15,7 @@ class DockerService {
   async listTags(repository) {
     try {
       console.log(`Fetching tags for repository: ${repository}`);
-      const { stdout } = await execAsync(`docker images ${repository} --format "{{.Tag}}"`);
+      const stdout = await containerRuntime.listTags(repository);
       const tags = stdout.split('\n').filter(Boolean);
       console.log(`Found ${tags.length} tags for ${repository}`);
       return tags;
@@ -29,7 +27,7 @@ class DockerService {
 
   async searchImages(term) {
     try {
-      const { stdout } = await execAsync(`docker search ${term} --format "{{.Name}}"`);
+      const stdout = await containerRuntime.searchImages(term);
       return stdout.split('\n').filter(Boolean);
     } catch (error) {
       console.error('Failed to search images:', error);

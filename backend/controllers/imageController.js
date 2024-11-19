@@ -1,9 +1,9 @@
+const containerRuntime = require('../utils/container-runtime');
 const { exec } = require('child_process');
 const util = require('util');
 const fs = require('fs');
 const fsPromises = require('fs').promises;
 const path = require('path');
-const execPromise = util.promisify(exec);
 const multer = require('multer');
 
 // 確保上傳目錄存在
@@ -41,37 +41,19 @@ const logError = (error, operation) => {
   // 這裡可以添加更多的日誌記錄邏輯，比如寫入文件或發送到日誌服務
 };
 
-// 檢查 Docker 權限的函數
+// 修改檢查權限函數，使用 containerRuntime
 const checkDockerPermissions = async () => {
   try {
-    console.log('🔍 Checking Docker permissions...');
-    await execPromise('docker ps');
-    console.log('✅ Docker permissions verified');
+    console.log('🔍 Checking container runtime permissions...');
+    await containerRuntime.listContainers();
+    console.log('✅ Container runtime permissions verified');
     return true;
   } catch (error) {
-    console.error('❌ Docker permission check failed:', error.message);
+    console.error('❌ Container runtime permission check failed:', error.message);
     if (error.message.includes('permission denied')) {
-      throw new Error('No permission to execute Docker commands. Please ensure the user is in the docker group.');
-    } else if (error.message.includes('Cannot connect to the Docker daemon')) {
-      throw new Error('Cannot connect to Docker daemon. Please ensure Docker is running.');
-    }
-    throw error;
-  }
-};
-
-// 包裝 Docker 命令執行
-const executeDockerCommand = async (command) => {
-  try {
-    console.log('🐳 Executing Docker command:', command);
-    const { stdout, stderr } = await execPromise(command);
-    if (stderr) {
-      console.warn('⚠️ Docker command stderr:', stderr);
-    }
-    return stdout;
-  } catch (error) {
-    console.error('❌ Docker command failed:', error);
-    if (error.message.includes('permission denied')) {
-      throw new Error('Permission denied while executing Docker command');
+      throw new Error('No permission to execute container commands. Please check your permissions.');
+    } else if (error.message.includes('Cannot connect')) {
+      throw new Error('Cannot connect to container runtime. Please ensure the service is running.');
     }
     throw error;
   }
@@ -93,9 +75,7 @@ const parseImageNameAndTag = (fullName) => {
 const getImages = async (req, res) => {
   console.log('🔍 Getting all images');
   try {
-    await checkDockerPermissions();
-    console.log('🐳 Executing docker images command...');
-    const { stdout } = await execPromise('docker images --format "{{json .}}"');
+    const stdout = await containerRuntime.listImages();
     console.log('📦 Raw docker output:', stdout);
 
     if (!stdout.trim()) {
@@ -151,7 +131,7 @@ const getImageDetails = async (req, res) => {
     const imageName = tag ? `${name}:${tag}` : name;
     console.log('📝 Full image name:', imageName);
     
-    const { stdout } = await execPromise(`docker inspect ${imageName}`);
+    const stdout = await containerRuntime.inspectImage(imageName);
     const details = JSON.parse(stdout)[0];
     console.log('📦 Raw image details:', details);
 
@@ -294,7 +274,6 @@ const uploadImage = async (req, res) => {
 // 刪除鏡像
 const deleteImage = async (req, res) => {
   try {
-    await checkDockerPermissions();
     const { images } = req.body;
     
     if (!images || !Array.isArray(images) || images.length === 0) {
@@ -307,7 +286,7 @@ const deleteImage = async (req, res) => {
     for (const imageKey of images) {
       try {
         console.log(`🗑️ Removing image: ${imageKey}`);
-        await execPromise(`docker rmi ${imageKey}`);
+        await containerRuntime.removeImage(imageKey);
         console.log(`✅ Successfully removed image: ${imageKey}`);
         results.push({
           image: imageKey,
@@ -329,14 +308,6 @@ const deleteImage = async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Error in deleteImage:', error);
-    
-    if (error.message.includes('permission denied')) {
-      return res.status(403).json({
-        message: 'Permission denied',
-        error: error.message
-      });
-    }
-
     res.status(500).json({
       message: 'Failed to delete images',
       error: error.message
@@ -354,12 +325,9 @@ const installImage = async (req, res) => {
       return res.status(400).json({ message: 'Image ID is required' });
     }
 
-    let pullCommand = `docker pull ${id}`;
-    if (registry && tag) {
-      pullCommand = `docker pull ${registry}/${id}:${tag}`;
-    }
-
-    const { stdout } = await execPromise(pullCommand);
+    const imageName = registry && tag ? `${registry}/${id}:${tag}` : id;
+    const stdout = await containerRuntime.pullImage(imageName);
+    
     res.json({ 
       message: 'Image installed successfully', 
       details: stdout 
@@ -391,10 +359,7 @@ const packageImages = async (req, res) => {
     
     // 使用完整的鏡像名構建命令
     const imageList = images.map(img => img.fullName).join(' ');
-    const command = `docker save -o "${outputFile}" ${imageList}`;
-    
-    console.log('🚀 Executing command:', command);
-    await execPromise(command);
+    await containerRuntime.saveImage(outputFile, imageList);
 
     // 設置響應頭
     res.setHeader('Content-Type', 'application/x-tar');
@@ -426,7 +391,6 @@ const packageImages = async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Error packaging images:', error);
-    // 清理臨時文件
     try {
       await fsPromises.unlink(outputFile);
     } catch (cleanupError) {
@@ -448,7 +412,6 @@ const extractImages = async (req, res) => {
     const { filePath } = req.body;
     console.log('📂 Processing file:', filePath);
     
-    // 檢查文件是否存在
     if (!fs.existsSync(filePath)) {
       console.error('❌ File not found:', filePath);
       return res.status(404).json({ 
@@ -457,10 +420,8 @@ const extractImages = async (req, res) => {
       });
     }
 
-    // 使用 docker load 命令來解析文件
-    console.log('🐳 Executing docker load command');
-    const { stdout } = await execPromise(`docker load --input "${filePath}" --quiet`);
-    console.log('📤 Docker load output:', stdout);
+    const stdout = await containerRuntime.loadImage(filePath);
+    console.log('📤 Load output:', stdout);
     
     // 解析輸出以獲取鏡像列表
     const images = stdout
@@ -515,7 +476,7 @@ const loadImages = async (req, res) => {
     const { images } = req.body;
     console.log('🔄 Loading images:', images);
     for (const image of images) {
-      await execPromise(`docker load --input ${image.path}`);
+      await containerRuntime.loadImage(image.path);
     }
 
     res.json({ message: 'Images loaded successfully' });
@@ -549,10 +510,8 @@ const retagImages = async (req, res) => {
     
     const results = [];
     for (const image of images) {
-      // 提取最終的鏡像名稱和標籤
       const extractedNameTag = extractImageNameAndTag(image.originalName);
       const newTag = `${repository}:${port}/${extractedNameTag}`;
-      console.log(`🔄 Retagging ${image.originalName} to ${newTag}`);
       
       const result = {
         original: image.originalName,
@@ -563,58 +522,27 @@ const retagImages = async (req, res) => {
         errors: []
       };
 
-      // 執行 tag 命令
       try {
-        await executeDockerCommand(`docker tag ${image.originalName} ${newTag}`);
-        console.log(`✅ Tagged image successfully: ${newTag}`);
-      } catch (tagError) {
-        console.error(`❌ Error tagging image: ${tagError.message}`);
-        result.errors.push({ operation: 'tag', error: tagError.message });
-      }
-
-      // 執行 push 命令
-      try {
-        await executeDockerCommand(`docker push ${newTag}`);
-        console.log(`✅ Pushed image successfully: ${newTag}`);
-      } catch (pushError) {
-        console.error(`❌ Error pushing image: ${pushError.message}`);
-        result.errors.push({ operation: 'push', error: pushError.message });
-      }
-      
-      // 根據 keepOriginal 決定是否刪除原始鏡像
-      if (!keepOriginal) {
-        try {
-          await executeDockerCommand(`docker rmi ${image.originalName}`);
-          console.log(`🗑️ Removed original image: ${image.originalName}`);
-        } catch (removeError) {
-          console.warn(`⚠️ Could not remove original image: ${removeError.message}`);
-          result.errors.push({ operation: 'remove', error: removeError.message });
+        await containerRuntime.tagImage(image.originalName, newTag);
+        await containerRuntime.pushImage(newTag);
+        
+        if (!keepOriginal) {
+          await containerRuntime.removeImage(image.originalName);
         }
-      } else {
-        console.log(`📦 Keeping original image: ${image.originalName}`);
-      }
-
-      // 更新結果狀態
-      if (result.errors.length > 0) {
-        result.status = 'partial';
+      } catch (error) {
+        result.errors.push({ operation: error.operation, error: error.message });
+        result.status = 'error';
       }
       
       results.push(result);
     }
 
-    console.log('✅ All images processed:', results);
     res.json({ 
       message: 'Images processing completed',
       results 
     });
   } catch (error) {
     console.error('❌ Error in retagImages:', error);
-    if (error.message.includes('permission')) {
-      return res.status(403).json({
-        message: 'Permission denied',
-        error: error.message
-      });
-    }
     res.status(500).json({
       message: 'Failed to process images',
       error: error.message
@@ -625,7 +553,7 @@ const retagImages = async (req, res) => {
 // 獲取本地倉庫中的鏡像列表
 const getRepositories = async (req, res) => {
   try {
-    const { stdout } = await execPromise('docker images --format "{{.Repository}}"');
+    const stdout = await containerRuntime.listRepositories();
     const repositories = [...new Set(stdout.trim().split('\n'))];
     res.json(repositories);
   } catch (error) {
@@ -642,7 +570,7 @@ const getTags = async (req, res) => {
       return res.status(400).json({ error: 'Repository parameter is required' });
     }
     
-    const { stdout } = await execPromise(`docker images ${repository} --format "{{.Tag}}"`);
+    const stdout = await containerRuntime.listTags(repository);
     const tags = stdout.trim().split('\n').filter(tag => tag !== '<none>');
     res.json(tags);
   } catch (error) {
