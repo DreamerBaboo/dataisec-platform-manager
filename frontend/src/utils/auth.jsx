@@ -8,28 +8,19 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (username, password) => {
     try {
-      console.log('Attempting login with:', { username });
-      const response = await fetch('http://localhost:3001/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
+      const response = await api.post('api/auth/login', {
+        username,
+        password
       });
-
-      if (!response.ok) {
-        console.log('Login failed:', response.status, response.statusText);
-        throw new Error('Login failed');
-      }
-
-      const data = await response.json();
-      console.log('Login successful:', data);
       
-      localStorage.setItem('token', data.token);
-      setUser(data.user);
-      return data;
+      if (response.token) {
+        localStorage.setItem('token', response.token);
+        setUser(response.user);
+        return response;
+      }
+      throw new Error('Login failed');
     } catch (error) {
-      console.log('Login error:', error);
+      console.error('Login error:', error);
       throw error;
     }
   };

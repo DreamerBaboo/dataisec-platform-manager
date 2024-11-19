@@ -7,7 +7,6 @@ data:
   API_BASE_URL:  "http://192.168.125.168:3001"# 請替換為正確的服務 URL
   JWT_EXPIRES_IN: "24h"
   OPENSEARCH_URL: "https://192.168.170.126:9200"
-  OPENSEARCH_ENDPOINT: "https://192.168.170.126:9200"
   OPENSEARCH_HOST: "192.168.170.126"
   OPENSEARCH_PORT: "9200"
   OPENSEARCH_POD_METRICS_INDEX: "metricbeat-*"
@@ -28,3 +27,4 @@ data:
   KUBERNETES_SERVICE_ACCOUNT_TOKEN_PATH: "/var/run/secrets/kubernetes.io/serviceaccount/token"
   KUBERNETES_CA_CERT_PATH: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
   KUBECONFIG_PATH: "/etc/kubernetes/admin.conf"
+  ALLOWED_ORIGINS: "http://localhost:3001,http://localhost:5173,http://192.168.170.126:3001"

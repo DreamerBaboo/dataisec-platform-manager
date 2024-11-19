@@ -7,35 +7,96 @@ export class ApiError extends Error {
 }
 
 // 定義請求配置類型
-interface RequestOptions {
-  method?: string;
+interface RequestOptions extends RequestInit {
   headers?: Record<string, string>;
-  body?: string;
 }
 
-// 獲取基礎 URL
-const getBaseUrl = (): string => {
-  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
-  console.log('API base URL:', apiBaseUrl);
+// 定義 API 配置介面
+interface ApiConfig {
+  baseUrl: string;
+  timeout: number;
+  headers: Record<string, string>;
+}
+
+// 獲取 API 配置
+function getApiConfig(): ApiConfig {
+  const apiUrl = import.meta.env.VITE_API_BASE_URL || 
+    (import.meta.env.DEV ? 'http://localhost:3001' : window.location.origin);
   
-  if (!apiBaseUrl) {
-    console.warn('API base URL not found in environment variables');
-    return import.meta.env.DEV 
-      ? 'http://localhost:3001'
-      : '';
+  const isInCluster = window.location.hostname.includes('.cluster.local');
+  
+  return {
+    baseUrl: apiUrl.replace(/\/+$/, ''), // 移除結尾的斜線
+    timeout: 30000,
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      ...(isInCluster ? { 'X-Cluster-Client': 'true' } : {})
+    }
+  };
+}
+
+// API 請求基礎配置
+const defaultOptions: RequestOptions = {
+  credentials: 'include', // 包含認證資訊
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
   }
-  
-  return apiBaseUrl;
 };
 
+// 獲取基礎 URL
+export const getBaseUrl = (): string => {
+  const config = getApiConfig();
+  return config.baseUrl;
+};
+
+// 獲取完整 API URL
 export const getApiUrl = (endpoint: string): string => {
   const baseUrl = getBaseUrl().replace(/\/+$/, '');
-  // 移除開頭的斜線
   const cleanEndpoint = endpoint.replace(/^\/+/, '');
   const url = `${baseUrl}/${cleanEndpoint}`;
   console.log('Generated API URL:', url);
   return url;
 };
+
+// 發送請求的函數
+export async function fetchApi(endpoint: string, options: RequestOptions = {}) {
+  const url = getApiUrl(endpoint);
+  console.log('Requesting URL:', url);
+  
+  const fetchOptions: RequestOptions = {
+    ...defaultOptions,
+    ...options,
+    headers: {
+      ...getApiConfig().headers,
+      ...options.headers,
+      Authorization: `Bearer ${localStorage.getItem('token') || ''}`
+    }
+  };
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), getApiConfig().timeout);
+
+    const response = await fetch(url, {
+      ...fetchOptions,
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+    return handleResponse(response);
+  } catch (error) {
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        throw new ApiError(408, 'Request timeout');
+      }
+      console.error(`API Request Failed: ${endpoint}`, error);
+      throw new ApiError(0, error.message);
+    }
+    throw error;
+  }
+}
 
 async function handleResponse(response: Response) {
   console.log('Response details:', {
@@ -63,9 +124,8 @@ async function handleResponse(response: Response) {
 }
 
 function getHeaders(): Record<string, string> {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
+  const config = getApiConfig();
+  const headers = { ...config.headers };
   
   const token = localStorage.getItem('token');
   if (token) {
@@ -76,44 +136,44 @@ function getHeaders(): Record<string, string> {
 }
 
 export const api = {
-  get: async <T>(endpoint: string): Promise<T> => {
-    const url = getApiUrl(endpoint);
-    console.log('Making GET request to:', url);
-    
-    const headers = {
-      'Accept': 'application/json',
-      'Authorization': `Bearer ${localStorage.getItem('token')}`
-    };
-    console.log('Request headers:', headers);
-
-    const response = await fetch(url, { headers });
-    return handleResponse(response);
+  get: async <T>(endpoint: string, options: RequestOptions = {}): Promise<T> => {
+    return fetchApi(endpoint, {
+      ...options,
+      method: 'GET'
+    });
   },
 
-  post: async <T>(endpoint: string, data: unknown): Promise<T> => {
-    const response = await fetch(getApiUrl(endpoint), {
+  post: async <T>(endpoint: string, data: unknown, options: RequestOptions = {}): Promise<T> => {
+    return fetchApi(endpoint, {
+      ...options,
       method: 'POST',
-      headers: getHeaders(),
       body: JSON.stringify(data)
     });
-    return handleResponse(response);
   },
 
-  put: async <T>(endpoint: string, data: unknown): Promise<T> => {
-    const response = await fetch(getApiUrl(endpoint), {
+  put: async <T>(endpoint: string, data: unknown, options: RequestOptions = {}): Promise<T> => {
+    return fetchApi(endpoint, {
+      ...options,
       method: 'PUT',
-      headers: getHeaders(),
       body: JSON.stringify(data)
     });
-    return handleResponse(response);
   },
 
-  delete: async <T>(endpoint: string): Promise<T> => {
-    const response = await fetch(getApiUrl(endpoint), {
-      method: 'DELETE',
-      headers: getHeaders()
+  delete: async <T>(endpoint: string, options: RequestOptions = {}): Promise<T> => {
+    return fetchApi(endpoint, {
+      ...options,
+      method: 'DELETE'
     });
-    return handleResponse(response);
+  },
+
+  // 用於檢查 API 狀態
+  health: async () => {
+    try {
+      const response = await api.get<{ status: string }>('health');
+      return response.status === 'ok';
+    } catch {
+      return false;
+    }
   }
 };
 

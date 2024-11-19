@@ -18,50 +18,75 @@ const http = require('http');
 
 const app = express();
 
-// 動態獲取允許的源
-function getAllowedOrigins() {
-  const origins = [
-    'http://localhost:3000',
-    'http://localhost:3001',
-    'http://localhost:5173'
-  ];
-  
-  // 如果是開發環境，添加更多允許的源
-  if (process.env.NODE_ENV !== 'production') {
-    // 添加本地網絡 IP
-    const networkInterfaces = require('os').networkInterfaces();
-    Object.values(networkInterfaces).forEach(interfaces => {
-      interfaces.forEach(interface => {
-        if (interface.family === 'IPv4' && !interface.internal) {
-          origins.push(`http://${interface.address}:3000`);
-          origins.push(`http://${interface.address}:3001`);
-          origins.push(`http://${interface.address}:5173`);
-        }
-      });
-    });
-  }
-  
-  return origins;
+// CORS 配置處理函數
+function createCorsOptions() {
+  return {
+    origin: function(origin, callback) {
+      // 開發環境允許的域名
+      const devOrigins = [
+        'http://localhost:3001',
+        'http://localhost:5173',
+        'http://192.168.125.168:3001'
+      ];
+      
+      // 從環境變數獲取允許的域名
+      const allowedOrigins = process.env.ALLOWED_ORIGINS 
+        ? process.env.ALLOWED_ORIGINS.split(',')
+        : [];
+      
+      // 合併所有允許的域名
+      const validOrigins = [
+        ...devOrigins,
+        ...allowedOrigins
+      ];
+
+      // 允許來自相同集群的請求
+      const isK8sInternalRequest = !origin || 
+        origin.includes('.cluster.local') || 
+        origin.includes('.svc.') ||
+        /^https?:\/\/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?$/.test(origin);
+
+      if (isK8sInternalRequest || validOrigins.some(valid => origin?.includes(valid))) {
+        callback(null, true);
+      } else {
+        console.warn(`⚠️ Blocked CORS request from origin: ${origin}`);
+        console.log('Allowed origins:', validOrigins);
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Requested-With',
+      'Accept',
+      'Origin',
+      'Access-Control-Request-Method',
+      'Access-Control-Request-Headers',
+      'X-Cluster-Client'  // 用於識別集群內部請求
+    ],
+    exposedHeaders: [
+      'Content-Range',
+      'X-Content-Range',
+      'X-Total-Count'
+    ],
+    maxAge: 86400 // 24小時
+  };
 }
 
-// CORS 配置
-app.use(cors({
-  origin: function(origin, callback) {
-    const allowedOrigins = getAllowedOrigins();
-    
-    // 允許沒有 origin 的請求（如移動應用）
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+// 應用 CORS 中間件
+app.use(cors(createCorsOptions()));
+
+// 記錄 CORS 請求
+app.use((req, res, next) => {
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`🌐 CORS Request: ${req.method} ${req.url}`);
+    console.log('Origin:', req.headers.origin);
+    console.log('Headers:', req.headers);
+  }
+  next();
+});
 
 app.use(bodyParser.json());
 
@@ -123,27 +148,18 @@ app.use((req, res, next) => {
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
   const publicPath = path.join(__dirname, 'public');
-  const indexPath = path.join(publicPath, 'index.html');
   
-  console.log('📂 Public directory path:', publicPath);
-  console.log('📄 Index file path:', indexPath);
-  console.log('📁 Public directory contents:', fs.readdirSync(publicPath));
-  
-  // Serve frontend static files
-  app.use(express.static('public', {
-    setHeaders: (res, path) => {
-      if (path.endsWith('.js')) {
-        res.setHeader('Content-Type', 'application/javascript');
-      } else if (path.endsWith('.css')) {
-        res.setHeader('Content-Type', 'text/css');
-      }
-    },
-    index: false  // 禁用目錄索引
-  }));
-  
-  // Handle React routing, return all requests to React app
+  // 確保目錄存在
+  if (!fs.existsSync(publicPath)) {
+    fs.mkdirSync(publicPath, { recursive: true });
+  }
+
+  // 設定靜態檔案服務
+  app.use(express.static(publicPath));
+
+  // 所有請求都返回 index.html
   app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    res.sendFile(path.join(publicPath, 'index.html'));
   });
 }
 
