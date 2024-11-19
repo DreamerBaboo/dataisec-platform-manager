@@ -14,7 +14,7 @@ import {
   CircularProgress
 } from '@mui/material';
 import { useAppTranslation } from '../../hooks/useAppTranslation';
-import { getApiUrl } from '../../config/api';
+import { getApiUrl } from '../../utils/api';
 
 const PodManagement = () => {
   const { t } = useAppTranslation();

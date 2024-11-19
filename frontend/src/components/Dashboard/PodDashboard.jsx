@@ -28,6 +28,7 @@ import ReactECharts from 'echarts-for-react';
 import RGL, { WidthProvider } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
+import { api, getApiUrl } from '../../utils/api';
 
 const ReactGridLayout = WidthProvider(RGL);
 
@@ -66,14 +67,9 @@ const PodDashboard = () => {
     const fetchNamespaces = async () => {
       try {
         console.log('開始獲取命名空間...');
-        const response = await fetch('http://localhost:3001/api/pods/namespaces', {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
-        if (response.ok) {
-          const data = await response.json();
-          console.log('獲取到的命名空間:', data.namespaces);
-          setNamespaces(data.namespaces);
-        }
+        const data = await api.get('api/pods/namespaces');
+        console.log('獲取到的命名空間:', data.namespaces);
+        setNamespaces(data.namespaces);
       } catch (error) {
         console.error('獲取命名空間時發生錯誤:', error);
       }
@@ -91,15 +87,12 @@ const PodDashboard = () => {
         if (filters.namespace !== 'all') queryParams.append('namespace', filters.namespace);
         if (filters.search) queryParams.append('search', filters.search);
 
-        const response = await fetch(`http://localhost:3001/api/pods?${queryParams}`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
+        const endpoint = `api/pods${queryParams.toString() ? `?${queryParams}` : ''}`;
+        console.log('請求端點:', endpoint);
         
-        if (response.ok) {
-          const data = await response.json();
-          console.log('獲取到的 Pod 數量:', data.length);
-          setPods(data);
-        }
+        const data = await api.get(endpoint);
+        console.log('獲取到的 Pod 數量:', data.length);
+        setPods(data);
       } catch (error) {
         console.error('獲取 Pod 列表時發生錯誤:', error);
       } finally {
@@ -122,20 +115,11 @@ const PodDashboard = () => {
 
     try {
       console.log('開始獲取選中 Pod 的指標，選中的 Pod:', selectedPods);
-      const response = await fetch('http://localhost:3001/api/pods/calculate-resources', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ podNames: selectedPods })
+      const data = await api.post('api/pods/calculate-resources', {
+        podNames: selectedPods
       });
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log('獲取到的 Pod 指標:', data);
-        setPodMetrics(data);
-      }
+      console.log('獲取到的 Pod 指標:', data);
+      setPodMetrics(data);
     } catch (error) {
       console.error('獲取 Pod 指標時發生錯誤:', error);
     }

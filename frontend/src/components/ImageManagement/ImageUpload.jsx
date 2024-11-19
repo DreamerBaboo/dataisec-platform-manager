@@ -30,6 +30,7 @@ import {
 import { useDropzone } from 'react-dropzone';
 import { useSnackbar } from 'notistack';
 import { useAppTranslation } from '../../hooks/useAppTranslation';
+import { getApiUrl } from '../../utils/api';
 
 const ImageUpload = ({ open, onClose, onSuccess }) => {
   const { t } = useAppTranslation('imageManagement');
@@ -101,7 +102,7 @@ const ImageUpload = ({ open, onClose, onSuccess }) => {
       }
 
       const response = await new Promise((resolve, reject) => {
-        xhr.open('POST', 'http://localhost:3001/api/images/upload');
+        xhr.open('POST', getApiUrl('images/upload'));
         
         // 添加認證頭
         xhr.setRequestHeader('Authorization', `Bearer ${token}`);
@@ -145,7 +146,7 @@ const ImageUpload = ({ open, onClose, onSuccess }) => {
       console.log('🔍 Starting image extraction');
       setProcessingStatus(t('images:imageManagement.messages.extracting'));
       
-      const extractResponse = await fetch('http://localhost:3001/api/images/extract', {
+      const extractResponse = await fetch(getApiUrl('images/extract'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -225,7 +226,7 @@ const ImageUpload = ({ open, onClose, onSuccess }) => {
       const repository = localStorage.getItem('repositoryHost') || 'localhost';
       const port = localStorage.getItem('repositoryPort') || '5000';
 
-      const response = await fetch('http://localhost:3001/api/images/retag', {
+      const response = await fetch(getApiUrl('images/retag'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

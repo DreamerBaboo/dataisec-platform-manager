@@ -36,8 +36,7 @@ import ImageUpload from './ImageUpload';
 import ImageDetails from './ImageDetails';
 import { useSnackbar } from 'notistack';
 import RepositoryConfig from './RepositoryConfig';
-import { getApiUrl } from '../../config/api';
-import axios from 'axios';
+import { api, getApiUrl } from '../../utils/api';
 
 const ImageList = () => {
   const { t } = useAppTranslation("imageManagement");
@@ -69,18 +68,11 @@ const ImageList = () => {
       setLoading(true);
       setError(null);
       
-      const response = await axios.get(getApiUrl('images'), {
-        headers: { 
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-          'Accept': 'application/json'
-        }
-      });
-      
-      console.log('📥 Response received:', response.status);
+      const data = await api.get('api/images');
+      console.log('📥 Response received:', data);
       
       // 確保數據格式正確
-      const data = Array.isArray(response.data) ? response.data : [];
-      const formattedData = data.map(image => ({
+      const formattedData = (Array.isArray(data) ? data : []).map(image => ({
         id: image.id || `${image.name}-${image.tag}`,
         name: image.name,
         tag: image.tag,
@@ -94,8 +86,8 @@ const ImageList = () => {
       setImages(formattedData);
       
     } catch (error) {
-      console.error('❌ Error fetching images:', error.response || error);
-      setError(error.response?.data?.message || error.message || '獲取鏡像列表失敗');
+      console.error('❌ Error fetching images:', error);
+      setError(error.message || '獲取鏡像列表失敗');
       setImages([]);
     } finally {
       setLoading(false);
@@ -118,24 +110,28 @@ const ImageList = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(getApiUrl('api/images'), {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
       
-      if (!response.ok) {
-        throw new Error('Failed to fetch images');
-      }
+      const data = await api.get('api/images');
+      console.log('📥 Response received:', data);
       
-      const data = await response.json();
-      const validData = Array.isArray(data) ? data : [];
-      setImages(validData);
-      setFilteredImages(validData.filter(image => 
-        image.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        image.tag.toLowerCase().includes(searchTerm.toLowerCase())
-      ));
+      // 確保數據格式正確
+      const formattedData = (Array.isArray(data) ? data : []).map(image => ({
+        id: image.id || `${image.name}-${image.tag}`,
+        name: image.name,
+        tag: image.tag,
+        size: image.size,
+        created: image.created,
+        repository: image.repository,
+        status: image.status || 'active'
+      }));
+      
+      console.log('📦 Formatted data:', formattedData);
+      setImages(formattedData);
+      
     } catch (error) {
-      console.error('Error fetching images:', error);
-      setError(error.message);
+      console.error('❌ Error fetching images:', error);
+      setError(error.message || '獲取鏡像列表失敗');
+      setImages([]);
     } finally {
       setLoading(false);
     }
@@ -204,42 +200,23 @@ const ImageList = () => {
     try {
       console.log('🗑️ Starting bulk delete for images:', selected);
       
-      const response = await fetch('http://localhost:3001/api/images/delete', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ 
-          images: selected
-        })
+      const response = await api.post('images/delete', { 
+        images: selected 
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || t('imageManagement:message.deleteFailed'));
-      }
+      console.log('✅ Delete result:', response);
 
-      const result = await response.json();
-      console.log('✅ Delete result:', result);
-
-      const hasErrors = result.results.some(r => r.status === 'error');
+      const hasErrors = response.results.some(r => r.status === 'error');
       
       if (hasErrors) {
         enqueueSnackbar(t('imageManagement:message.partialDeleteFailed'), {
           variant: 'warning',
-          anchorOrigin: {
-            vertical: 'bottom',
-            horizontal: 'right'
-          }
+          anchorOrigin: { vertical: 'bottom', horizontal: 'right' }
         });
       } else {
         enqueueSnackbar(t('imageManagement:message.deleteSuccess'), {
           variant: 'success',
-          anchorOrigin: {
-            vertical: 'bottom',
-            horizontal: 'right'
-          }
+          anchorOrigin: { vertical: 'bottom', horizontal: 'right' }
         });
       }
 
@@ -249,10 +226,7 @@ const ImageList = () => {
       console.error('❌ Error deleting images:', error);
       enqueueSnackbar(error.message || t('imageManagement:message.deleteFailed'), {
         variant: 'error',
-        anchorOrigin: {
-          vertical: 'bottom',
-          horizontal: 'right'
-        }
+        anchorOrigin: { vertical: 'bottom', horizontal: 'right' }
       });
     }
   };
@@ -264,15 +238,9 @@ const ImageList = () => {
     const snackbarKey = enqueueSnackbar(t('imageManagement:message.packageStart'), {
       variant: 'info',
       persist: true,
-      anchorOrigin: {
-        vertical: 'bottom',
-        horizontal: 'right'
-      },
+      anchorOrigin: { vertical: 'bottom', horizontal: 'right' },
       action: (key) => (
-        <CircularProgress 
-          size={24} 
-          sx={{ color: 'white', marginLeft: 1 }} 
-        />
+        <CircularProgress size={24} sx={{ color: 'white', marginLeft: 1 }} />
       )
     });
     
@@ -281,32 +249,13 @@ const ImageList = () => {
     try {
       const selectedImages = selected.map(imageKey => {
         const [name, tag] = imageKey.split(':');
-        return {
-          name,
-          tag,
-          fullName: imageKey
-        };
+        return { name, tag, fullName: imageKey };
       });
 
       console.log('📦 Images to package:', selectedImages);
 
-      closeSnackbar(snackbarKey);
-      const preparingKey = enqueueSnackbar(t('imageManagement:message.preparing'), {
-        variant: 'info',
-        persist: true,
-        anchorOrigin: {
-          vertical: 'bottom',
-          horizontal: 'right'
-        },
-        action: (key) => (
-          <CircularProgress 
-            size={24} 
-            sx={{ color: 'white', marginLeft: 1 }} 
-          />
-        )
-      });
-
-      const response = await fetch('http://localhost:3001/api/images/package', {
+      // 使用 fetch 因為需要處理 blob 下載
+      const response = await fetch(getApiUrl('images/package'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -320,27 +269,21 @@ const ImageList = () => {
         throw new Error(errorData.message || 'Failed to package images');
       }
 
-      closeSnackbar(preparingKey);
+      closeSnackbar(snackbarKey);
       const downloadingKey = enqueueSnackbar(t('imageManagement.message.downloading'), {
         variant: 'info',
         persist: true,
-        anchorOrigin: {
-          vertical: 'bottom',
-          horizontal: 'right'
-        },
+        anchorOrigin: { vertical: 'bottom', horizontal: 'right' },
         action: (key) => (
-          <CircularProgress 
-            size={24} 
-            sx={{ color: 'white', marginLeft: 1 }} 
-          />
+          <CircularProgress size={24} sx={{ color: 'white', marginLeft: 1 }} />
         )
       });
 
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
       const today = new Date().toISOString().split('T')[0];
       const filename = `images-${today}.tar`;
       
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = filename;
@@ -350,23 +293,17 @@ const ImageList = () => {
       document.body.removeChild(a);
 
       closeSnackbar(downloadingKey);
-        enqueueSnackbar(t('imageManagement.message.downloadSuccess'), { 
+      enqueueSnackbar(t('imageManagement.message.downloadSuccess'), { 
         variant: 'success',
         autoHideDuration: 3000,
-        anchorOrigin: {
-          vertical: 'bottom',
-          horizontal: 'right'
-        }
+        anchorOrigin: { vertical: 'bottom', horizontal: 'right' }
       });
     } catch (error) {
       console.error('❌ Error packaging images:', error);
       enqueueSnackbar(error.message || t('imageManagement.message.packageFailed'), { 
         variant: 'error',
         autoHideDuration: 3000,
-        anchorOrigin: {
-          vertical: 'bottom',
-          horizontal: 'right'
-        }
+        anchorOrigin: { vertical: 'bottom', horizontal: 'right' }
       });
     } finally {
       setPackagingStatus({
@@ -380,18 +317,7 @@ const ImageList = () => {
   const handleViewDetails = async (imageId) => {
     console.log('🔍 Viewing details for image:', imageId);
     try {
-      const response = await fetch(`http://localhost:3001/api/images/${imageId}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Accept': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch image details');
-      }
-      
-      const details = await response.json();
+      const details = await api.get(`images/${imageId}`);
       console.log('📦 Image details received:', details);
       setSelectedImage(details);
     } catch (error) {

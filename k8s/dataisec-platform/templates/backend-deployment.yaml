@@ -14,19 +14,30 @@ spec:
       labels:
         app: {{ .Values.backend.name }}
     spec:
+      nodeSelector:
+        {{- toYaml .Values.backend.nodeSelector | nindent 8 }}
       serviceAccountName: {{ .Values.backend.name }}-sa
       securityContext:
-        fsGroup: 1000
-        runAsUser: 1000
-        runAsGroup: 1000
+        fsGroup: {{ .Values.backend.securityContext.pod.fsGroup }}
+      initContainers:
+        - name: init-dirs
+          image: alpine
+          command: ['sh', '-c', 'mkdir -p /data/backend /data/templates && chmod -R 777 /data']
+          volumeMounts:
+            - name: backend-storage
+              mountPath: /data/backend
+            - name: templates-storage
+              mountPath: /data/templates
       containers:
         - name: {{ .Values.backend.name }}
           image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
           imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
           securityContext:
-            allowPrivilegeEscalation: true
+            runAsUser: {{ .Values.backend.securityContext.container.runAsUser }}
+            runAsGroup: {{ .Values.backend.securityContext.container.runAsGroup }}
+            allowPrivilegeEscalation: {{ .Values.backend.securityContext.container.allowPrivilegeEscalation }}
             capabilities:
-              add: ["NET_ADMIN", "SYS_ADMIN"]
+              add: {{ .Values.backend.securityContext.container.capabilities.add }}
           ports:
             - containerPort: {{ .Values.backend.service.port }}
           env:
@@ -49,20 +60,14 @@ spec:
             - name: kube-config
               mountPath: /app/.kube
               readOnly: true
-            - name: deployment-templates
+            - name: backend-storage
+              mountPath: /app/backend
+            - name: templates-storage
               mountPath: /app/deploymentTemplate
             - name: helm-cache
               mountPath: /app/.helm
           resources:
             {{- toYaml .Values.backend.resources | nindent 12 }}
-          lifecycle:
-            postStart:
-              exec:
-                command:
-                - /bin/sh
-                - -c
-                - |
-                  chmod 666 /var/run/docker.sock
       volumes:
         - name: docker-sock
           hostPath:
@@ -72,7 +77,10 @@ spec:
           secret:
             secretName: {{ .Values.backend.name }}-kubeconfig
             defaultMode: 0400
-        - name: deployment-templates
+        - name: backend-storage
+          persistentVolumeClaim:
+            claimName: {{ .Values.backend.name }}-pvc
+        - name: templates-storage
           persistentVolumeClaim:
             claimName: {{ .Values.backend.name }}-templates-pvc
         - name: helm-cache

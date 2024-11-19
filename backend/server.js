@@ -18,11 +18,46 @@ const http = require('http');
 
 const app = express();
 
-// Middleware
+// 動態獲取允許的源
+function getAllowedOrigins() {
+  const origins = [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://localhost:5173'
+  ];
+  
+  // 如果是開發環境，添加更多允許的源
+  if (process.env.NODE_ENV !== 'production') {
+    // 添加本地網絡 IP
+    const networkInterfaces = require('os').networkInterfaces();
+    Object.values(networkInterfaces).forEach(interfaces => {
+      interfaces.forEach(interface => {
+        if (interface.family === 'IPv4' && !interface.internal) {
+          origins.push(`http://${interface.address}:3000`);
+          origins.push(`http://${interface.address}:3001`);
+          origins.push(`http://${interface.address}:5173`);
+        }
+      });
+    });
+  }
+  
+  return origins;
+}
+
+// CORS 配置
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? process.env.FRONTEND_URL 
-    : ['http://localhost:5173', 'http://localhost:3000'],
+  origin: function(origin, callback) {
+    const allowedOrigins = getAllowedOrigins();
+    
+    // 允許沒有 origin 的請求（如移動應用）
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']

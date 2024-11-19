@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Box, Tabs, Tab, CircularProgress, IconButton, Tooltip, Paper } from '@mui/material';
+import { Box, Tabs, Tab, CircularProgress, IconButton, Tooltip, Paper, Alert } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import MetricsDisplay from './MetricsDisplay';
 import { useAppTranslation } from '../../hooks/useAppTranslation';
-import { getApiUrl } from '../../config/api';
+import { api } from '../../utils/api';
 
 const REFRESH_INTERVAL = 30000; // 30 seconds
 
@@ -16,6 +16,7 @@ const SystemDashboard = () => {
   const [lastUpdate, setLastUpdate] = useState(null);
   const refreshTimerRef = useRef(null);
   const { t } = useAppTranslation();
+  const [error, setError] = useState(null);
 
   // 檢查頁面是否活躍
   const usePageVisibility = () => {
@@ -40,16 +41,20 @@ const SystemDashboard = () => {
   // 獲取節點列表
   const fetchNodes = useCallback(async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/metrics/nodes', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      if (!response.ok) {
-        throw new Error('Failed to fetch nodes');
+      setError(null);
+      console.log('Fetching nodes...');
+      const data = await api.get('api/metrics/nodes');
+      console.log('Fetched nodes data:', data);
+      
+      if (!Array.isArray(data)) {
+        throw new Error('Invalid response format: expected array');
       }
-      const data = await response.json();
+      
       setNodes(['cluster', ...data.map(node => node.name)]);
     } catch (error) {
-      console.error('Failed to fetch nodes:', error);
+      console.error('獲取節點列表失敗:', error);
+      setError(`獲取節點列表失敗: ${error.message}`);
+      setNodes(['cluster']);
     }
   }, []);
 
@@ -59,23 +64,26 @@ const SystemDashboard = () => {
 
     try {
       setLoading(true);
-      const url = selectedNode === 'cluster' 
-        ? getApiUrl('api/metrics/system')
-        : getApiUrl(`api/metrics/system/node/${selectedNode}`);
-
-      const response = await fetch(url, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
+      setError(null);
       
-      if (!response.ok) {
-        throw new Error('Failed to fetch metrics');
+      const endpoint = selectedNode === 'cluster' 
+        ? 'api/metrics/system'
+        : `api/metrics/system/node/${selectedNode}`;
+
+      console.log('Fetching metrics...', endpoint);
+      const data = await api.get(endpoint);
+      console.log('Fetched metrics data:', data);
+      
+      if (!data || typeof data !== 'object') {
+        throw new Error('Invalid response format: expected object');
       }
       
-      const data = await response.json();
       setMetrics(data);
       setLastUpdate(new Date());
     } catch (error) {
-      console.error('Failed to fetch metrics:', error);
+      console.error('獲取指標數據失敗:', error);
+      setError(`獲取指標數據失敗: ${error.message}`);
+      setMetrics(null);
     } finally {
       setLoading(false);
     }
@@ -131,6 +139,12 @@ const SystemDashboard = () => {
   return (
     <Box sx={{ width: '100%', height: '100%', minWidth: '1182px' }}>
       <Paper sx={{ width: '100%', height: '100%' }}>
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
+        
         <Box sx={{ 
           display: 'flex', 
           justifyContent: 'space-between', 

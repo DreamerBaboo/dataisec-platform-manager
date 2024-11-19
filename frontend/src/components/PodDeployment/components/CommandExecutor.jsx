@@ -32,7 +32,7 @@ const CommandExecutor = ({ name, version, open, onClose }) => {
         setIsLoading(true);
         console.log('🚀 開始獲取命令列表:', { name, version });
         
-        const response = await axios.get(getApiUrl('commands'), {
+        const response = await axios.get(getApiUrl('api/commands'), {
           params: { name, version }
         });
         
@@ -86,7 +86,7 @@ const CommandExecutor = ({ name, version, open, onClose }) => {
       });
 
       try {
-        const response = await axios.post(getApiUrl('execute'), { command });
+        const response = await axios.post(getApiUrl('api/execute'), { command });
         
         setResults(prev => {
           const newResults = [...prev];

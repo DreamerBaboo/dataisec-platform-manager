@@ -57,7 +57,7 @@ import ExportConfig from './components/ExportConfig';
 import { podService } from '../../services/podService';
 import { podDeploymentService } from '../../services/podDeploymentService';
 
-axios.defaults.baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+axios.defaults.baseURL = import.meta.env.VITE_API_BASE_URL || '/api';
 axios.defaults.headers.common['Content-Type'] = 'application/json';
 
 const PodDeploymentManagement = () => {

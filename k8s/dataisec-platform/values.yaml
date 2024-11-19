@@ -1,14 +1,16 @@
 # 全局設置
 global:
   environment: production
-  imageRegistry: ""
+  imageRegistry: "dreamerbaboo"
+  releaseName: "dataisec-platform"
+  namespace: "dataisec"
 
 # 後端服務配置
 backend:
   name: dataisec-backend
   image:
-    repository: dreamerbaboo/dataisec-pod-management
-    tag: latest
+    repository: dreamerbaboo/dataisec-pod-management-backend
+    tag: "1.0.0"
     pullPolicy: IfNotPresent
   replicaCount: 1
   resources:
@@ -25,11 +27,11 @@ backend:
   # 存儲配置
   storage:
     className: "local-storage"
-    size: "5Gi"
+    size: "10Gi"  # 確保不小於之前的值
     templates:
       enabled: true
       path: "/app/deploymentTemplate"
-      size: "1Gi"
+      size: "1Gi"  # 確保不小於之前的值
     helm:
       cacheSize: "1Gi"
   
@@ -37,18 +39,40 @@ backend:
   securityContext:
     container:
       runAsUser: 1000
-      runAsGroup: 1000
+      runAsGroup: 999  # docker 組的標準 GID
       allowPrivilegeEscalation: true
       capabilities:
         add: ["NET_ADMIN", "SYS_ADMIN"]
     pod:
-      fsGroup: 1000
-      runAsUser: 1000
-      runAsGroup: 1000
+      fsGroup: 999  # docker 組的標準 GID
   
+  # RBAC 配置
+  serviceAccount:
+    create: true
+    annotations: {}
+    name: "dataisec-backend-sa"
+  
+  # Docker 配置
+  docker:
+    socket:
+      enabled: true  # 禁用 Docker socket 掛載
+      path: /var/run/containerd/containerd.sock
+      mode: "666"
+  
+  # Kubernetes 配置
+  kubernetes:
+    config:
+      enabled: true
+      external: false
+      secretName: ""
+    helm:
+      enabled: true
+      cacheDir: "/app/.helm"
+  
+  # 環境變量配置
   config:
     jwt:
-      secret: "your-jwt-secret"
+      secret: "7a1873329b423f46de41af3130067d4a090e9847ef28c432476f5c7c56431a3a2c37564fb290186fe19ad8537de23bede1f83188f916f4df4c16747d7d4a8e3b"
     cors:
       allowedOrigins: ["http://localhost:5173"]
   
@@ -71,39 +95,17 @@ backend:
     WS_HEARTBEAT_INTERVAL: "30000"
     DEPLOYMENT_TEMPLATE_PATH: "/app/deploymentTemplate"
     KUBECONFIG: "/app/.kube/config"
-  
-  # RBAC 配置
-  serviceAccount:
-    create: true
-    annotations: {}
-  
-  # Docker 配置
-  docker:
-    socket:
-      enabled: true
-      path: /var/run/docker.sock
-      mode: "666"
-  
-  # Kubernetes 配置
-  kubernetes:
-    config:
-      enabled: true
-      # 如果使用外部 kubeconfig，設置為 true
-      external: false
-      # 如果使用外部 kubeconfig，指定 secret 名稱
-      secretName: ""
-    
-    # Helm 配置
-    helm:
-      enabled: true
-      cacheDir: "/app/.helm"
+
+  # 節點選擇器配置
+  nodeSelector:
+    kubernetes.io/hostname: 192.168.170.126  # 更新為正確的節點主機名
 
 # 前端服務配置
 frontend:
   name: dataisec-frontend
   image:
-    repository: dreamerbaboo/dataisec-pod-management
-    tag: latest
+    repository: dreamerbaboo/dataisec-pod-management-frontend
+    tag: "1.0.0"
     pullPolicy: IfNotPresent
   replicaCount: 1
   resources:
@@ -114,10 +116,12 @@ frontend:
       cpu: 100m
       memory: 128Mi
   service:
-    type: ClusterIP
-    port: 80
+    type: NodePort #ClusterIP
+    port: 8443
   config:
-    apiUrl: "http://dataisec-backend:3001/api"
+    apiUrl: "http://localhost:3001/api"
+  nodeSelector:
+    kubernetes.io/hostname: 192.168.170.126  # 更新為正確的節點主機名
 
 # Ingress 配置
 ingress:
@@ -126,18 +130,35 @@ ingress:
   annotations:
     kubernetes.io/ingress.class: nginx
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/use-regex: "true"
   hosts:
     - host: dataisec.local
       paths:
-        - path: /
-          pathType: Prefix
-          service: frontend
         - path: /api
           pathType: Prefix
           service: backend
+        - path: /
+          pathType: Prefix
+          service: frontend
 
 # 持久化存儲配置
 persistence:
   enabled: true
   storageClass: "local-storage"
   size: 10Gi
+  accessMode: ReadWriteOnce
+  path: ""
+
+# 監控和日誌配置
+monitoring:
+  enabled: false
+  prometheus:
+    enabled: false
+  grafana:
+    enabled: false
+
+# 備份配置
+backup:
+  enabled: false
+  schedule: "0 0 * * *"
+  retention: 7

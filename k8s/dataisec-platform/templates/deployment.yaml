@@ -1,0 +1,181 @@
+{{- if .Values.backend.serviceAccount.create }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.backend.name }}-sa
+  namespace: {{ .Release.Namespace }}
+  {{- with .Values.backend.serviceAccount.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Values.backend.name }}-role
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "services", "configmaps", "secrets", "persistentvolumeclaims"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["batch"]
+    resources: ["jobs", "cronjobs"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Values.backend.name }}-role-binding
+subjects:
+- kind: ServiceAccount
+  name: {{ .Values.backend.name }}-sa
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: ClusterRole
+  name: {{ .Values.backend.name }}-role
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.backend.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}
+    spec:
+      serviceAccountName: {{ .Values.backend.name }}-sa
+      securityContext:
+        {{- toYaml .Values.backend.securityContext.pod | nindent 8 }}
+      containers:
+        # Backend Container
+        - name: {{ .Values.backend.name }}
+          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          securityContext:
+            privileged: true  # 需要特權模式來訪問 Docker socket
+            {{- toYaml .Values.backend.securityContext.container | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.backend.service.port }}
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: {{ .Values.backend.name }}-config
+            - secretRef:
+                name: {{ .Values.backend.name }}-secrets
+          env:
+            - name: DOCKER_HOST
+              value: unix:///var/run/docker.sock
+          resources:
+            {{- toYaml .Values.backend.resources | nindent 12 }}
+          volumeMounts:
+            - name: app-storage
+              mountPath: /app/data
+            {{- if .Values.backend.storage.templates.enabled }}
+            - name: templates-storage
+              mountPath: {{ .Values.backend.env.DEPLOYMENT_TEMPLATE_PATH }}
+            {{- end }}
+            - name: docker-socket
+              mountPath: /var/run/docker.sock
+            {{- if .Values.backend.kubernetes.config.enabled }}
+            - name: kube-config
+              mountPath: /app/.kube
+              readOnly: true
+            {{- end }}
+        
+        # Frontend Container
+        - name: {{ .Values.frontend.name }}
+          image: "{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag }}"
+          imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.frontend.service.port }}
+              protocol: TCP
+          env:
+            - name: API_URL
+              value: {{ .Values.frontend.config.apiUrl }}
+          resources:
+            {{- toYaml .Values.frontend.resources | nindent 12 }}
+      
+      volumes:
+        - name: app-storage
+          persistentVolumeClaim:
+            claimName: {{ .Values.backend.name }}-pvc
+        {{- if .Values.backend.storage.templates.enabled }}
+        - name: templates-storage
+          persistentVolumeClaim:
+            claimName: {{ .Values.backend.name }}-templates-pvc
+        {{- end }}
+        - name: docker-socket
+          hostPath:
+            path: /var/run/docker.sock
+            type: Socket
+        {{- if .Values.backend.kubernetes.config.enabled }}
+        - name: kube-config
+          hostPath:
+            path: /app/.kube
+            type: Directory
+        {{- end }}
+---
+# Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: backend
+      port: {{ .Values.backend.service.port }}
+      targetPort: {{ .Values.backend.service.port }}
+      protocol: TCP
+    - name: frontend
+      port: {{ .Values.frontend.service.port }}
+      targetPort: {{ .Values.frontend.service.port }}
+      protocol: TCP
+  selector:
+    app: {{ .Release.Name }}
+---
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}-ingress
+  namespace: {{ .Release.Namespace }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  rules:
+  {{- range .Values.ingress.hosts }}
+    - host: {{ .host }}
+      http:
+        paths:
+        {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ $.Release.Name }}
+                port:
+                  number: {{ if eq .service "frontend" }}{{ $.Values.frontend.service.port }}{{ else }}{{ $.Values.backend.service.port }}{{ end }}
+        {{- end }}
+  {{- end }}
+{{- end }}

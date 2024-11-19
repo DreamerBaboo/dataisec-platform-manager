@@ -31,6 +31,7 @@ import { useAppTranslation } from '../../../hooks/useAppTranslation';
 import YamlEditor from '../components/YamlEditor';
 import podDeploymentService from '../../../services/podDeploymentService';
 import SearchBar from '../../common/SearchBar';
+import { api, getApiUrl } from '../../../utils/api';
 
 const PLACEHOLDER_CATEGORIES = {
   image: ['repository', 'tag'],
@@ -81,36 +82,38 @@ const TemplateConfig = ({ config, onChange, errors }) => {
         throw new Error('Deployment name is required');
       }
 
-      // First, get the list of files in the deployment directory
-      const response = await fetch(`/api/deployment-templates/${config.name}/files`);
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to get template files');
-      }
-
-      const files = await response.json();
+      // 獲取模板文件列表
+      const files = await api.get(`api/deployment-templates/${config.name}/files`);
       console.log('Found template files:', files);
 
-      // The backend now returns array with single template file
+      // 後端返回單個模板文件的數組
       const templateFile = files[0];
       if (!templateFile) {
         throw new Error('No template file found');
       }
 
-      // Store the template file name
+      // 保存模板文件名
       setTemplateFile(templateFile);
 
-      // Load the template file content
-      const templateResponse = await fetch(`/api/deployment-templates/${config.name}/file/${templateFile}`);
-      if (!templateResponse.ok) {
-        throw new Error('Failed to load template file');
+      // 加載模板文件內容
+      const response = await fetch(getApiUrl(`api/deployment-templates/${config.name}/file/${templateFile}`), {
+        headers: {
+          'Accept': 'text/plain',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const content = await templateResponse.text();
+      const content = await response.text();
+      
       console.log('Loaded template:', {
         file: templateFile,
         contentLength: content.length
       });
+      
       setTemplateContent(content);
       parseTemplate(content);
     } catch (error) {
@@ -355,10 +358,12 @@ const TemplateConfig = ({ config, onChange, errors }) => {
 
   const handleCreateNamespace = async () => {
     try {
-      const response = await podDeploymentService.createNamespace(newNamespace);
+      const response = await api.post('api/namespaces', {
+        name: newNamespace
+      });
       
       if (response.success) {
-        const updatedNamespaces = await podDeploymentService.getNamespaces();
+        const updatedNamespaces = await api.get('api/namespaces');
         const namespaceNames = updatedNamespaces.map(ns => ns.name);
         setNamespaces(namespaceNames);
         
@@ -374,11 +379,7 @@ const TemplateConfig = ({ config, onChange, errors }) => {
           }
         };
 
-        await podDeploymentService.saveDeploymentConfig(
-          config.name,
-          config.version,
-          updatedConfig
-        );
+        await api.post(`api/deployment-config/${config.name}/${config.version}`, updatedConfig);
 
         onChange(updatedConfig);
         setCreateNamespaceDialog(false);
@@ -417,11 +418,7 @@ const TemplateConfig = ({ config, onChange, errors }) => {
 
       onChange(updatedConfig);
 
-      await podDeploymentService.saveDeploymentConfig(
-        config.name,
-        config.version,
-        updatedConfig
-      );
+      await api.post(`api/deployment-config/${config.name}/${config.version}`, updatedConfig);
 
       console.log(`✅ Template field ${field} updated successfully:`, value);
     } catch (error) {
