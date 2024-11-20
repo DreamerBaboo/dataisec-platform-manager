@@ -1,5 +1,5 @@
 
-import { logger } from '../../../utils/logger'; // 導入 logger
+import { logger } from '../../../utils/logger.ts'; // 導入 logger
 import {
   Box,
   Typography,

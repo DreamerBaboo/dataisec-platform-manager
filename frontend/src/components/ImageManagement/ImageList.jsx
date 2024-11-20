@@ -37,7 +37,7 @@ import ImageDetails from './ImageDetails';
 import { useSnackbar } from 'notistack';
 import RepositoryConfig from './RepositoryConfig';
 import { api, getApiUrl } from '../../utils/api';
-import { logger } from '../../utils/logger'; // 導入 logger
+import { logger } from '../../utils/logger.ts';  // 導入 logger
 
 const ImageList = () => {
   const { t } = useAppTranslation("imageManagement");

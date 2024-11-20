@@ -66,6 +66,10 @@ COPY --from=backend-builder /app/backend ./
 RUN mkdir -p public
 COPY --from=frontend-builder /app/frontend/dist/* ./public/
 
+# 複製配置生成腳本
+COPY generate-config.sh /app/
+RUN chmod +x /app/generate-config.sh
+
 # 修正資源路徑
 RUN cd public && \
     if [ -d "assets" ]; then \
@@ -118,4 +122,5 @@ EXPOSE 3001
 # 創建掛載點，只保留 .kube 配置
 VOLUME ["/app/.kube"]
 
-CMD ["node", "server.js"]
+# 使用配置生成腳本作為入口點
+CMD ["/app/generate-config.sh"]

@@ -19,7 +19,8 @@ const currentLevel = levels[logLevelStr as keyof LogLevels] ?? levels.info;
 
 function log(level: keyof LogLevels, message: string, ...optionalParams: any[]) {
   if (levels[level] <= currentLevel) {
-    const logFunction = console[level] || logger.info;
+    // 使用 console[level] 作為預設的日誌函數，如果不存在則使用 console.log
+    const logFunction = console[level] || console.log;
     logFunction(`[${level.toUpperCase()}]`, message, ...optionalParams);
   }
 }

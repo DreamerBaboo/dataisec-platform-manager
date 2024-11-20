@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Typography, Box, Paper, TextField, Button, Switch, FormControlLabel } from '@mui/material';
 import { useAuth } from '../../utils/auth';
 import { useAppTranslation } from '../../hooks/useAppTranslation';
-import { logger } from '../../utils/logger'; // 導入 logger
+import { logger } from '../../utils/logger.ts'; // 導入 logger
 const UserProfile = () => {
   const {t} = useAppTranslation(['settings', 'common']);
  

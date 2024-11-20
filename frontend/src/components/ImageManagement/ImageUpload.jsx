@@ -31,7 +31,7 @@ import { useDropzone } from 'react-dropzone';
 import { useSnackbar } from 'notistack';
 import { useAppTranslation } from '../../hooks/useAppTranslation';
 import { getApiUrl } from '../../utils/api';
-import { logger } from '../../utils/logger'; // 導入 logger
+import { logger } from '../../utils/logger.ts';  // 導入 logger
 
 const ImageUpload = ({ open, onClose, onSuccess }) => {
   const { t } = useAppTranslation('imageManagement');

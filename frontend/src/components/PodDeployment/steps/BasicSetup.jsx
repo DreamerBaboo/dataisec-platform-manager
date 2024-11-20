@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { logger } from '../../../utils/logger'; // 導入 logger
+import { logger } from '../../../utils/logger.ts'; // 修改為正確的 .ts 擴展名
 import {
   Box,
   TextField,
@@ -289,7 +289,7 @@ spec:
             newConfig
           );
 
-          // 更新版本列
+          // 更新版本列表
           const response = await podDeploymentService.getDeploymentVersions(config.name);
           const updatedVersions = Array.isArray(response.versions) ? response.versions : [];
           setVersions(updatedVersions);
@@ -418,7 +418,7 @@ spec:
                 required
                 error={!!allErrors.version}
                 helperText={allErrors.version}
-                onBlur={handleVersionBlur} // 添加失焦處理
+                onBlur={handleVersionBlur}
               />
             )}
           />
@@ -493,4 +493,4 @@ spec:
   );
 };
 
-export default BasicSetup; 
+export default BasicSetup;

@@ -7,7 +7,7 @@ import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import { useAppTranslation } from '../../hooks/useAppTranslation';
 import { getApiUrl } from '../../utils/api';
-import { logger } from '../../utils/logger'; // 導入 logger
+import { logger } from '../../utils/logger.ts';  // 導入 logger
 
 const ReactGridLayout = WidthProvider(RGL);
 

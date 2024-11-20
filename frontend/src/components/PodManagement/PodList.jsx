@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { logger } from '../../utils/logger'; // 導入 loggers
+import { logger } from '../../utils/logger.ts';  // 導入 loggers
 import {
   Box,
   Paper,

@@ -5,7 +5,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import MetricsDisplay from './MetricsDisplay';
 import { useAppTranslation } from '../../hooks/useAppTranslation';
 import { api } from '../../utils/api';
-import { logger } from '../../utils/logger'; // 使用命名導出
+import { logger } from '../../utils/logger.ts';  // 使用命名導出
 
 const REFRESH_INTERVAL = 30000; // 30 seconds
 

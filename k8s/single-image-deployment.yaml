@@ -17,21 +17,51 @@ spec:
       serviceAccountName: dataisec-platform-sa
       nodeSelector:
         kubernetes.io/hostname: "192.168.170.126"
+      # 添加 DNS 配置
+      dnsPolicy: ClusterFirst
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "5"
       containers:
         - name: dataisec-platform
-          image: dreamerbaboo/dataisec-pod-management:1.0.2
+          image: dreamerbaboo/dataisec-platform:latest
           imagePullPolicy: IfNotPresent
           env:
             - name: NODE_NAME
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
+            # 明確映射 ConfigMap 中的環境變量
+            - name: VITE_API_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: dataisec-platform-config
+                  key: VITE_API_BASE_URL
+            - name: VITE_WS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: dataisec-platform-config
+                  key: VITE_WS_PORT
+            - name: NODE_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: dataisec-platform-config
+                  key: NODE_ENV
+            - name: REACT_APP_LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: dataisec-platform-config
+                  key: REACT_APP_LOG_LEVEL
             - name: CONTAINER_RUNTIME
               value: "nerdctl"
             - name: CONTAINER_NAMESPACE
               value: "k8s.io"
-            - name: KUBECONFIG
-              value: "/var/run/secrets/kubernetes.io/serviceaccount/kubeconfig"
+            # 添加 Kubernetes API 服務器地址
+            - name: KUBERNETES_SERVICE_HOST
+              value: "kubernetes.default.svc"
+            - name: KUBERNETES_SERVICE_PORT
+              value: "443"
           ports:
             - containerPort: 3001
               name: backend
@@ -45,52 +75,22 @@ spec:
             - name: kube-api-access
               mountPath: /var/run/secrets/kubernetes.io/serviceaccount
               readOnly: true
-            - name: kubeconfig
-              mountPath: /var/run/secrets/kubernetes.io/serviceaccount/kubeconfig
-              subPath: kubeconfig
-              readOnly: true
       volumes:
         - name: kube-api-access
           projected:
+            defaultMode: 420
             sources:
-            - serviceAccountToken:
-                expirationSeconds: 3600
-                path: token
-            - configMap:
-                name: kube-root-ca.crt
-                items:
-                - key: ca.crt
-                  path: ca.crt
-            - downwardAPI:
-                items:
-                - path: namespace
-                  fieldRef:
-                    apiVersion: v1
-                    fieldPath: metadata.namespace
-        - name: kubeconfig
-          configMap:
-            name: kube-config
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: kube-config
-data:
-  kubeconfig: |
-    apiVersion: v1
-    kind: Config
-    clusters:
-    - cluster:
-        certificate-authority: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-        server: https://kubernetes.default.svc
-      name: default
-    contexts:
-    - context:
-        cluster: default
-        user: default
-      name: default
-    current-context: default
-    users:
-    - name: default
-      user:
-        tokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+              - serviceAccountToken:
+                  expirationSeconds: 3600
+                  path: token
+              - configMap:
+                  name: kube-root-ca.crt
+                  items:
+                    - key: ca.crt
+                      path: ca.crt
+              - downwardAPI:
+                  items:
+                    - path: namespace
+                      fieldRef:
+                        apiVersion: v1
+                        fieldPath: metadata.namespace
