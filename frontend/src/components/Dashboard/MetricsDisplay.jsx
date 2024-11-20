@@ -6,6 +6,7 @@ import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import { useAppTranslation } from '../../hooks/useAppTranslation';
 const ReactGridLayout = WidthProvider(RGL);
+import { logger } from '../../utils/logger'; // 導入 logger
 
 const DEFAULT_LAYOUT = [
   { i: 'cpu', x: 0, y: 0, w: 6, h: 8, minW: 4, minH: 6 },

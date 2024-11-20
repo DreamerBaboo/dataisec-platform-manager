@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Typography, Box, Paper, TextField, Button, Switch, FormControlLabel } from '@mui/material';
 import { useAuth } from '../../utils/auth';
 import { useAppTranslation } from '../../hooks/useAppTranslation';
+import { logger } from '../../utils/logger'; // 導入 logger
 const UserProfile = () => {
   const {t} = useAppTranslation(['settings', 'common']);
  
@@ -20,7 +21,7 @@ const UserProfile = () => {
   const handleSubmit = (event) => {
     event.preventDefault();
     // 這裡應該實現更新用戶資料的邏輯
-    console.log('更新用戶資料:', { username, email, darkMode });
+    logger.info('更新用戶資料:', { username, email, darkMode });
   };
 
   return (

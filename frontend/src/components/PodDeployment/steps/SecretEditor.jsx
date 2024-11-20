@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { logger } from '../../../utils/logger'; // 導入 logger 
 import {
   Box,
   Typography,
@@ -694,7 +695,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
 
   // Add cleanup function
   const cleanupSecretYaml = async () => {
-    console.log ('config name', config.name);
+    logger.info ('config name', config.name);
   if (!config?.name || !config?.version) return;
   try {
     await podDeploymentService.deleteDeployScript(
@@ -702,7 +703,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
         config.version,
         `${config.name}-${config.version}-secret.yaml`
       );
-      console.log('✅ Secret YAML deleted successfully');
+      logger.info('✅ Secret YAML deleted successfully');
   } catch (error) {
       // Ignore 404 errors (file doesn't exist)
       if (error.response?.status !== 404) {
@@ -768,7 +769,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
   const handleRemoveEntry = (index) => {
     const updatedSecret = { ...newSecret };
     updatedSecret.data.entries = updatedSecret.data.entries.filter((_, i) => i !== index);
-    console.log ('remove entery');
+    logger.info ('remove entery');
     setNewSecret(updatedSecret);
   };
 

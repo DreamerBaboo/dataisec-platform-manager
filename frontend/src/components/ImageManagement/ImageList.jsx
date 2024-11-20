@@ -37,6 +37,7 @@ import ImageDetails from './ImageDetails';
 import { useSnackbar } from 'notistack';
 import RepositoryConfig from './RepositoryConfig';
 import { api, getApiUrl } from '../../utils/api';
+import { logger } from '../../utils/logger'; // 導入 logger
 
 const ImageList = () => {
   const { t } = useAppTranslation("imageManagement");
@@ -63,13 +64,13 @@ const ImageList = () => {
   const TABLE_HEIGHT = ROW_HEIGHT * ROWS_PER_PAGE + HEADER_HEIGHT;
 
   const fetchImages = async () => {
-    console.log('🔄 Starting to fetch images...');
+    logger.info('🔄 Starting to fetch images...');
     try {
       setLoading(true);
       setError(null);
       
       const data = await api.get('api/images');
-      console.log('📥 Response received:', data);
+      logger.info('📥 Response received:', data);
       
       // 確保數據格式正確
       const formattedData = (Array.isArray(data) ? data : []).map(image => ({
@@ -82,7 +83,7 @@ const ImageList = () => {
         status: image.status || 'active'
       }));
       
-      console.log('📦 Formatted data:', formattedData);
+      logger.info('📦 Formatted data:', formattedData);
       setImages(formattedData);
       
     } catch (error) {
@@ -112,7 +113,7 @@ const ImageList = () => {
       setError(null);
       
       const data = await api.get('api/images');
-      console.log('📥 Response received:', data);
+      logger.info('📥 Response received:', data);
       
       // 確保數據格式正確
       const formattedData = (Array.isArray(data) ? data : []).map(image => ({
@@ -125,7 +126,7 @@ const ImageList = () => {
         status: image.status || 'active'
       }));
       
-      console.log('📦 Formatted data:', formattedData);
+      logger.info('📦 Formatted data:', formattedData);
       setImages(formattedData);
       
     } catch (error) {
@@ -189,7 +190,7 @@ const ImageList = () => {
     }
 
     setSelected(newSelected);
-    console.log('👉 Selected images:', newSelected);
+    logger.info('👉 Selected images:', newSelected);
   };
 
   const isSelected = (imageName, imageTag) => {
@@ -198,13 +199,13 @@ const ImageList = () => {
 
   const handleBulkDelete = async () => {
     try {
-      console.log('🗑️ Starting bulk delete for images:', selected);
+      logger.info('🗑️ Starting bulk delete for images:', selected);
       
       const response = await api.post('images/delete', { 
         images: selected 
       });
 
-      console.log('✅ Delete result:', response);
+      logger.info('✅ Delete result:', response);
 
       const hasErrors = response.results.some(r => r.status === 'error');
       
@@ -232,7 +233,7 @@ const ImageList = () => {
   };
 
   const handlePackage = async () => {
-    console.log('📦 Starting package process...');
+    logger.info('📦 Starting package process...');
     setPackagingStatus(prev => ({ ...prev, loading: true, progress: 0 }));
     
     const snackbarKey = enqueueSnackbar(t('imageManagement:message.packageStart'), {
@@ -252,7 +253,7 @@ const ImageList = () => {
         return { name, tag, fullName: imageKey };
       });
 
-      console.log('📦 Images to package:', selectedImages);
+      logger.info('📦 Images to package:', selectedImages);
 
       // 使用 fetch 因為需要處理 blob 下載
       const response = await fetch(getApiUrl('images/package'), {
@@ -315,10 +316,10 @@ const ImageList = () => {
   };
 
   const handleViewDetails = async (imageId) => {
-    console.log('🔍 Viewing details for image:', imageId);
+    logger.info('🔍 Viewing details for image:', imageId);
     try {
       const details = await api.get(`images/${imageId}`);
-      console.log('📦 Image details received:', details);
+      logger.info('📦 Image details received:', details);
       setSelectedImage(details);
     } catch (error) {
       console.error('❌ Error fetching image details:', error);

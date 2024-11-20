@@ -23,7 +23,7 @@ export const templateService = {
       formData.append('template', file);
       formData.append('deploymentName', deploymentName);
 
-      console.log('Upload request details:', {
+      logger.info('Upload request details:', {
         fileName: file.name,
         deploymentName: deploymentName,
         formDataEntries: Array.from(formData.entries()).map(([key, value]) => ({
@@ -68,7 +68,7 @@ export const templateService = {
   // Save template content
   async saveTemplateContent(deploymentName, content) {
     try {
-      console.log('Saving template content:', {
+      logger.info('Saving template content:', {
         deploymentName,
         contentLength: content.length,
         contentPreview: content.substring(0, 100)
@@ -85,7 +85,7 @@ export const templateService = {
         }
       );
 
-      console.log('Save response:', response.data);
+      logger.info('Save response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Failed to save template content:', error);
@@ -96,14 +96,14 @@ export const templateService = {
   // Get template placeholders
   async getTemplatePlaceholders(deploymentName) {
     try {
-      console.log('Getting placeholders for deployment:', deploymentName);
+      logger.info('Getting placeholders for deployment:', deploymentName);
       const response = await axios.get(
         `${API_URL}/api/pod-deployment/templates/${deploymentName}/placeholders`,
         {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         }
       );
-      console.log('Placeholders response:', response.data);
+      logger.info('Placeholders response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Failed to get template placeholders:', error);

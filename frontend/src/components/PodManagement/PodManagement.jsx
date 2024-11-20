@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { logger } from '../../utils/logger'; // 導入 logger
 import {
   Box,
   Paper,
@@ -130,7 +131,7 @@ const PodManagement = () => {
           variant="contained"
           color="primary"
           sx={{ mt: 2 }}
-          onClick={() => console.log('Selected Pods:', selectedPods)}
+          onClick={() => logger.info('Selected Pods:', selectedPods)}
         >
           {t('podManagement:actions.performAction')} ({selectedPods.length})
         </Button>

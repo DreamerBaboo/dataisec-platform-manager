@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { logger } from '../../utils/logger'; // 導入 logger
 import { 
   Box, 
   Paper, 

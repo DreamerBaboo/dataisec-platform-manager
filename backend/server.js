@@ -15,7 +15,6 @@ const fs = require('fs');
 const WebSocket = require('ws');
 const http = require('http');
 
-
 const app = express();
 
 // CORS 配置處理函數
@@ -26,7 +25,9 @@ function createCorsOptions() {
       const devOrigins = [
         'http://localhost:3001',
         'http://localhost:5173',
-        'http://192.168.125.168:3001'
+        'http://192.168.125.168:3001',
+        'http://192.168.170.126:30002',  // 添加新的允許域名
+        'http://192.168.170.126'         // 添加基本域名
       ];
       
       // 從環境變數獲取允許的域名
@@ -47,7 +48,7 @@ function createCorsOptions() {
         /^https?:\/\/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?$/.test(origin);
 
       if (isK8sInternalRequest || validOrigins.some(valid => origin?.includes(valid))) {
-        callback(null, true);
+        callback(null, origin); // 修改此行，傳回請求的 origin
       } else {
         console.warn(`⚠️ Blocked CORS request from origin: ${origin}`);
         console.log('Allowed origins:', validOrigins);
@@ -102,8 +103,6 @@ const k8sRouter = require('./routes/k8s');
 const helmRouter = require('./routes/helmRoutes');
 const commandRoutes = require('./routes/commandRoutes');
 
-
-
 // API routes
 app.use('/api/auth', authRouter);
 app.use('/api/metrics', metricsRouter);
@@ -111,11 +110,11 @@ app.use('/api/pods', podsRouter);
 app.use('/api/images', imagesRouter);
 app.use('/api/pod-deployments', podDeploymentRouter);
 app.use('/api/deployment-templates', deploymentTemplatesRouter);
-// app.use('/api/pod-deployment', podDeploymentRouter);  // 確保路徑匹配 
 app.use('/api/docker', dockerRouter);
 app.use('/api/k8s', k8sRouter);
 app.use('/api/helm', helmRouter);
 app.use('/api', commandRoutes);
+
 // 使用中間件解析 JSON 請求
 app.use(express.json());
 

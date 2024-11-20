@@ -9,6 +9,7 @@ import {
   Box
 } from '@mui/material';
 import { useAppTranslation } from '../../hooks/useAppTranslation';
+import { logger } from '../../utils/logger'; // 導入 logger
 
 
 

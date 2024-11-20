@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { logger } from '../../../utils/logger'; // 導入 logger
 import {
   Stepper,
   Step,
@@ -154,7 +155,7 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
           timestamp: new Date().toISOString()
         };
         
-        console.log('💾 Preparing to save config:', {
+        logger.info('💾 Preparing to save config:', {
           name: configToSave.name,
           version: configToSave.version,
           isNewVersion: !versions.includes(configToSave.version)
@@ -171,7 +172,7 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
           const response = await podDeploymentService.getDeploymentVersions(configToSave.name);
           setVersions(Array.isArray(response.versions) ? response.versions : []);
           
-          console.log('✅ Configuration saved and versions updated');
+          logger.info('✅ Configuration saved and versions updated');
         } catch (error) {
           console.error('❌ Failed to save configuration:', error);
           setErrors(prev => ({
@@ -185,7 +186,7 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
       // 移動到下一步
       setActiveStep(prevStep => {
         const nextStep = prevStep + 1;
-        console.log('📊 Moving to next step:', {
+        logger.info('📊 Moving to next step:', {
           currentStep: prevStep,
           nextStep: nextStep,
           config: deploymentConfig
@@ -207,7 +208,7 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
 }, [activeStep, visibleSteps, steps]);
 
  const handleConfigChange = useCallback((newConfig) => {
-  console.log('🔄 Config change in StepperDeployment:', {
+  logger.info('🔄 Config change in StepperDeployment:', {
     currentConfig: deploymentConfig,
     newConfig: newConfig,
     isVersionChange: newConfig.version !== deploymentConfig.version
@@ -331,7 +332,7 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
 
   // 監聽配置變更
   useEffect(() => {
-    console.log('📊 Deployment config updated:', {
+    logger.info('📊 Deployment config updated:', {
       name: deploymentConfig.name,
       version: deploymentConfig.version,
       step: activeStep,
@@ -352,7 +353,7 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
             deploymentConfig.version
           );
           
-          console.log('📥 Loading version config:', {
+          logger.info('📥 Loading version config:', {
             name: deploymentConfig.name,
             version: deploymentConfig.version,
             config: versionConfig

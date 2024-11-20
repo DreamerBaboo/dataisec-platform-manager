@@ -2,6 +2,7 @@ import React from 'react';
 import { IconButton, Tooltip } from '@mui/material';
 import { Download as DownloadIcon } from '@mui/icons-material';
 import { useAppTranslation } from '../../../hooks/useAppTranslation';
+import { logger } from '../../../utils/logger'; // 導入 logger
 
 const ExportConfig = ({ config }) => {
   const { t } = useAppTranslation();

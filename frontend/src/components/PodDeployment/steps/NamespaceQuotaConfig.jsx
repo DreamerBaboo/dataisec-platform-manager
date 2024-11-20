@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { logger } from '../../../utils/logger'; // 導入 logger
 import {
   Box,
   Grid,
@@ -232,7 +233,7 @@ const NamespaceQuotaConfig = ({ config, onChange, errors }) => {
           `${config.name}-${config.version}-quota.yaml`,
           yamlContent
         );
-        console.log('✅ Quota YAML saved successfully');
+        logger.info('✅ Quota YAML saved successfully');
       }
     } catch (error) {
       console.error('Failed to save quota YAML:', error);

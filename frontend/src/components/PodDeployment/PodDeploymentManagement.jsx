@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { logger } from '../../utils/logger'; // 導入 logger
 import axios from 'axios';
 import {
   Box,
@@ -98,12 +99,12 @@ const PodDeploymentManagement = () => {
 
   const fetchPods = async () => {
     try {
-      console.log('🔍 Fetching pods for namespace:', selectedNamespace || 'all namespaces');
+      logger.info('🔍 Fetching pods for namespace:', selectedNamespace || 'all namespaces');
       setLoading(true);
       const response = await axios.get(`/api/pods${selectedNamespace ? `?namespace=${selectedNamespace}` : ''}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
-      console.log('✅ Pods fetched:', response.data);
+      logger.info('✅ Pods fetched:', response.data);
       setPods(response.data);
       setError(null);
     } catch (err) {
@@ -115,27 +116,27 @@ const PodDeploymentManagement = () => {
   };
 
   useEffect(() => {
-    console.log('🚀 Component mounted');
+    logger.info('🚀 Component mounted');
     fetchNamespaces();
   }, []);
 
   useEffect(() => {
-    console.log('📌 Selected namespace changed:', selectedNamespace);
+    logger.info('📌 Selected namespace changed:', selectedNamespace);
     fetchPods();
   }, [selectedNamespace]);
 
   const handleRefresh = () => {
-    console.log('🔄 Manually refreshing pods...');
+    logger.info('🔄 Manually refreshing pods...');
     fetchPods();
   };
 
   const handleDelete = async (pod) => {
     try {
-      console.log('🗑️ Deleting pod:', pod);
+      logger.info('🗑️ Deleting pod:', pod);
       await axios.delete(`/api/pods/${pod.name}?namespace=${pod.namespace}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
-      console.log('✅ Pod deleted successfully');
+      logger.info('✅ Pod deleted successfully');
       fetchPods();
     } catch (err) {
       console.error('❌ Error deleting pod:', err);
@@ -146,7 +147,7 @@ const PodDeploymentManagement = () => {
   // Modify handleConfigSave to use new config format
   const handleConfigSave = async (config) => {
     try {
-      console.log('💾 Saving pod configuration:', config);
+      logger.info('💾 Saving pod configuration:', config);
       if (configDialog.pod) {
         await axios.put(`/api/pod-deployments/${configDialog.pod.name}`, config, {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
@@ -156,7 +157,7 @@ const PodDeploymentManagement = () => {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         });
       }
-      console.log('✅ Configuration saved successfully');
+      logger.info('✅ Configuration saved successfully');
       setConfigDialog({ open: false, pod: null });
       fetchPods();
     } catch (err) {
@@ -178,7 +179,7 @@ const PodDeploymentManagement = () => {
   };
 
   const filteredPods = React.useMemo(() => {
-    console.log('🔍 Filtering pods:', { pods, searchTerm, selectedNamespace });
+    logger.info('🔍 Filtering pods:', { pods, searchTerm, selectedNamespace });
     return pods.filter(pod => {
       const searchMatch = pod.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          pod.namespace.toLowerCase().includes(searchTerm.toLowerCase());

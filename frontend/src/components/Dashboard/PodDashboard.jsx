@@ -29,6 +29,7 @@ import RGL, { WidthProvider } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import { api, getApiUrl } from '../../utils/api';
+import { logger } from '../../utils/logger'; // 導入 logger
 
 const ReactGridLayout = WidthProvider(RGL);
 
@@ -66,9 +67,9 @@ const PodDashboard = () => {
   useEffect(() => {
     const fetchNamespaces = async () => {
       try {
-        console.log('開始獲取命名空間...');
+        logger.info('開始獲取命名空間...');
         const data = await api.get('api/pods/namespaces');
-        console.log('獲取到的命名空間:', data.namespaces);
+        logger.info('獲取到的命名空間:', data.namespaces);
         setNamespaces(data.namespaces);
       } catch (error) {
         console.error('獲取命名空間時發生錯誤:', error);
@@ -81,17 +82,17 @@ const PodDashboard = () => {
   useEffect(() => {
     const fetchPods = async () => {
       try {
-        console.log('開始獲取 Pod 列表，過濾條件:', filters);
+        logger.info('開始獲取 Pod 列表，過濾條件:', filters);
         setLoading(true);
         const queryParams = new URLSearchParams();
         if (filters.namespace !== 'all') queryParams.append('namespace', filters.namespace);
         if (filters.search) queryParams.append('search', filters.search);
 
         const endpoint = `api/pods${queryParams.toString() ? `?${queryParams}` : ''}`;
-        console.log('請求端點:', endpoint);
+        logger.info('請求端點:', endpoint);
         
         const data = await api.get(endpoint);
-        console.log('獲取到的 Pod 數量:', data.length);
+        logger.info('獲取到的 Pod 數量:', data.length);
         setPods(data);
       } catch (error) {
         console.error('獲取 Pod 列表時發生錯誤:', error);
@@ -108,17 +109,17 @@ const PodDashboard = () => {
   // Fetch metrics for selected pods
   const fetchSelectedPodsMetrics = useCallback(async () => {
     if (selectedPods.length === 0) {
-      console.log('沒有選中的 Pod，清空指標數據');
+      logger.info('沒有選中的 Pod，清空指標數據');
       setPodMetrics(null);
       return;
     }
 
     try {
-      console.log('開始獲取選中 Pod 的指標，選中的 Pod:', selectedPods);
+      logger.info('開始獲取選中 Pod 的指標，選中的 Pod:', selectedPods);
       const data = await api.post('api/pods/calculate-resources', {
         podNames: selectedPods
       });
-      console.log('獲取到的 Pod 指標:', data);
+      logger.info('獲取到的 Pod 指標:', data);
       setPodMetrics(data);
     } catch (error) {
       console.error('獲取 Pod 指標時發生錯誤:', error);

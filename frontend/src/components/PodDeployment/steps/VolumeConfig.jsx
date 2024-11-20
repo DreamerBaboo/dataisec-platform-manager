@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { logger } from '../../../utils/logger'; // 導入 logger
 import {
   Box,
   Button,
@@ -48,16 +49,16 @@ const VolumeConfig = ({ config, onChange, errors = {} }) => {
   useEffect(() => {
     const loadStorageConfig = async () => {
       if (!config?.name || !config?.version) {
-        console.log('No deployment name or version provided');
+        logger.info('No deployment name or version provided');
         return;
       }
 
       try {
         setLoading(true);
-        console.log('Loading storage configuration for:', config.name, config.version);
+        logger.info('Loading storage configuration for:', config.name, config.version);
         
         const response = await podDeploymentService.getStorageConfig(config.name, config.version);
-        console.log('Loaded storage configuration:', response);
+        logger.info('Loaded storage configuration:', response);
 
         // Set storage class visibility if it exists
         if (response.storageClassYaml) {
@@ -138,7 +139,7 @@ const VolumeConfig = ({ config, onChange, errors = {} }) => {
         setLoading(true);
         // 使用 podDeploymentService 獲取節點列表
         const response = await podDeploymentService.getNodes();
-        console.log('Fetched nodes:', response); // 用於調試
+        logger.info('Fetched nodes:', response); // 用於調試
 
         if (response && Array.isArray(response)) {
           const formattedNodes = response.map(node => ({
@@ -146,7 +147,7 @@ const VolumeConfig = ({ config, onChange, errors = {} }) => {
             role: node.role || '',
             status: node.status || ''
           }));
-          console.log('Formatted nodes:', formattedNodes); // 用於調試
+          logger.info('Formatted nodes:', formattedNodes); // 用於調試
           setNodes(formattedNodes);
         }
       } catch (error) {

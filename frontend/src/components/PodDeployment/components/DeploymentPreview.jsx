@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { logger } from '../../../utils/logger'; // 導入 logger
 import {
   Box,
   Typography,
@@ -144,7 +145,7 @@ const DeploymentPreview = ({ config, onDeploy, onBack }) => {
           [YAML_TYPES.CONFIGMAP]: `${config.name}-${config.version}-configmap.yaml`,
           [YAML_TYPES.SECRET]: `${config.name}-${config.version}-secret.yaml`
         };
-        console.log('yamlFiles: ', yamlFiles);
+        logger.info('yamlFiles: ', yamlFiles);
 
         const contents = {};
         for (const [type, filename] of Object.entries(yamlFiles)) {
@@ -155,14 +156,14 @@ const DeploymentPreview = ({ config, onDeploy, onBack }) => {
               filename
             );
             
-            console.log ('content : ', response?.content);
+            logger.info ('content : ', response?.content);
             if (response?.content) {
               contents[type] = response.content;
-              console.log(`✅ Loaded ${type} YAML successfully`);
+              logger.info(`✅ Loaded ${type} YAML successfully`);
             }
           } catch (error) {
             if (error.response?.status === 404) {
-              console.log(`ℹ️ No ${type} YAML file found`);
+              logger.info(`ℹ️ No ${type} YAML file found`);
               continue;
             } else {
               console.error(`❌ Failed to load ${type} YAML:`, error);
@@ -183,7 +184,7 @@ const DeploymentPreview = ({ config, onDeploy, onBack }) => {
   // Function to generate final YAML with replaced values
   const generateFinalYaml = () => {
     if (!config?.yamlTemplate?.content) {
-      console.log('❌ No template content found');
+      logger.info('❌ No template content found');
       return '';
     }
 
@@ -196,11 +197,11 @@ const DeploymentPreview = ({ config, onDeploy, onBack }) => {
         if (value) {
           // Create a regex that matches ${key} with optional whitespace
           const regex = new RegExp(`\\$\\{${key}\\}`, 'gi');
-          console.log('regex == value', regex, value);
+          logger.info('regex == value', regex, value);
           finalContent = finalContent.replace(regex, value);
         }
       });
-      //console.log('final Content:', finalContent);
+      //logger.info('final Content:', finalContent);
       // Add namespace if not present in template
       if (!finalContent.includes('namespace:') && config.namespace) {
         finalContent = finalContent.replace(
@@ -209,7 +210,7 @@ const DeploymentPreview = ({ config, onDeploy, onBack }) => {
         );
       }
 
-      console.log('✅ Final YAML generated successfully with placeholders replaced');
+      logger.info('✅ Final YAML generated successfully with placeholders replaced');
       return finalContent;
     } catch (error) {
       console.error('❌ Failed to generate final YAML:', error);
@@ -226,7 +227,7 @@ const DeploymentPreview = ({ config, onDeploy, onBack }) => {
         // Generate final YAML content with replaced placeholders
         const finalYaml = generateFinalYaml();
         if (!finalYaml) {
-          console.log('⚠️ No final YAML content to save');
+          logger.info('⚠️ No final YAML content to save');
           return;
         }
         
@@ -240,7 +241,7 @@ const DeploymentPreview = ({ config, onDeploy, onBack }) => {
         
         if (config.deploymentMode === 'helm') {
           // Save final YAML to deploy-scripts
-          console.log ('THIS IS HELM');
+          logger.info ('THIS IS HELM');
           await podDeploymentService.saveHelmDeployScript(
             config.name,
             config.version,
@@ -249,7 +250,7 @@ const DeploymentPreview = ({ config, onDeploy, onBack }) => {
           )
         } 
         else{
-          console.log ('THIS IS KUBERNETES');
+          logger.info ('THIS IS KUBERNETES');
           await podDeploymentService.saveDeployScript(
           config.name,
           config.version,
@@ -258,7 +259,7 @@ const DeploymentPreview = ({ config, onDeploy, onBack }) => {
           )
         }
         
-        console.log('✅ Final YAML saved successfully');
+        logger.info('✅ Final YAML saved successfully');
         
         // Load the final YAML into the preview
         setYamlContents(prev => ({

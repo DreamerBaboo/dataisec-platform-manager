@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { logger } from '../../../utils/logger'; // 導入 logger
 import {
   Dialog,
   DialogTitle,
@@ -77,12 +78,12 @@ const YamlEditor = ({
       }
       
       try {
-        console.log('正在獲取預設值，deploymentName:', deploymentName);
+        logger.info('正在獲取預設值，deploymentName:', deploymentName);
         // Analyze template for new placeholders
         const { placeholders, defaultValues, categories } = 
           await templateService.getTemplatePlaceholders(deploymentName);
 
-        console.log('獲取到的預設值:', { placeholders, defaultValues, categories });
+        logger.info('獲取到的預設值:', { placeholders, defaultValues, categories });
 
         // Trigger template refresh in parent component
         if (onTemplateChange) {

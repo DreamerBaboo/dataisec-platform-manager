@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { logger } from '../../../utils/logger'; // 導入 logger
 import {
   Box,
   Typography,
@@ -39,7 +40,7 @@ const ResourceConfig = ({ config, onChange, errors = {} }) => {
         updatedConfig
       );
 
-      console.log(`✅ Resource field ${field} saved to config.json:`, value);
+      logger.info(`✅ Resource field ${field} saved to config.json:`, value);
     } catch (error) {
       console.error(`❌ Failed to save resource field ${field}:`, error);
       setLocalErrors(prev => ({

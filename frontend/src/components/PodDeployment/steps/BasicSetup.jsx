@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { logger } from '../../../utils/logger'; // 導入 logger
 import {
   Box,
   TextField,
@@ -86,7 +87,7 @@ spec:
       formData.append('file', file);
       formData.append('deploymentName', config.name);
 
-      console.log('Upload request details:', {
+      logger.info('Upload request details:', {
         fileName: file.name,
         deploymentName: config.name,
         formDataEntries: Array.from(formData.entries()).map(([key, value]) => ({
@@ -103,7 +104,7 @@ spec:
         }
       });
 
-      console.log('Upload response:', {
+      logger.info('Upload response:', {
         status: response.status,
         statusText: response.statusText,
         headers: Object.fromEntries(response.headers.entries())
@@ -251,7 +252,7 @@ spec:
   const handleVersionChange = (event, newValue) => {
     const newVersion = newValue?.trim() || '';
     
-    console.log('📝 Version change in BasicSetup:', { 
+    logger.info('📝 Version change in BasicSetup:', { 
       oldVersion: config.version,
       newVersion: newVersion,
       isNewVersion: !versions.includes(newVersion)
@@ -278,7 +279,7 @@ spec:
           deploymentMode: config.deploymentMode || 'k8s' // 確保有默認值
         };
 
-        console.log('📝 Creating new version config:', newConfig);
+        logger.info('📝 Creating new version config:', newConfig);
 
         try {
           // 保存新版本配置
@@ -296,7 +297,7 @@ spec:
           // 更新當前配置
           onChange(newConfig);
 
-          console.log('✅ New version created and saved successfully:', {
+          logger.info('✅ New version created and saved successfully:', {
             version: newVersion,
             config: newConfig
           });

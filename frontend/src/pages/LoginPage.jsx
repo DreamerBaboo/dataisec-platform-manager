@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { TextField, Button, Paper, Typography, Box, Alert, Select, MenuItem, useTheme } from '@mui/material';
 import { useAuth } from '../utils/auth.jsx';
 import { useAppTranslation } from '../hooks/useAppTranslation';
-import { ColorModeContext } from '../App';
+import ColorModeContext from '../contexts/ColorModeContext.jsx';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 

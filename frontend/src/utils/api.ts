@@ -20,9 +20,13 @@ interface ApiConfig {
 
 // 獲取 API 配置
 function getApiConfig(): ApiConfig {
-  console.log('getApiConfig', import.meta.env.VITE_API_BASE_URL);
+  console.info('getApiConfig', import.meta.env.VITE_API_BASE_URL);
+  // 從不同來源獲取 API URL，如無則使用預設值
   const apiUrl = import.meta.env.VITE_API_BASE_URL || 
-    (import.meta.env.NODE_ENV ? 'http://localhost:30022' : window.location.origin);
+                 window.__RUNTIME_CONFIG__?.VITE_API_BASE_URL || 
+                 'http://localhost:3001';
+  
+  console.info('API URL:', apiUrl); // 調試日誌
   
   const isInCluster = window.location.hostname.includes('.cluster.local');
   
@@ -57,14 +61,14 @@ export const getApiUrl = (endpoint: string): string => {
   const baseUrl = getBaseUrl().replace(/\/+$/, '');
   const cleanEndpoint = endpoint.replace(/^\/+/, '');
   const url = `${baseUrl}/${cleanEndpoint}`;
-  console.log('Generated API URL:', url);
+  console.info('Generated API URL:', url);
   return url;
 };
 
 // 發送請求的函數
 export async function fetchApi<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
   const url = getApiUrl(endpoint);
-  console.log('Requesting URL:', url);
+  console.info('Requesting URL:', url);
   
   const fetchOptions: RequestOptions = {
     ...defaultOptions,
@@ -101,7 +105,7 @@ export async function fetchApi<T>(endpoint: string, options: RequestOptions = {}
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {
-  console.log('Response details:', {
+  console.info('Response details:', {
     url: response.url,
     status: response.status,
     statusText: response.statusText,
@@ -176,7 +180,9 @@ export const api = {
     } catch {
       return false;
     }
-  }
+  },
+
+  getBaseUrl
 };
 
 export default api;

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { logger } from '../../../utils/logger'; // 導入 logger 
 import {
   Box,
   Grid,
@@ -84,7 +85,7 @@ const TemplateConfig = ({ config, onChange, errors }) => {
 
       // 獲取模板文件列表
       const files = await api.get(`api/deployment-templates/${config.name}/files`);
-      console.log('Found template files:', files);
+      logger.info('Found template files:', files);
 
       // 後端返回單個模板文件的數組
       const templateFile = files[0];
@@ -109,7 +110,7 @@ const TemplateConfig = ({ config, onChange, errors }) => {
 
       const content = await response.text();
       
-      console.log('Loaded template:', {
+      logger.info('Loaded template:', {
         file: templateFile,
         contentLength: content.length
       });
@@ -194,7 +195,7 @@ const TemplateConfig = ({ config, onChange, errors }) => {
 
       onChange(updatedConfig);
 
-      console.log(`✅ Placeholder ${placeholder} updated successfully:`, value);
+      logger.info(`✅ Placeholder ${placeholder} updated successfully:`, value);
     } catch (error) {
       console.error(`❌ Failed to update placeholder ${placeholder}:`, error);
       setYamlError(`Failed to save placeholder configuration`);
@@ -307,7 +308,7 @@ const TemplateConfig = ({ config, onChange, errors }) => {
       if (!newValue) return;
 
       const namespaceValue = typeof newValue === 'string' ? newValue : newValue.name;
-      console.log('Namespace change:', { namespaceValue, newValue });
+      logger.info('Namespace change:', { namespaceValue, newValue });
 
       const isNewNamespace = !namespaces.includes(namespaceValue);
       
@@ -343,7 +344,7 @@ const TemplateConfig = ({ config, onChange, errors }) => {
           }
         );
 
-        console.log('✅ Namespace saved successfully:', {
+        logger.info('✅ Namespace saved successfully:', {
           namespace: namespaceValue,
           config: updatedConfig
         });
@@ -395,7 +396,7 @@ const TemplateConfig = ({ config, onChange, errors }) => {
     
     if (!namespaceValue) return;
 
-    console.log('Namespace blur detected:', {
+    logger.info('Namespace blur detected:', {
       value: namespaceValue,
       existingNamespaces: namespaces,
       isNew: !namespaces.includes(namespaceValue)
@@ -420,7 +421,7 @@ const TemplateConfig = ({ config, onChange, errors }) => {
 
       await api.post(`api/deployment-config/${config.name}/${config.version}`, updatedConfig);
 
-      console.log(`✅ Template field ${field} updated successfully:`, value);
+      logger.info(`✅ Template field ${field} updated successfully:`, value);
     } catch (error) {
       console.error(`❌ Failed to update template field ${field}:`, error);
       setYamlError(`Failed to save ${field} configuration`);
@@ -447,7 +448,7 @@ const TemplateConfig = ({ config, onChange, errors }) => {
       setTemplateContent(newContent);
       setEditorOpen(false);
 
-      console.log('✅ Template content saved successfully');
+      logger.info('✅ Template content saved successfully');
     } catch (error) {
       console.error('❌ Failed to save template content:', error);
       setYamlError('Failed to save template content');

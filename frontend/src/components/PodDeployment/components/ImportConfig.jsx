@@ -2,6 +2,7 @@ import React from 'react';
 import { Button } from '@mui/material';
 import { Upload as UploadIcon } from '@mui/icons-material';
 import { useAppTranslation } from '../../../hooks/useAppTranslation';
+import { logger } from '../../../utils/logger'; // 導入 logger
 
 const ImportConfig = ({ onImport }) => {
   const { t } = useAppTranslation();

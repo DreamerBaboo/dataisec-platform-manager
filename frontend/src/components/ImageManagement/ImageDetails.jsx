@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { logger } from '../../utils/logger'; // 導入 logger
 import {
   Dialog,
   DialogTitle,

@@ -6,7 +6,7 @@ data:
   CONTAINER_RUNTIME: "nerdctl"
   CONTAINER_NAMESPACE: "k8s.io"
   VITE_API_BASE_URL: "http://192.168.170.126:30002" 
-  API_BASE_URL:  "http://192.168.170.126:3001" # replace with the target service url
+  API_BASE_URL:  "http://192.168.170.126:30002" # replace with the target service url
   JWT_EXPIRES_IN: "24h"
   OPENSEARCH_URL: "https://192.168.170.126:9200"
   OPENSEARCH_HOST: "192.168.170.126"
@@ -19,8 +19,9 @@ data:
   OPENSEARCH_AUDIT_LOG_INDEX: "pod-deployment-audit"
   PORT: "3001"
   KUBECONFIG: "/etc/kubernetes/admin.conf"
-  VITE_WS_PORT: "3001"
-  LOG_LEVEL: "info"
+  VITE_WS_PORT: "30002"
+  LOG_LEVEL: "debug"
+  REACT_APP_LOG_LEVEL: "debug"
   LOG_FORMAT: "json"
   NODE_ENV: "production"
   WS_HEARTBEAT_INTERVAL: "30000"
@@ -29,4 +30,4 @@ data:
   KUBERNETES_SERVICE_ACCOUNT_TOKEN_PATH: "/var/run/secrets/kubernetes.io/serviceaccount/token"
   KUBERNETES_CA_CERT_PATH: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
   KUBECONFIG_PATH: "/etc/kubernetes/admin.conf"
-  ALLOWED_ORIGINS: "http://localhost:3001,http://localhost:5173,http://192.168.170.126:3001"
+  ALLOWED_ORIGINS: "http://localhost:5173,http://localhost:3001,http://192.168.170.126:3001"

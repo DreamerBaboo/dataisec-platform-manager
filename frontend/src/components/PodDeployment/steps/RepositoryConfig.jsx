@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { logger } from '../../../utils/logger'; // 導入 logger
 import {
   Box,
   Typography,
@@ -39,7 +40,7 @@ const RepositoryConfig = ({ config, onChange, errors }) => {
         }
       });
       
-      console.log('Repositories response:', response.data);
+      logger.info('Repositories response:', response.data);
       setRepositories(response.data);
     } catch (error) {
       console.error('Failed to fetch repositories:', error);
@@ -122,7 +123,7 @@ const RepositoryConfig = ({ config, onChange, errors }) => {
         }
       );
 
-      console.log('✅ Repository saved successfully:', {
+      logger.info('✅ Repository saved successfully:', {
         repository: newValue,
         configJson: true,
         yaml: true
@@ -167,7 +168,7 @@ const RepositoryConfig = ({ config, onChange, errors }) => {
         }
       );
 
-      console.log('✅ Tag saved successfully:', {
+      logger.info('✅ Tag saved successfully:', {
         tag: newTag,
         configJson: true,
         yaml: true

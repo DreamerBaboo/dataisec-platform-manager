@@ -4,6 +4,7 @@ import { Typography, Box, Paper, TextField } from '@mui/material';
 import axios from 'axios';
 import { useAppTranslation } from '../../hooks/useAppTranslation';
 import { getApiUrl } from '../../utils/api';
+import { logger } from '../../utils/logger'; // 導入 logger
 
 const LogViewer = () => {
   const { t } = useAppTranslation(['monitoring', 'common']);

@@ -5,6 +5,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import MetricsDisplay from './MetricsDisplay';
 import { useAppTranslation } from '../../hooks/useAppTranslation';
 import { api } from '../../utils/api';
+import { logger } from '../../utils/logger'; // 使用命名導出
 
 const REFRESH_INTERVAL = 30000; // 30 seconds
 
@@ -42,9 +43,9 @@ const SystemDashboard = () => {
   const fetchNodes = useCallback(async () => {
     try {
       setError(null);
-      console.log('Fetching nodes...');
+      logger.info('Fetching nodes...');
       const data = await api.get('api/metrics/nodes');
-      console.log('Fetched nodes data:', data);
+      logger.info('Fetched nodes data:', data);
       
       if (!Array.isArray(data)) {
         throw new Error('Invalid response format: expected array');
@@ -70,9 +71,9 @@ const SystemDashboard = () => {
         ? 'api/metrics/system'
         : `api/metrics/system/node/${selectedNode}`;
 
-      console.log('Fetching metrics...', endpoint);
+      logger.info('Fetching metrics...', endpoint);
       const data = await api.get(endpoint);
-      console.log('Fetched metrics data:', data);
+      logger.info('Fetched metrics data:', data);
       
       if (!data || typeof data !== 'object') {
         throw new Error('Invalid response format: expected object');
@@ -91,13 +92,13 @@ const SystemDashboard = () => {
 
   // 手動刷新
   const handleRefresh = useCallback(() => {
-    console.log('Manual refresh triggered');
+    logger.info('Manual refresh triggered');
     fetchMetrics();
   }, [fetchMetrics]);
 
   // 設置自動刷新
   useEffect(() => {
-    console.log('Setting up auto refresh, page visible:', isPageVisible);
+    logger.info('Setting up auto refresh, page visible:', isPageVisible);
     
     if (isPageVisible) {
       // 立即執行一次
@@ -105,20 +106,20 @@ const SystemDashboard = () => {
       
       // 設置定時器
       refreshTimerRef.current = setInterval(() => {
-        console.log('Auto refresh triggered');
+        logger.info('Auto refresh triggered');
         fetchMetrics();
       }, REFRESH_INTERVAL);
 
       return () => {
         if (refreshTimerRef.current) {
-          console.log('Clearing refresh timer');
+          logger.info('Clearing refresh timer');
           clearInterval(refreshTimerRef.current);
         }
       };
     } else {
       // 頁面不可見時清除定時器
       if (refreshTimerRef.current) {
-        console.log('Clearing refresh timer due to page invisibility');
+        logger.info('Clearing refresh timer due to page invisibility');
         clearInterval(refreshTimerRef.current);
       }
     }

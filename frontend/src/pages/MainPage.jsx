@@ -14,6 +14,7 @@ import UserProfile from '../components/UserProfile/UserProfile';
 import ImageList from '../components/ImageManagement/ImageList';
 import ImageUpload from '../components/ImageManagement/ImageUpload';
 import { useAppTranslation } from '../hooks/useAppTranslation';
+import { logger } from '../utils/logger'; // 導入 logger
 
 function MainPage() {
   const [open, setOpen] = useState(true);
@@ -22,12 +23,12 @@ function MainPage() {
  
 
   const toggleDrawer = () => {
-    console.log('Toggling drawer. Current state:', open);
+    logger.info('Toggling drawer. Current state:', open);
     setOpen(!open);
   };
 
   useEffect(() => {
-    console.log('Drawer state changed to:', open);
+    logger.info('Drawer state changed to:', open);
   }, [open]);
 
   return (

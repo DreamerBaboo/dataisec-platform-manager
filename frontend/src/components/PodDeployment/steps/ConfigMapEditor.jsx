@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import { logger } from '../../../utils/logger'; // 導入 logger
 import {
   Box,
   Typography,
@@ -163,7 +164,7 @@ const ConfigMapEditor = ({ config, onChange, errors = {} }) => {
         config.version,
         `${config.name}-${config.version}-configmap.yaml`
       );
-      console.log('✅ ConfigMap YAML deleted successfully');
+      logger.info('✅ ConfigMap YAML deleted successfully');
     } catch (error) {
       // Ignore 404 errors (file doesn't exist)
       if (error.response?.status !== 404) {

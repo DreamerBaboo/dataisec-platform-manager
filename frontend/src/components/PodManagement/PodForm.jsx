@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { TextField, Button, Box, Typography, MenuItem } from '@mui/material';
 import axios from 'axios';
 import { getApiUrl } from '../../utils/api';
+import { logger } from '../../utils/logger'; // 導入 logger
 
 const PodForm = ({ onSubmit }) => {
   const [podConfig, setPodConfig] = useState({

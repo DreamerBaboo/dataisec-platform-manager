@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { logger } from '../../../utils/logger'; // 導入 logger
 import {
   Box,
   Typography,
@@ -25,10 +26,10 @@ const AffinityConfig = ({ config, onChange, errors = {} }) => {
   const fetchNodes = async () => {
     try {
       setLoading(true);
-      console.log('開始獲取節點列表...');
+      logger.info('開始獲取節點列表...');
       
       const nodeData = await api.get('api/k8s/nodes');
-      console.log('獲取到的節點數據:', nodeData);
+      logger.info('獲取到的節點數據:', nodeData);
       
       const formattedNodes = (Array.isArray(nodeData) ? nodeData : []).map(node => ({
         name: node.name,
@@ -39,7 +40,7 @@ const AffinityConfig = ({ config, onChange, errors = {} }) => {
         label: `${node.hostname || ''} (${node.name})`
       }));
       
-      console.log('格式化後的節點數據:', formattedNodes);
+      logger.info('格式化後的節點數據:', formattedNodes);
       setNodes(formattedNodes);
       
       // 清除任何之前的錯誤
@@ -62,7 +63,7 @@ const AffinityConfig = ({ config, onChange, errors = {} }) => {
 
   const handleAffinityChange = async (field, value) => {
     try {
-      console.log(`更新親和性配置: ${field} = ${value}`);
+      logger.info(`更新親和性配置: ${field} = ${value}`);
       
       const updatedConfig = {
         ...config,
@@ -81,7 +82,7 @@ const AffinityConfig = ({ config, onChange, errors = {} }) => {
       // 保存到配置文件
       await api.post(`api/deployment-config/${config.name}/${config.version}`, updatedConfig);
 
-      console.log(`✅ 親和性字段 ${field} 已保存:`, value);
+      logger.info(`✅ 親和性字段 ${field} 已保存:`, value);
       
       // 清除該字段的錯誤
       setLocalErrors(prev => {
