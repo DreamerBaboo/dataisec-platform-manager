@@ -41,12 +41,8 @@ FROM node:18-alpine
 # 安裝必要的工具
 RUN apk add --no-cache \
     curl \
-    docker-cli \
-    docker \
-    openrc \
     bash \
     openssl \
-    shadow \
     && ARCH=$(uname -m) \
     && if [ "$ARCH" = "aarch64" ]; then \
          KUBECTL_ARCH="arm64"; \
@@ -81,13 +77,10 @@ RUN cd public && \
 # 創建必要的目錄和設置權限
 RUN mkdir -p /app/.kube && \
     touch /app/.kube/config && \
-    usermod -aG docker node && \
-    chown -R node:docker /app && \
+    chown -R node:node /app && \
     chmod -R 755 /app && \
     chmod 755 /usr/local/bin/kubectl && \
-    chmod 755 /usr/local/bin/helm && \
-    touch /var/run/docker.sock && \
-    chmod 666 /var/run/docker.sock
+    chmod 755 /usr/local/bin/helm
 
 # 切換到非 root 用戶
 USER node
@@ -122,7 +115,7 @@ ENV NODE_ENV=production \
 
 EXPOSE 3001
 
-# 創建掛載點
-VOLUME ["/app/.kube", "/var/run/docker.sock"]
+# 創建掛載點，只保留 .kube 配置
+VOLUME ["/app/.kube"]
 
 CMD ["node", "server.js"]

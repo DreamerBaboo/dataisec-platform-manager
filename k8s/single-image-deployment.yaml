@@ -19,8 +19,19 @@ spec:
         kubernetes.io/hostname: "192.168.170.126"
       containers:
         - name: dataisec-platform
-          image: dreamerbaboo/dataisec-pod-management:1.0.0
+          image: dreamerbaboo/dataisec-pod-management:1.0.2
           imagePullPolicy: IfNotPresent
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: CONTAINER_RUNTIME
+              value: "nerdctl"
+            - name: CONTAINER_NAMESPACE
+              value: "k8s.io"
+            - name: KUBECONFIG
+              value: "/var/run/secrets/kubernetes.io/serviceaccount/kubeconfig"
           ports:
             - containerPort: 3001
               name: backend
@@ -31,18 +42,14 @@ spec:
             - secretRef:
                 name: dataisec-platform-secret
           volumeMounts:
-            - name: containerd-socket
-              mountPath: /var/run/containerd/containerd.sock
-            # Mount service account token and certs
             - name: kube-api-access
               mountPath: /var/run/secrets/kubernetes.io/serviceaccount
               readOnly: true
+            - name: kubeconfig
+              mountPath: /var/run/secrets/kubernetes.io/serviceaccount/kubeconfig
+              subPath: kubeconfig
+              readOnly: true
       volumes:
-        - name: containerd-socket
-          hostPath:
-            path: /run/containerd/containerd.sock
-            type: Socket
-        # Automatically mounted service account token and certs
         - name: kube-api-access
           projected:
             sources:
@@ -60,3 +67,30 @@ spec:
                   fieldRef:
                     apiVersion: v1
                     fieldPath: metadata.namespace
+        - name: kubeconfig
+          configMap:
+            name: kube-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kube-config
+data:
+  kubeconfig: |
+    apiVersion: v1
+    kind: Config
+    clusters:
+    - cluster:
+        certificate-authority: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        server: https://kubernetes.default.svc
+      name: default
+    contexts:
+    - context:
+        cluster: default
+        user: default
+      name: default
+    current-context: default
+    users:
+    - name: default
+      user:
+        tokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token

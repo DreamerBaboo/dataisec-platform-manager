@@ -10,7 +10,14 @@ const YAML = require('yaml');
 class K8sService {
   constructor() {
     this.kc = new k8s.KubeConfig();
-    this.kc.loadFromDefault();
+       
+    // 如果在 Kubernetes 集群內運行，使用 ServiceAccount 憑證
+    if (process.env.KUBERNETES_SERVICE_HOST) {
+      this.kc.loadFromCluster();
+    } else {
+      // 如果在集群外運行，嘗試加載默認配置
+      this.kc.loadFromDefault();
+    }
     this.k8sApi = this.kc.makeApiClient(k8s.CoreV1Api);
     this.k8sAppsApi = this.kc.makeApiClient(k8s.AppsV1Api);
     this.storageApi = this.kc.makeApiClient(k8s.StorageV1Api);

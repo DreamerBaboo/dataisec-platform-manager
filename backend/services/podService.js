@@ -1,10 +1,34 @@
 const k8s = require('@kubernetes/client-node');
 const { client } = require('../utils/opensearchClient');
+const fs = require('fs');
+const path = require('path');
 
 class PodService {
   constructor() {
     this.kc = new k8s.KubeConfig();
-    this.kc.loadFromDefault();
+    
+    try {
+      // 首先嘗試使用環境變數中指定的 kubeconfig
+      if (process.env.KUBECONFIG && fs.existsSync(process.env.KUBECONFIG)) {
+        console.log('Using kubeconfig from KUBECONFIG env:', process.env.KUBECONFIG);
+        this.kc.loadFromFile(process.env.KUBECONFIG);
+      }
+      // 如果在 Kubernetes 集群內運行，使用 ServiceAccount 憑證
+      else if (process.env.KUBERNETES_SERVICE_HOST && 
+               fs.existsSync('/var/run/secrets/kubernetes.io/serviceaccount/token')) {
+        console.log('Loading in-cluster configuration');
+        this.kc.loadFromCluster();
+      }
+      // 最後嘗試加載默認配置
+      else {
+        console.log('Loading default kubeconfig');
+        this.kc.loadFromDefault();
+      }
+    } catch (error) {
+      console.error('Error initializing Kubernetes configuration:', error);
+      throw new Error('Failed to initialize Kubernetes configuration: ' + error.message);
+    }
+
     this.k8sApi = this.kc.makeApiClient(k8s.CoreV1Api);
   }
 
@@ -319,4 +343,4 @@ class PodService {
   }
 }
 
-module.exports = new PodService(); 
+module.exports = new PodService();

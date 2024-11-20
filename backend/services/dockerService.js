@@ -1,11 +1,9 @@
-const containerRuntime = require('../utils/container-runtime');
+const containerService = require('./containerService');
 
 class DockerService {
   async listRepositories() {
     try {
-      const stdout = await containerRuntime.listRepositories();
-      const repositories = [...new Set(stdout.split('\n').filter(Boolean))];
-      return repositories;
+      return await containerService.listRepositories();
     } catch (error) {
       console.error('Failed to list repositories:', error);
       throw error;
@@ -15,8 +13,7 @@ class DockerService {
   async listTags(repository) {
     try {
       console.log(`Fetching tags for repository: ${repository}`);
-      const stdout = await containerRuntime.listTags(repository);
-      const tags = stdout.split('\n').filter(Boolean);
+      const tags = await containerService.listTags(repository);
       console.log(`Found ${tags.length} tags for ${repository}`);
       return tags;
     } catch (error) {
@@ -27,8 +24,7 @@ class DockerService {
 
   async searchImages(term) {
     try {
-      const stdout = await containerRuntime.searchImages(term);
-      return stdout.split('\n').filter(Boolean);
+      return await containerService.searchImages(term);
     } catch (error) {
       console.error('Failed to search images:', error);
       throw error;
@@ -36,4 +32,4 @@ class DockerService {
   }
 }
 
-module.exports = new DockerService(); 
+module.exports = new DockerService();
