@@ -168,7 +168,7 @@ class PodService {
   }
 
   // 獲取指定命名空間的所有 Pod
-  async getPods(namespace = '') {
+  async getPods(namespace = '', search = '') {
     try {
       // 在獲取 Pod 之前檢查權限
       const hasPermission = await this.checkResourcePermission('pods', 'list', namespace);
@@ -176,7 +176,7 @@ class PodService {
         throw new Error(`沒有權限列出命名空間 ${namespace || 'all'} 中的 Pod`);
       }
 
-      logger.info(`Fetching pods for namespace: ${namespace || 'all namespaces'}`);
+      logger.info(`Fetching pods for namespace: ${namespace || 'all namespaces'}, search: ${search}`);
       let pods;
       if (namespace) {
         const response = await this.k8sApi.listNamespacedPod(namespace);
@@ -185,7 +185,17 @@ class PodService {
         const response = await this.k8sApi.listPodForAllNamespaces();
         pods = response.body.items;
       }
-      logger.info(`Found ${pods.length} pods`);
+
+      // 如果有搜索條件，進行過濾
+      if (search) {
+        const searchLower = search.toLowerCase();
+        pods = pods.filter(pod => 
+          pod.metadata.name.toLowerCase().includes(searchLower) ||
+          pod.metadata.namespace.toLowerCase().includes(searchLower)
+        );
+      }
+
+      logger.info(`Found ${pods.length} pods after filtering`);
 
       // 獲取 Pod 的額外信息
       const podDetails = await Promise.all(

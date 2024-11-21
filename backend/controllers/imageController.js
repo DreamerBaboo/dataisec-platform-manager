@@ -5,24 +5,26 @@ const fs = require('fs');
 const fsPromises = require('fs').promises;
 const path = require('path');
 const multer = require('multer');
+const logger = require('../utils/logger');
+const dockerService = require('../services/dockerService');
 
 // 確保上傳目錄存在
 const UPLOAD_DIR = path.join(__dirname, '../uploads');
 if (!fs.existsSync(UPLOAD_DIR)) {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-  console.log('📁 Created upload directory:', UPLOAD_DIR);
+  logger.info('📁 Created upload directory:', UPLOAD_DIR);
 }
 
 // 修改 multer 配置
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    console.log('📁 Using upload directory:', UPLOAD_DIR);
+    logger.info('📁 Using upload directory:', UPLOAD_DIR);
     cb(null, UPLOAD_DIR);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
     const filename = `${file.fieldname}-${uniqueSuffix}${path.extname(file.originalname)}`;
-    console.log('📝 Generated filename:', filename);
+    logger.info('📝 Generated filename:', filename);
     cb(null, filename);
   }
 });
@@ -30,26 +32,20 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage: storage,
   limits: {
-    fileSize: 1024 * 1024 * 10000, // 2GB
+    fileSize: 1024 * 1024 * 10000, // 10GB
     files: 1
   }
 });
 
-// 日誌記錄函數
-const logError = (error, operation) => {
-  console.error(`Error during ${operation}:`, error);
-  // 這裡可以添加更多的日誌記錄邏輯，比如寫入文件或發送到日誌服務
-};
-
-// 修改檢查權限函數，使用 containerRuntime
+// 檢查權限函數
 const checkDockerPermissions = async () => {
   try {
-    console.log('🔍 Checking container runtime permissions...');
+    logger.info('🔍 Checking container runtime permissions...');
     await containerRuntime.listContainers();
-    console.log('✅ Container runtime permissions verified');
+    logger.info('✅ Container runtime permissions verified');
     return true;
   } catch (error) {
-    console.error('❌ Container runtime permission check failed:', error.message);
+    logger.error('❌ Container runtime permission check failed:', error.message);
     if (error.message.includes('permission denied')) {
       throw new Error('No permission to execute container commands. Please check your permissions.');
     } else if (error.message.includes('Cannot connect')) {
@@ -59,61 +55,32 @@ const checkDockerPermissions = async () => {
   }
 };
 
-const parseImageNameAndTag = (fullName) => {
-  console.log('🔍 Parsing image name:', fullName);
-  
-  // 分割最後一個冒號來獲取標籤
-  const lastColonIndex = fullName.lastIndexOf(':');
-  const tag = lastColonIndex !== -1 ? fullName.slice(lastColonIndex + 1) : 'latest';
-  const nameWithoutTag = lastColonIndex !== -1 ? fullName.slice(0, lastColonIndex) : fullName;
-  
-  console.log('📝 Parsed result:', { name: nameWithoutTag, tag });
-  return { name: nameWithoutTag, tag };
-};
-
 // 獲取所有鏡像
 const getImages = async (req, res) => {
-  console.log('🔍 Getting all images');
+  logger.info('🔍 Getting all images');
   try {
-    const stdout = await containerRuntime.listImages();
-    console.log('📦 Raw docker output:', stdout);
+    const images = await containerRuntime.listImages();
+    logger.info('📦 Raw images data:', images);
 
-    if (!stdout.trim()) {
-      console.log('ℹ️ No images found');
+    if (!images || images.length === 0) {
+      logger.info('ℹ️ No images found');
       return res.json([]);
     }
 
-    const images = stdout
-      .trim()
-      .split('\n')
-      .filter(line => {
-        console.log('🔄 Processing line:', line);
-        return line;
-      })
-      .map(line => {
-        try {
-          console.log('📝 Parsing JSON line:', line);
-          const image = JSON.parse(line);
-          const { name, tag } = parseImageNameAndTag(`${image.Repository}:${image.Tag}`);
-          return {
-            id: image.ID,
-            name: name,
-            tag: tag,
-            size: image.Size,
-            createdAt: image.CreatedAt,
-            status: 'available'
-          };
-        } catch (err) {
-          console.error('❌ Error parsing line:', err);
-          return null;
-        }
-      })
-      .filter(image => image !== null);
+    // 轉換為前端需要的格式
+    const formattedImages = images.map(image => ({
+      id: image.ID,
+      name: image.REPO,
+      tag: image.TAG,
+      size: image.SIZE,
+      createdAt: image.CREATED,
+      status: 'available'
+    }));
 
-    console.log('✅ Final images list:', images);
-    res.json(images);
+    logger.info('✅ Formatted images list:', formattedImages);
+    res.json(formattedImages);
   } catch (error) {
-    console.error('❌ Error getting images:', error);
+    logger.error('❌ Error getting images:', error);
     res.status(500).json({
       message: 'Failed to get images',
       error: error.message
@@ -121,474 +88,192 @@ const getImages = async (req, res) => {
   }
 };
 
-
-// 獲取鏡像詳情
-const getImageDetails = async (req, res) => {
+// 獲取映像檔列表
+async function listImages(req, res) {
   try {
-    const { name, tag } = req.params;
-    console.log('🔍 Getting details for image:', { name, tag });
-
-    const imageName = tag ? `${name}:${tag}` : name;
-    console.log('📝 Full image name:', imageName);
-    
-    const stdout = await containerRuntime.inspectImage(imageName);
-    const details = JSON.parse(stdout)[0];
-    console.log('📦 Raw image details:', details);
-
-    // 確保 RepoTags 是數組並處理 null/undefined 情況
-    let repoTags = [];
-    if (details.RepoTags && Array.isArray(details.RepoTags)) {
-      repoTags = details.RepoTags;
-    } else if (details.RepoTags === null || details.RepoTags === undefined) {
-      // 如果 RepoTags 不存在，使用當前的名稱和標籤
-      repoTags = [`${name}:${tag || 'latest'}`];
-    }
-
-    console.log('🏷️ Image tags:', repoTags);
-
-    // 解析每個標籤
-    const tagInfo = repoTags.map(tagString => {
-      const lastColonIndex = tagString.lastIndexOf(':');
-      if (lastColonIndex === -1) {
-        return {
-          repository: tagString,
-          tag: 'latest'
-        };
-      }
-      return {
-        repository: tagString.slice(0, lastColonIndex),
-        tag: tagString.slice(lastColonIndex + 1)
-      };
-    });
-
-    console.log('📑 Parsed tag info:', tagInfo);
-
-    const response = {
-      id: details.Id,
-      repoTags: tagInfo,
-      size: details.Size,
-      createdAt: details.Created,
-      architecture: details.Architecture,
-      os: details.Os,
-      author: details.Author,
-      details: {
-        config: {
-          env: details.Config?.Env || [],
-          cmd: details.Config?.Cmd || [],
-          workdir: details.Config?.WorkingDir,
-          exposedPorts: details.Config?.ExposedPorts || {},
-          labels: details.Config?.Labels || {},
-          volumes: details.Config?.Volumes || {}
-        },
-        layers: details.RootFS?.Layers || [],
-        history: details.History || [],
-        platform: {
-          os: details.Os,
-          architecture: details.Architecture,
-          variant: details.Variant || '',
-          osVersion: details.OsVersion || '',
-          osFeatures: details.OsFeatures || []
-        }
-      }
-    };
-
-    console.log('✅ Formatted response:', response);
-    res.json(response);
+    const images = await dockerService.listImages();
+    res.json(images);
   } catch (error) {
-    console.error('❌ Error in getImageDetails:', error);
-    res.status(500).json({ 
-      message: 'Failed to fetch image details',
-      error: error.message 
-    });
+    logger.error('Failed to list images:', error);
+    res.status(500).json({ error: '無法獲取映像檔列表' });
   }
-};
+}
 
-// 上傳新鏡像
-const uploadImage = async (req, res) => {
-  console.log('📤 Starting image upload process');
-  console.log('📦 Request file:', req.file);
-  
+// 獲取映像檔詳細資訊
+async function getImageDetails(req, res) {
   try {
-    const { file } = req;
-    if (!file) {
-      console.error('❌ No file uploaded');
-      return res.status(400).json({ message: 'No file uploaded' });
-    }
-
-    console.log('📊 File details:', {
-      originalName: file.originalname,
-      size: file.size,
-      path: file.path,
-      mimetype: file.mimetype
-    });
-
-    // 驗證文件類型
-    const validTypes = ['.tar', '.gz', '.tgz'];
-    const ext = path.extname(file.originalname).toLowerCase();
-    if (!validTypes.includes(ext)) {
-      console.error('❌ Invalid file type:', ext);
-      await fsPromises.unlink(file.path);
-      return res.status(400).json({ 
-        message: 'Invalid file type. Only .tar, .gz, and .tgz files are allowed' 
-      });
-    }
-
-    // 確保文件存在並可訪問
-    try {
-      await fsPromises.access(file.path, fs.constants.R_OK | fs.constants.W_OK);
-      console.log('✅ File is accessible:', file.path);
-    } catch (error) {
-      console.error('❌ File access error:', error);
-      return res.status(500).json({ 
-        message: 'File access error',
-        error: error.message 
-      });
-    }
-
-    console.log('✅ File validation passed');
-    console.log('🔄 Processing file:', file.path);
-
-    // 返回文件路徑供後續處理
-    res.json({ 
-      message: 'File uploaded successfully',
-      filePath: file.path
-    });
+    const { imageName } = req.params;
+    const details = await dockerService.inspectImage(imageName);
+    res.json(JSON.parse(details));
   } catch (error) {
-    console.error('❌ Error in uploadImage:', error);
-    // 清理臨時文件
-    if (req.file) {
-      try {
-        await fsPromises.unlink(req.file.path);
-        console.log('🧹 Cleaned up temp file:', req.file.path);
-      } catch (unlinkError) {
-        console.error('❌ Error cleaning up temp file:', unlinkError);
-      }
-    }
-    res.status(500).json({ 
-      message: 'Failed to upload image', 
-      error: error.message 
-    });
+    logger.error(`Failed to get image details for ${req.params.imageName}:`, error);
+    res.status(500).json({ error: '無法獲取映像檔詳細資訊' });
   }
-};
+}
 
-// 刪除鏡像
-const deleteImage = async (req, res) => {
+// 拉取映像檔
+async function pullImage(req, res) {
   try {
-    const { images } = req.body;
-    
-    if (!images || !Array.isArray(images) || images.length === 0) {
-      return res.status(400).json({ message: 'No images selected for deletion' });
-    }
-
-    console.log('🗑️ Deleting images:', images);
-    const results = [];
-
-    for (const imageKey of images) {
-      try {
-        console.log(`🗑️ Removing image: ${imageKey}`);
-        await containerRuntime.removeImage(imageKey);
-        console.log(`✅ Successfully removed image: ${imageKey}`);
-        results.push({
-          image: imageKey,
-          status: 'success'
-        });
-      } catch (error) {
-        console.error(`❌ Error removing image ${imageKey}:`, error);
-        results.push({
-          image: imageKey,
-          status: 'error',
-          error: error.message
-        });
-      }
-    }
-
-    res.json({
-      message: 'Images deletion completed',
-      results
-    });
+    const { imageName } = req.body;
+    await dockerService.pullImage(imageName);
+    res.json({ message: '映像檔拉取成功' });
   } catch (error) {
-    console.error('❌ Error in deleteImage:', error);
-    res.status(500).json({
-      message: 'Failed to delete images',
-      error: error.message
-    });
+    logger.error(`Failed to pull image ${req.body.imageName}:`, error);
+    res.status(500).json({ error: '映像檔拉取失敗' });
   }
-};
+}
 
-// 安裝鏡像
-const installImage = async (req, res) => {
+// 刪除映像檔
+async function removeImage(req, res) {
   try {
-    const { id } = req.params;
-    const { registry, tag, pullPolicy } = req.body;
-
-    if (!id) {
-      return res.status(400).json({ message: 'Image ID is required' });
-    }
-
-    const imageName = registry && tag ? `${registry}/${id}:${tag}` : id;
-    const stdout = await containerRuntime.pullImage(imageName);
-    
-    res.json({ 
-      message: 'Image installed successfully', 
-      details: stdout 
-    });
+    const { imageId } = req.params;
+    await dockerService.removeImage(imageId);
+    res.json({ message: '映像檔刪除成功' });
   } catch (error) {
-    logError(error, 'installing image');
-    res.status(500).json({ 
-      message: 'Failed to install image', 
-      error: error.message 
-    });
+    logger.error(`Failed to remove image ${req.params.imageId}:`, error);
+    res.status(500).json({ error: '映像檔刪除失敗' });
   }
-};
+}
 
-const packageImages = async (req, res) => {
-  console.log('📦 Packaging images request received');
-  const { images } = req.body;
-  console.log('📦 Images to package:', images);
-  
-  if (!images || !Array.isArray(images) || images.length === 0) {
-    return res.status(400).json({ message: 'No images selected for packaging' });
-  }
-
-  const tempDir = path.join(__dirname, '../temp');
-  const outputFile = path.join(tempDir, `docker-images-${new Date().toISOString().split('T')[0]}.tar`);
-
+// 標記映像檔
+async function tagImage(req, res) {
   try {
-    // 確保臨時目錄存在
-    await fsPromises.mkdir(tempDir, { recursive: true });
-    
-    // 使用完整的鏡像名構建命令
-    const imageList = images.map(img => img.fullName).join(' ');
-    await containerRuntime.saveImage(outputFile, imageList);
-
-    // 設置響應頭
-    res.setHeader('Content-Type', 'application/x-tar');
-    res.setHeader('Content-Disposition', 
-      `attachment; filename=docker-images-${images.map(img => img.name).join('-')}-${Date.now()}.tar`
-    );
-
-    // 使用標準 fs 模組的 createReadStream
-    const fileStream = fs.createReadStream(outputFile);
-    fileStream.pipe(res);
-
-    // 文件發送完成後清理
-    fileStream.on('end', async () => {
-      try {
-        await fsPromises.unlink(outputFile);
-        console.log('✅ Temporary file cleaned up:', outputFile);
-      } catch (cleanupError) {
-        console.error('❌ Error cleaning up temp file:', cleanupError);
-      }
-    });
-
-    // 錯誤處理
-    fileStream.on('error', (error) => {
-      console.error('❌ Error streaming file:', error);
-      res.status(500).json({ 
-        message: 'Error streaming file',
-        error: error.message 
-      });
-    });
+    const { source, target } = req.body;
+    await dockerService.tagImage(source, target);
+    res.json({ message: '映像檔標記成功' });
   } catch (error) {
-    console.error('❌ Error packaging images:', error);
-    try {
-      await fsPromises.unlink(outputFile);
-    } catch (cleanupError) {
-      console.error('❌ Error cleaning up temp file:', cleanupError);
-    }
-    res.status(500).json({ 
-      message: 'Failed to package images', 
-      error: error.message 
-    });
+    logger.error('Failed to tag image:', error);
+    res.status(500).json({ error: '映像檔標記失敗' });
   }
-};
+}
 
-const extractImages = async (req, res) => {
-  console.log('🔍 Starting image extraction process');
-  console.log('📥 Request body:', req.body);
-  
+// 推送映像檔
+async function pushImage(req, res) {
   try {
-    await checkDockerPermissions();
+    const { imageName } = req.body;
+    await dockerService.pushImage(imageName);
+    res.json({ message: '映像檔推送成功' });
+  } catch (error) {
+    logger.error(`Failed to push image ${req.body.imageName}:`, error);
+    res.status(500).json({ error: '映像檔推送失敗' });
+  }
+}
+
+// 搜尋映像檔
+async function searchImages(req, res) {
+  try {
+    const { term } = req.query;
+    const results = await dockerService.searchImages(term);
+    res.json(results);
+  } catch (error) {
+    logger.error(`Failed to search images with term ${req.query.term}:`, error);
+    res.status(500).json({ error: '映像檔搜尋失敗' });
+  }
+}
+
+// 儲存映像檔
+async function saveImage(req, res) {
+  try {
+    const { imageName } = req.body;
+    const result = await dockerService.saveImage(imageName);
+    res.json(result);
+  } catch (error) {
+    logger.error(`Failed to save image ${req.body.imageName}:`, error);
+    res.status(500).json({ error: '映像檔儲存失敗' });
+  }
+}
+
+// 載入映像檔
+async function loadImage(req, res) {
+  try {
     const { filePath } = req.body;
-    console.log('📂 Processing file:', filePath);
-    
-    if (!fs.existsSync(filePath)) {
-      console.error('❌ File not found:', filePath);
-      return res.status(404).json({ 
-        message: 'File not found',
-        error: `File ${filePath} does not exist`
-      });
+    await dockerService.loadImage(filePath);
+    res.json({ message: '映像檔載入成功' });
+  } catch (error) {
+    logger.error('Failed to load image:', error);
+    res.status(500).json({ error: '映像檔載入失敗' });
+  }
+}
+
+// 添加上傳映像檔功能
+async function uploadImage(req, res) {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: '未找到上傳的檔案' });
     }
 
-    const stdout = await containerRuntime.loadImage(filePath);
-    console.log('📤 Load output:', stdout);
+    logger.info('📤 Uploading image file:', req.file.originalname);
     
-    // 解析輸出以獲取鏡像列表
-    const images = stdout
-      .split('\n')
-      .filter(Boolean)
-      .map(line => {
-        console.log('📝 Processing line:', line);
-        const match = line.match(/Loaded image: (.+)/);
-        if (!match) {
-          console.log('⚠️ No match found in line');
-          return null;
-        }
-        
-        const fullName = match[1];
-        const { name, tag } = parseImageNameAndTag(fullName);
-        return { 
-          name, 
-          tag, 
-          originalName: fullName  // 保存原始名稱用於後操作
-        };
-      })
-      .filter(Boolean);
+    const filePath = req.file.path;
+    const fileName = req.file.filename;
 
-    console.log('✅ Extracted images:', images);
-
-    // 清理臨時文件
     try {
-      await fsPromises.unlink(filePath);
-      console.log('🧹 Cleaned up temp file:', filePath);
-    } catch (unlinkError) {
-      console.error('⚠️ Error cleaning up temp file:', unlinkError);
-    }
-
-    res.json({ images });
-  } catch (error) {
-    console.error('❌ Error in extractImages:', error);
-    if (error.message.includes('permission')) {
-      return res.status(403).json({
-        message: 'Permission denied',
-        error: error.message
-      });
-    }
-    res.status(500).json({
-      message: 'Failed to extract images',
-      error: error.message
-    });
-  }
-};
-
-const loadImages = async (req, res) => {
-  try {
-    const { images } = req.body;
-    console.log('🔄 Loading images:', images);
-    for (const image of images) {
-      await containerRuntime.loadImage(image.path);
-    }
-
-    res.json({ message: 'Images loaded successfully' });
-  } catch (error) {
-    console.error('Error loading images:', error);
-    res.status(500).json({ 
-      message: 'Failed to load images',
-      error: error.message 
-    });
-  }
-};
-
-// 新增提取鏡像名稱的輔助函數
-const extractImageNameAndTag = (originalName) => {
-  console.log('🔍 Extracting name from:', originalName);
-  
-  // 使用最後一個 '/' 分割來獲取最終的名稱和標籤
-  const parts = originalName.split('/');
-  const nameWithTag = parts[parts.length - 1];
-  
-  console.log('📝 Extracted name and tag:', nameWithTag);
-  return nameWithTag;
-};
-
-// 更新 retagImages 函數
-const retagImages = async (req, res) => {
-  try {
-    await checkDockerPermissions();
-    const { images, repository, port, keepOriginal } = req.body;
-    console.log('🏷️ Retagging images:', { images, repository, port, keepOriginal });
-    
-    const results = [];
-    for (const image of images) {
-      const extractedNameTag = extractImageNameAndTag(image.originalName);
-      const newTag = `${repository}:${port}/${extractedNameTag}`;
+      await dockerService.loadImage(filePath);
+      logger.info('✅ Image loaded successfully:', fileName);
       
-      const result = {
-        original: image.originalName,
-        new: newTag,
-        status: 'success',
-        kept: keepOriginal,
-        extractedName: extractedNameTag,
-        errors: []
-      };
-
+      // 清理臨時檔案
+      await fs.unlink(filePath);
+      logger.info('🧹 Temporary file cleaned up:', filePath);
+      
+      res.json({
+        message: '映像檔上傳成功',
+        fileName: fileName
+      });
+    } catch (error) {
+      // 如果載入失敗，也要清理臨時檔案
       try {
-        await containerRuntime.tagImage(image.originalName, newTag);
-        await containerRuntime.pushImage(newTag);
-        
-        if (!keepOriginal) {
-          await containerRuntime.removeImage(image.originalName);
-        }
-      } catch (error) {
-        result.errors.push({ operation: error.operation, error: error.message });
-        result.status = 'error';
+        await fs.unlink(filePath);
+        logger.info('🧹 Cleaned up temporary file after error:', filePath);
+      } catch (cleanupError) {
+        logger.error('❌ Failed to cleanup temporary file:', cleanupError);
       }
       
-      results.push(result);
+      throw error;
     }
-
-    res.json({ 
-      message: 'Images processing completed',
-      results 
-    });
   } catch (error) {
-    console.error('❌ Error in retagImages:', error);
+    logger.error('❌ Error uploading image:', error);
     res.status(500).json({
-      message: 'Failed to process images',
-      error: error.message
+      error: '映像檔上傳失敗',
+      details: error.message
     });
   }
-};
+}
 
-// 獲取本地倉庫中的鏡像列表
-const getRepositories = async (req, res) => {
+// 列出映像庫
+async function listRepositories(req, res) {
   try {
-    const stdout = await containerRuntime.listRepositories();
-    const repositories = [...new Set(stdout.trim().split('\n'))];
+    const repositories = await dockerService.listRepositories();
     res.json(repositories);
   } catch (error) {
-    console.error('❌ Error getting repositories:', error);
-    res.status(500).json({ error: error.message });
+    logger.error('Failed to list repositories:', error);
+    res.status(500).json({ error: '無法獲取映像庫列表' });
   }
-};
+}
 
-// 獲取指定倉庫的標籤列表
-const getTags = async (req, res) => {
+// 列出標籤
+async function listTags(req, res) {
   try {
-    const { repository } = req.query;
-    if (!repository) {
-      return res.status(400).json({ error: 'Repository parameter is required' });
-    }
-    
-    const stdout = await containerRuntime.listTags(repository);
-    const tags = stdout.trim().split('\n').filter(tag => tag !== '<none>');
+    const { repository } = req.params;
+    const tags = await dockerService.listTags(repository);
     res.json(tags);
   } catch (error) {
-    console.error('❌ Error getting tags:', error);
-    res.status(500).json({ error: error.message });
+    logger.error('Failed to list tags:', error);
+    res.status(500).json({ error: '無法獲取標籤列表' });
   }
-};
+}
 
 module.exports = {
-  getImages,
+  listImages,
   getImageDetails,
   uploadImage,
-  deleteImage,
-  installImage,
-  packageImages,
-  extractImages,
-  loadImages,
-  retagImages,
-  getRepositories,
-  getTags
-}; 
+  pullImage,
+  removeImage,
+  tagImage,
+  pushImage,
+  searchImages,
+  saveImage,
+  loadImage,
+  upload,
+  listRepositories,
+  listTags
+};

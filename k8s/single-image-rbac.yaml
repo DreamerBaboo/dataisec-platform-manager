@@ -11,8 +11,11 @@ metadata:
   name: dataisec-platform-role
 rules:
   - apiGroups: [""]
-    resources: ["pods", "pods/exec", "services", "configmaps", "secrets", "persistentvolumeclaims", "nodes"]
+    resources: ["pods", "pods/exec", "pods/log", "services", "configmaps", "secrets", "persistentvolumeclaims", "nodes"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "list", "watch", "create"]
   - apiGroups: ["apps"]
     resources: ["deployments", "statefulsets"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
@@ -28,9 +31,6 @@ rules:
   - apiGroups: [""]
     resources: ["nodes/debug"]
     verbs: ["create", "get", "list", "delete"]
-  - apiGroups: [""]
-    resources: ["namespaces"]
-    verbs: ["get", "list", "watch"]
   - apiGroups: [""]
     resources: ["events"]
     verbs: ["get", "list", "watch"]

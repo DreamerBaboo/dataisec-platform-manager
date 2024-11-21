@@ -33,11 +33,18 @@ router.get('/namespaces', authenticateToken, async (req, res) => {
 // 獲取 Pod 列表
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const { namespace } = req.query;
-    const pods = await podService.getPods(namespace);
+    const { namespace, search } = req.query;
+    logger.info('Getting pods with filters:', { namespace, search });
+    
+    const pods = await podService.getPods(namespace, search);
     res.json(pods);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    logger.error('Error getting pods:', error);
+    res.status(500).json({ 
+      error: 'Failed to get pods',
+      message: error.message,
+      details: error.response?.body || error.stack
+    });
   }
 });
 

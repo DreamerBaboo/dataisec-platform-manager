@@ -23,6 +23,12 @@ spec:
         options:
           - name: ndots
             value: "5"
+      # 添加 initContainer 來預拉取 busybox 映像檔
+      initContainers:
+        - name: pull-debug-image
+          image: busybox:stable
+          imagePullPolicy: Never
+          command: ['sh', '-c', 'echo "Debug image pulled successfully"']
       containers:
         - name: dataisec-platform
           image: dreamerbaboo/dataisec-platform:latest
@@ -32,6 +38,9 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
+            # 添加調試映像檔配置
+            - name: DEBUG_IMAGE
+              value: "busybox:stable"
             # 明確映射 ConfigMap 中的環境變量
             - name: VITE_API_BASE_URL
               valueFrom:
