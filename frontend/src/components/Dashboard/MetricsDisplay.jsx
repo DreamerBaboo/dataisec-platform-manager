@@ -20,19 +20,18 @@ const LAYOUT_STORAGE_KEY = 'metrics-dashboard-layout';
 const MetricsDisplay = ({ metrics, selectedNode }) => {
   const { t } = useAppTranslation();
   const [layout, setLayout] = useState(() => {
-    // 從 localStorage 讀取保存的布局，如果沒有則使用默認布局
     const savedLayout = localStorage.getItem(LAYOUT_STORAGE_KEY);
     return savedLayout ? JSON.parse(savedLayout) : DEFAULT_LAYOUT;
   });
 
-  // 當布局改變時保存到 localStorage
   const handleLayoutChange = useCallback((newLayout) => {
     setLayout(newLayout);
     localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(newLayout));
   }, []);
 
-  // 格式化數值的輔助函數
   const formatValue = (value, type) => {
+    if (value === undefined || value === null) return 'N/A';
+    
     switch (type) {
       case 'percentage':
         return `${value.toFixed(2)}%`;
@@ -42,8 +41,8 @@ const MetricsDisplay = ({ metrics, selectedNode }) => {
         return `${formatBytes(value)}/s`;
       case 'cores':
         return `${value.toFixed(1)} cores`;
-      case 'gigabytes':  // 新增的 case
-        return `${formatBytes(value)}`;
+      case 'gigabytes':
+        return `${formatBytes(value * 1024 * 1024 * 1024)}`;
       default:
         return value.toString();
     }
@@ -57,15 +56,18 @@ const MetricsDisplay = ({ metrics, selectedNode }) => {
     return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
   };
 
-  if (!metrics || !metrics[selectedNode]) {
+  // Get the correct metrics based on selected node
+  const currentMetrics = selectedNode === 'cluster' 
+    ? metrics?.cluster 
+    : metrics?.nodes?.[selectedNode];
+
+  if (!currentMetrics) {
     return (
       <Box sx={{ mt: 2 }}>
         <Typography>{t('dashboard:messages.noMetricsAvailable')}</Typography>
       </Box>
     );
   }
-
-  const nodeMetrics = metrics[selectedNode];
 
   const getChartOption = (data, title, type = 'line', options = {}) => {
     if (!data || (!Array.isArray(data) && type !== 'pie')) {
@@ -326,7 +328,7 @@ const MetricsDisplay = ({ metrics, selectedNode }) => {
             }}>
               <ReactECharts
                 option={getChartOption(
-                  metricType === 'network' ? nodeMetrics?.network?.rx : nodeMetrics?.[metricType],
+                  metricType === 'network' ? currentMetrics?.network?.rx : currentMetrics?.[metricType],
                   '',
                   metricType === 'storage' ? 'pie' : 'line',
                   {

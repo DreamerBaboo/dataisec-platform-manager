@@ -140,10 +140,10 @@ opensearchJavaOpts: "${JAVA_HEAP}" #[-Xmx2G -Xms2G, -Xmx4G -Xms4G, -Xmx6G -Xms6G
 
 resources:
   requests:
-    cpu: "${CPU_REQUEST}"" #[200m, 300m, 400m, 500m, 600m, 700m, 800m, 900m, 1000m, ]
+    cpu: "${CPU_REQUEST}" #[200m, 300m, 400m, 500m, 600m, 700m, 800m, 900m, 1000m, ]
     memory: "${MEMORY_REQUEST}"" #[2Gi, 4Gi, 8Gi]
   limits:
-    cpu: "${CPU_LIMIT}"" #[2000m, 3000m, 4000m, 5000m, 6000m, 7000m, 8000m]
+    cpu: "${CPU_LIMIT}" #[2000m, 3000m, 4000m, 5000m, 6000m, 7000m, 8000m]
     memory: "${MEMORY_LIMIT}" #[2Gi, 4Gi, 8Gi, 10Gi, 12Gi, 16Gi, 18Gi, 20Gi, 24Gi, 32Gi]
 initResources:
   limits:

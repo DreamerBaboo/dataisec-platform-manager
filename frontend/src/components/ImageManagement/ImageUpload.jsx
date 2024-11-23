@@ -69,7 +69,7 @@ const ImageUpload = ({ open, onClose, onSuccess }) => {
     logger.info('📊 File size:', formatFileSize(fileInfo.file.size));
 
     const formData = new FormData();
-    formData.append('image', fileInfo.file);
+    formData.append('file', fileInfo.file);
 
     try {
       const xhr = new XMLHttpRequest();
@@ -103,7 +103,7 @@ const ImageUpload = ({ open, onClose, onSuccess }) => {
       }
 
       const response = await new Promise((resolve, reject) => {
-        xhr.open('POST', getApiUrl('images/upload'));
+        xhr.open('POST', getApiUrl('api/images/upload'));  // Updated endpoint
         
         // 添加認證頭
         xhr.setRequestHeader('Authorization', `Bearer ${token}`);
@@ -142,12 +142,25 @@ const ImageUpload = ({ open, onClose, onSuccess }) => {
       });
 
       logger.info('✅ Upload completed:', response);
-      
+
+      if (response.loadedImages) {
+        setExtractedImages(response.loadedImages);
+        setConfirmationOpen(true);
+        setProcessingStatus('');
+
+        enqueueSnackbar(t('imageManagement:message.uploadSuccess'), {
+          variant: 'success',
+          anchorOrigin: { vertical: 'bottom', horizontal: 'right' }
+        });
+      } else {
+        throw new Error('No images were loaded from the uploaded file');
+      }
+
       // 解析上傳的鏡像文件
       logger.info('🔍 Starting image extraction');
       setProcessingStatus(t('images:imageManagement.messages.extracting'));
       
-      const extractResponse = await fetch(getApiUrl('images/extract'), {
+      const extractResponse = await fetch(getApiUrl('api/images/extract'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -227,7 +240,7 @@ const ImageUpload = ({ open, onClose, onSuccess }) => {
       const repository = localStorage.getItem('repositoryHost') || 'localhost';
       const port = localStorage.getItem('repositoryPort') || '5000';
 
-      const response = await fetch(getApiUrl('images/retag'), {
+      const response = await fetch(getApiUrl('api/images/retag'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

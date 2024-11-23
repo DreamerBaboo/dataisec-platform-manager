@@ -59,5 +59,11 @@
     },
     "status": {
         "uploading": "Uploading"
+    },
+    "dialog": {
+        "deleteTitle": "Confirm Deletion",
+        "deleteConfirmation": "Are you sure you want to delete {{count}} selected images?",
+        "deleteConfirmation_one": "Are you sure you want to delete the selected image?",
+        "deleteConfirmation_other": "Are you sure you want to delete {{count}} selected images?"
     }
 }

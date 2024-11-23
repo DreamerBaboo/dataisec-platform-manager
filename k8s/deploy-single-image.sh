@@ -12,6 +12,9 @@ kubectl apply -f ./single-image-rbac.yaml -n dataisec
 # 部署 ConfigMap
 kubectl apply -f ./single-image-configmap.yaml -n dataisec
 
+# 部署單一pv
+kubectl apply -f ./single-image-persistent.yaml -n dataisec
+
 # 部署秘密
 kubectl apply -f ./single-image-secrets.yaml -n dataisec
 

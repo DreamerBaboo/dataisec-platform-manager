@@ -23,12 +23,8 @@ spec:
         options:
           - name: ndots
             value: "5"
-      # 添加 initContainer 來預拉取 busybox 映像檔
-      initContainers:
-        - name: pull-debug-image
-          image: busybox:stable
-          imagePullPolicy: Never
-          command: ['sh', '-c', 'echo "Debug image pulled successfully"']
+      securityContext:
+        fsGroup: 0 
       containers:
         - name: dataisec-platform
           image: dreamerbaboo/dataisec-platform:latest
@@ -38,9 +34,6 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
-            # 添加調試映像檔配置
-            - name: DEBUG_IMAGE
-              value: "busybox:stable"
             # 明確映射 ConfigMap 中的環境變量
             - name: VITE_API_BASE_URL
               valueFrom:
@@ -71,10 +64,21 @@ spec:
               value: "kubernetes.default.svc"
             - name: KUBERNETES_SERVICE_PORT
               value: "443"
+            - name: CONTAINERD_ADDRESS
+              value: "/run/containerd/containerd.sock"
+            - name: CONTAINERD_NAMESPACE
+              value: "k8s.io"
+            # 添加 root 用戶配置
+            - name: USER
+              value: "root"
           ports:
             - containerPort: 3001
               name: backend
               protocol: TCP
+          securityContext:
+            privileged: true
+            runAsUser: 0
+            runAsGroup: 0
           envFrom:
             - configMapRef:
                 name: dataisec-platform-config
@@ -84,6 +88,21 @@ spec:
             - name: kube-api-access
               mountPath: /var/run/secrets/kubernetes.io/serviceaccount
               readOnly: true
+            # Docker socket 掛載
+            - name: docker-sock
+              mountPath: /var/run/docker.sock
+            # Containerd socket 掛載
+            - name: containerd-sock
+              mountPath: /run/containerd/containerd.sock
+            # 添加 nerdctl 二進制文件掛載
+            - name: nerdctl-binary
+              mountPath: /usr/local/bin/nerdctl
+            # 添加 containerd 配置目錄
+            - name: containerd-config
+              mountPath: /etc/containerd
+            # Add deployment templates volume mount
+            - name: deployment-templates
+              mountPath: /app/deploymentTemplate
       volumes:
         - name: kube-api-access
           projected:
@@ -103,3 +122,27 @@ spec:
                       fieldRef:
                         apiVersion: v1
                         fieldPath: metadata.namespace
+        # Docker socket volume
+        - name: docker-sock
+          hostPath:
+            path: /var/run/docker.sock
+            type: Socket
+        # Containerd socket volume
+        - name: containerd-sock
+          hostPath:
+            path: /run/containerd/containerd.sock
+            type: Socket
+        # nerdctl 二進制文件
+        - name: nerdctl-binary
+          hostPath:
+            path: /usr/local/bin/nerdctl
+            type: File
+        # containerd 配置目錄
+        - name: containerd-config
+          hostPath:
+            path: /etc/containerd
+            type: Directory
+        # Add deployment templates volume
+        - name: deployment-templates
+          persistentVolumeClaim:
+            claimName: dataisec-platform-deployment-templates-pvc

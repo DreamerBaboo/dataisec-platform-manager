@@ -58,10 +58,6 @@ const ImageList = () => {
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
   const [order, setOrder] = useState('desc');
   const [orderBy, setOrderBy] = useState('uploadDate');
-  const ROW_HEIGHT = 53; // 每行的高度（根據 MUI 的默認值）
-  const HEADER_HEIGHT = 56; // 表頭高度
-  const ROWS_PER_PAGE = 10; // 默認顯示 10 行
-  const TABLE_HEIGHT = ROW_HEIGHT * ROWS_PER_PAGE + HEADER_HEIGHT;
 
   const fetchImages = async () => {
     logger.info('🔄 Starting to fetch images...');
@@ -69,17 +65,28 @@ const ImageList = () => {
       setLoading(true);
       setError(null);
       
-      const data = await api.get('api/images');
+      const response = await fetch(getApiUrl('api/images/list'), {  
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch images: ${response.statusText}`);
+      }
+
+      const data = await response.json();
       logger.info('📥 Response received:', data);
       
       // 確保數據格式正確
       const formattedData = (Array.isArray(data) ? data : []).map(image => ({
-        id: image.id || `${image.name}-${image.tag}`,
-        name: image.name,
-        tag: image.tag,
-        size: image.size,
-        created: image.created,
-        repository: image.repository,
+        id: image.ID || `${image.Repository}-${image.Tag}`,
+        name: image.Repository,
+        tag: image.Tag,
+        size: image.Size,
+        created: image.Created,
+        repository: image.Repository,
         status: image.status || 'active'
       }));
       
@@ -112,17 +119,28 @@ const ImageList = () => {
       setLoading(true);
       setError(null);
       
-      const data = await api.get('api/images');
+      const response = await fetch(getApiUrl('api/images/list'), {  
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch images: ${response.statusText}`);
+      }
+
+      const data = await response.json();
       logger.info('📥 Response received:', data);
       
       // 確保數據格式正確
       const formattedData = (Array.isArray(data) ? data : []).map(image => ({
-        id: image.id || `${image.name}-${image.tag}`,
-        name: image.name,
-        tag: image.tag,
-        size: image.size,
-        created: image.created,
-        repository: image.repository,
+        id: image.ID || `${image.Repository}-${image.Tag}`,
+        name: image.Repository,
+        tag: image.Tag,
+        size: image.Size,
+        created: image.Created,
+        repository: image.Repository,
         status: image.status || 'active'
       }));
       
@@ -201,13 +219,23 @@ const ImageList = () => {
     try {
       logger.info('🗑️ Starting bulk delete for images:', selected);
       
-      const response = await api.post('images/delete', { 
-        images: selected 
+      const response = await fetch(getApiUrl('api/images/delete'), {
+        method: 'DELETE',  
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ images: selected })
       });
 
-      logger.info('✅ Delete result:', response);
+      if (!response.ok) {
+        throw new Error(`Delete failed: ${response.statusText}`);
+      }
 
-      const hasErrors = response.results.some(r => r.status === 'error');
+      const result = await response.json();
+      logger.info('✅ Delete result:', result);
+
+      const hasErrors = result.results?.some(r => r.status === 'error');
       
       if (hasErrors) {
         enqueueSnackbar(t('imageManagement:message.partialDeleteFailed'), {
@@ -233,7 +261,7 @@ const ImageList = () => {
   };
 
   const handlePackage = async () => {
-    logger.info('📦 Starting package process...');
+    logger.info('📦 開始打包映像檔...');
     setPackagingStatus(prev => ({ ...prev, loading: true, progress: 0 }));
     
     const snackbarKey = enqueueSnackbar(t('imageManagement:message.packageStart'), {
@@ -245,18 +273,14 @@ const ImageList = () => {
       )
     });
     
-    setPackagingStatus(prev => ({ ...prev, snackbarKey }));
-
     try {
       const selectedImages = selected.map(imageKey => {
         const [name, tag] = imageKey.split(':');
         return { name, tag, fullName: imageKey };
       });
 
-      logger.info('📦 Images to package:', selectedImages);
-
-      // 使用 fetch 因為需要處理 blob 下載
-      const response = await fetch(getApiUrl('images/package'), {
+      // 使用 fetch 直接處理二進制數據
+      const response = await fetch(getApiUrl('api/images/package'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -266,24 +290,13 @@ const ImageList = () => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to package images');
+        throw new Error(`打包失敗: ${response.statusText}`);
       }
 
-      closeSnackbar(snackbarKey);
-      const downloadingKey = enqueueSnackbar(t('imageManagement.message.downloading'), {
-        variant: 'info',
-        persist: true,
-        anchorOrigin: { vertical: 'bottom', horizontal: 'right' },
-        action: (key) => (
-          <CircularProgress size={24} sx={{ color: 'white', marginLeft: 1 }} />
-        )
-      });
-
+      // 處理下載
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      const today = new Date().toISOString().split('T')[0];
-      const filename = `images-${today}.tar`;
+      const filename = `docker-images-${new Date().toISOString().slice(0,10)}.tar`;
       
       const a = document.createElement('a');
       a.href = url;
@@ -293,18 +306,16 @@ const ImageList = () => {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
 
-      closeSnackbar(downloadingKey);
-      enqueueSnackbar(t('imageManagement.message.downloadSuccess'), { 
+      closeSnackbar(snackbarKey);
+      enqueueSnackbar(t('imageManagement:message.packageSuccess'), {
         variant: 'success',
-        autoHideDuration: 3000,
-        anchorOrigin: { vertical: 'bottom', horizontal: 'right' }
+        autoHideDuration: 3000
       });
     } catch (error) {
-      console.error('❌ Error packaging images:', error);
-      enqueueSnackbar(error.message || t('imageManagement.message.packageFailed'), { 
+      logger.error('❌ 打包映像檔失敗:', error);
+      enqueueSnackbar(t('imageManagement:message.packageFailed'), {
         variant: 'error',
-        autoHideDuration: 3000,
-        anchorOrigin: { vertical: 'bottom', horizontal: 'right' }
+        autoHideDuration: 3000
       });
     } finally {
       setPackagingStatus({
@@ -318,7 +329,7 @@ const ImageList = () => {
   const handleViewDetails = async (imageId) => {
     logger.info('🔍 Viewing details for image:', imageId);
     try {
-      const details = await api.get(`images/${imageId}`);
+      const details = await api.get(`api/images/${imageId}`);
       logger.info('📦 Image details received:', details);
       setSelectedImage(details);
     } catch (error) {
@@ -400,63 +411,62 @@ const ImageList = () => {
   };
 
   return (
-    <Box sx={{ width: '100%', minWidth: '1182px' }}>
-      <Paper sx={{ mb: 2, p: 2 }}>
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
-          gap: 2 
-        }}>
-          <Typography variant="h6" component="div">
-            {t('imageManagement:common.imageList')} ({images.length})
+    <Box sx={{ height: '90vh', display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <Paper sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <Toolbar
+          sx={{
+            pl: { sm: 2 },
+            pr: { xs: 1, sm: 1 }
+          }}
+        >
+          <Typography
+            sx={{ flex: '1 1 100%' }}
+            variant="h6"
+            component="div"
+          >
+            {t('imageManagement:common.imageList')}
+            {selected.length > 0 && (
+              <Typography
+                sx={{ ml: 2 }}
+                color="inherit"
+                variant="subtitle1"
+                component="span"
+              >
+                {selected.length} {t('common:selected')}
+              </Typography>
+            )}
           </Typography>
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center',
-            gap: 1,
-            flex: 1,
-            maxWidth: 500,
-            ml: 2
-          }}>
-            <TextField
-              size="small"
-              placeholder={t('imageManagement:message.searchImages')}
-              value={searchTerm}
-              onChange={(e) => handleSearch(e.target.value)}
-              sx={{ flex: 1 }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon color="action" />
-                  </InputAdornment>
-                ),
-                endAdornment: searchTerm && (
-                  <InputAdornment position="end">
-                    <IconButton
-                      size="small"
-                      onClick={handleClearSearch}
-                      edge="end"
-                    >
-                      <ClearIcon />
-                    </IconButton>
-                  </InputAdornment>
-                )
-              }}
-            />
-            <IconButton onClick={() => setConfigOpen(true)}>
-              <SettingsIcon />
-            </IconButton>
-            <IconButton onClick={handleRefresh} disabled={loading}>
-              <RefreshIcon />
-            </IconButton>
-          </Box>
-        </Box>
-      </Paper>
+          <TextField
+            size="small"
+            value={searchTerm}
+            onChange={(e) => handleSearch(e.target.value)}
+            placeholder={t('imageManagement:message.searchImages')}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+              endAdornment: searchTerm && (
+                <InputAdornment position="end">
+                  <IconButton size="small" onClick={handleClearSearch}>
+                    <ClearIcon />
+                  </IconButton>
+                </InputAdornment>
+              )
+            }}
+            sx={{ width: 300, mr: 2 }}
+          />
+          <IconButton onClick={handleRefresh} disabled={loading}>
+            <RefreshIcon />
+          </IconButton>
+          <IconButton onClick={() => setConfigOpen(true)}>
+            <SettingsIcon />
+          </IconButton>
+        </Toolbar>
 
-      <Paper sx={{ width: '100%', mb: 3 }}>
-        <TableContainer sx={{ maxHeight: TABLE_HEIGHT }}>
-          <Table stickyHeader>
+        <TableContainer sx={{ flex: 1, overflow: 'auto' }}>
+          <Table stickyHeader size="small">
             <TableHead>
               <TableRow>
                 <TableCell padding="checkbox">
@@ -543,7 +553,7 @@ const ImageList = () => {
         </TableContainer>
       </Paper>
 
-      <Paper sx={{ p: 2, mt: 2 }}>
+      <Paper sx={{ p: 2, mt: 'auto' }}>
         <Box sx={{ 
           display: 'flex', 
           justifyContent: 'space-between', 

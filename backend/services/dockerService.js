@@ -1,75 +1,93 @@
 const path = require('path');
 const fs = require('fs').promises;
 const os = require('os');
-const ContainerService = require('./containerService');
+const containerRuntime = require('../utils/container-runtime');
 const { spawn } = require('child_process');
 const logger = require('../utils/logger');
 
 class DockerService {
-
   constructor() {
     this.dockerPath = 'docker';
+    this.containerRuntime = containerRuntime;
   }
 
   async executeCommand(args) {
-    return new Promise((resolve, reject) => {
-      logger.info(`Executing docker command: ${args.join(' ')}`);
-      
-      const process = spawn(this.dockerPath, args);
-      let stdout = '';
-      let stderr = '';
+    logger.info(`執行 Docker 命令: ${args.join(' ')}`);
+    
+    try {
+      // 首先嘗試直接執行 docker 命令
+      return await new Promise((resolve, reject) => {
+        const process = spawn(this.dockerPath, args);
+        let stdout = '';
+        let stderr = '';
 
-      process.stdout.on('data', (data) => {
-        stdout += data.toString();
-      });
+        process.stdout.on('data', (data) => {
+          stdout += data.toString();
+          logger.debug(`Docker stdout: ${data.toString().trim()}`);
+        });
 
-      process.stderr.on('data', (data) => {
-        stderr += data.toString();
-      });
+        process.stderr.on('data', (data) => {
+          stderr += data.toString();
+          logger.debug(`Docker stderr: ${data.toString().trim()}`);
+        });
 
-      process.on('close', (code) => {
-        if (code === 0) {
-          resolve(stdout.trim());
-        } else {
-          reject(new Error(`Docker command failed: ${stderr}`));
-        }
-      });
+        process.on('close', (code) => {
+          if (code === 0) {
+            resolve(stdout.trim());
+          } else {
+            const errorMessage = stderr || stdout;
+            logger.error(`Docker 命令失敗 (代碼 ${code}): ${errorMessage}`);
+            reject(new Error(`Docker 命令失敗: ${errorMessage}`));
+          }
+        });
 
-      process.on('error', (error) => {
-        reject(new Error(`Failed to execute docker command: ${error.message}`));
+        process.on('error', (error) => {
+          logger.error('Docker 命令執行錯誤:', error);
+          reject(new Error(`無法執行 Docker 命令: ${error.message}`));
+        });
       });
-    });
+    } catch (primaryError) {
+      // 如果直接執行 docker 失敗，嘗試使用 container-runtime
+      logger.warn('直接執行 docker 失敗，嘗試使用 container-runtime:', primaryError);
+      try {
+        const result = await this.containerRuntime.executeCommand(args.join(' '));
+        return result;
+      } catch (fallbackError) {
+        logger.error('container-runtime 也失敗:', fallbackError);
+        throw new Error(`容器命令執行失敗: ${primaryError.message} (備選方案也失敗: ${fallbackError.message})`);
+      }
+    }
   }
 
   async listRepositories() {
     try {
-      const output = await this.containerService.executeCommand(['images', '--format', '{"Repository":"{{.Repository}}","Tag":"{{.Tag}}","ID":"{{.ID}}","CreatedAt":"{{.CreatedAt}}","Size":"{{.Size}}"}']);
+      const output = await this.executeCommand(['images', '--format', '{"Repository":"{{.Repository}}","Tag":"{{.Tag}}","ID":"{{.ID}}","CreatedAt":"{{.CreatedAt}}","Size":"{{.Size}}"}']);
       return this.parseRepositories(output);
     } catch (error) {
-      console.error('Failed to list repositories:', error);
+      logger.error('無法列出倉庫:', error);
       throw error;
     }
   }
 
   async listTags(repository) {
     try {
-      console.log(`Fetching tags for repository: ${repository}`);
-      const output = await this.containerService.executeCommand(['images', repository, '--format', '{{.Tag}}']);
+      logger.info(`獲取倉庫標籤: ${repository}`);
+      const output = await this.executeCommand(['images', repository, '--format', '{{.Tag}}']);
       const tags = output.split('\n').filter(Boolean);
-      console.log(`Found ${tags.length} tags for ${repository}`);
+      logger.info(`找到 ${tags.length} 個標籤，屬於 ${repository}`);
       return tags;
     } catch (error) {
-      console.error(`Failed to list tags for ${repository}:`, error);
+      logger.error(`無法列出 ${repository} 的標籤:`, error);
       throw error;
     }
   }
 
   async searchImages(term) {
     try {
-      const output = await this.containerService.executeCommand(['search', '--format', '{"Name":"{{.Name}}","Description":"{{.Description}}","Stars":"{{.StarCount}}","Official":"{{.IsOfficial}}","Automated":"{{.IsAutomated}}"}', term]);
+      const output = await this.executeCommand(['search', '--format', '{"Name":"{{.Name}}","Description":"{{.Description}}","Stars":"{{.StarCount}}","Official":"{{.IsOfficial}}","Automated":"{{.IsAutomated}}"}', term]);
       return this.parseSearchResults(output);
     } catch (error) {
-      console.error('Failed to search images:', error);
+      logger.error('搜索映像檔失敗:', error);
       throw error;
     }
   }
@@ -88,7 +106,7 @@ class DockerService {
           size: image.Size
         }));
     } catch (error) {
-      console.error('Failed to parse repositories:', error);
+      logger.error('解析倉庫資訊失敗:', error);
       throw error;
     }
   }
@@ -107,7 +125,7 @@ class DockerService {
           automated: result.Automated
         }));
     } catch (error) {
-      console.error('Failed to parse search results:', error);
+      logger.error('解析搜索結果失敗:', error);
       throw error;
     }
   }
@@ -118,39 +136,41 @@ class DockerService {
       const sanitizedName = imageName.replace(/[\/\:]/g, '-');
       const outputPath = path.join(os.tmpdir(), `${sanitizedName}-${timestamp}.tar`);
       
-      console.log(`Saving image ${imageName} to ${outputPath}`);
-      await this.containerService.executeCommand(['save', '-o', outputPath, imageName]);
+      logger.info(`保存映像檔 ${imageName} 到 ${outputPath}`);
+      await this.executeCommand(['save', '-o', outputPath, imageName]);
       
       return {
         filePath: outputPath,
         fileName: path.basename(outputPath)
       };
     } catch (error) {
-      console.error(`Failed to save image ${imageName}:`, error);
+      logger.error(`保存映像檔 ${imageName} 失敗:`, error);
       throw error;
     }
   }
 
   async loadImage(filePath) {
     try {
-      console.log(`Loading image from ${filePath}`);
-      const result = await this.containerService.executeCommand(['load', '-i', filePath]);
+      logger.info(`從 ${filePath} 載入映像檔`);
+      const result = await this.executeCommand(['load', '-i', filePath]);
       
       try {
         await fs.unlink(filePath);
       } catch (cleanupError) {
-        console.warn('Failed to cleanup temporary file:', cleanupError);
+        logger.warn('清理臨時檔案失敗:', cleanupError);
       }
       
       return result;
     } catch (error) {
-      console.error('Failed to load image:', error);
+      logger.error('載入映像檔失敗:', error);
       throw error;
     }
   }
 
   async listImages() {
     try {
+      logger.info('開始列出映像檔');
+      
       const output = await this.executeCommand([
         'images',
         '--format',
@@ -163,16 +183,19 @@ class DockerService {
           try {
             return JSON.parse(line);
           } catch (e) {
-            logger.error('Failed to parse image line:', line, e);
+            logger.error('解析映像檔行失敗:', line, e);
             return null;
           }
         })
-        .filter(img => img !== null);
+        .filter(img => img !== null)
+        // 過濾掉 sha256 和 <none> 標籤的映像
+        .filter(img => img.Repository !== 'sha256' && img.Tag !== '<none>');
 
-      logger.info(`Found ${images.length} images`);
+      logger.info(`找到 ${images.length} 個有效映像檔`);
+      logger.info('image list :', images);
       return images;
     } catch (error) {
-      logger.error('Error listing images:', error);
+      logger.error('列出映像檔失敗:', error);
       throw error;
     }
   }
@@ -182,7 +205,7 @@ class DockerService {
       const output = await this.executeCommand(['inspect', imageName]);
       return JSON.parse(output);
     } catch (error) {
-      logger.error(`Error inspecting image ${imageName}:`, error);
+      logger.error(`檢查映像檔 ${imageName} 失敗:`, error);
       throw error;
     }
   }
@@ -190,10 +213,10 @@ class DockerService {
   async pullImage(imageName) {
     try {
       await this.executeCommand(['pull', imageName]);
-      logger.info(`Successfully pulled image: ${imageName}`);
+      logger.info(`成功拉取映像檔: ${imageName}`);
       return true;
     } catch (error) {
-      logger.error(`Error pulling image ${imageName}:`, error);
+      logger.error(`拉取映像檔 ${imageName} 失敗:`, error);
       throw error;
     }
   }
@@ -201,10 +224,10 @@ class DockerService {
   async removeImage(imageId) {
     try {
       await this.executeCommand(['rmi', imageId]);
-      logger.info(`Successfully removed image: ${imageId}`);
+      logger.info(`成功移除映像檔: ${imageId}`);
       return true;
     } catch (error) {
-      logger.error(`Error removing image ${imageId}:`, error);
+      logger.error(`移除映像檔 ${imageId} 失敗:`, error);
       throw error;
     }
   }
@@ -212,10 +235,10 @@ class DockerService {
   async tagImage(source, target) {
     try {
       await this.executeCommand(['tag', source, target]);
-      logger.info(`Successfully tagged image ${source} as ${target}`);
+      logger.info(`成功標記映像檔 ${source} 為 ${target}`);
       return true;
     } catch (error) {
-      logger.error(`Error tagging image ${source} as ${target}:`, error);
+      logger.error(`標記映像檔 ${source} 為 ${target} 失敗:`, error);
       throw error;
     }
   }
@@ -223,10 +246,10 @@ class DockerService {
   async pushImage(imageName) {
     try {
       await this.executeCommand(['push', imageName]);
-      logger.info(`Successfully pushed image: ${imageName}`);
+      logger.info(`成功推送映像檔: ${imageName}`);
       return true;
     } catch (error) {
-      logger.error(`Error pushing image ${imageName}:`, error);
+      logger.error(`推送映像檔 ${imageName} 失敗:`, error);
       throw error;
     }
   }

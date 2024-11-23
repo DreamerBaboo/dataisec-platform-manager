@@ -116,15 +116,23 @@ const PodDashboard = () => {
 
     try {
       logger.info('開始獲取選中 Pod 的指標，選中的 Pod:', selectedPods);
+      const selectedPodDetails = pods.find(pod => pod.name === selectedPods[0]);
+      
+      if (!selectedPodDetails) {
+        throw new Error('找不到選中的 Pod 詳細資訊');
+      }
+
       const data = await api.post('api/pods/calculate-resources', {
-        podNames: selectedPods
+        podName: selectedPodDetails.name,
+        namespace: selectedPodDetails.namespace
       });
+      
       logger.info('獲取到的 Pod 指標:', data);
       setPodMetrics(data);
     } catch (error) {
       console.error('獲取 Pod 指標時發生錯誤:', error);
     }
-  }, [selectedPods]);
+  }, [selectedPods, pods]);
 
   useEffect(() => {
     fetchSelectedPodsMetrics();
@@ -257,7 +265,7 @@ const PodDashboard = () => {
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Typography variant="h4" color="primary">
-              {podMetrics ? 
+              {podMetrics?.cpu?.cores ? 
                 `${t('dashboard:dashboard.resources.cpu.total')} ${podMetrics.cpu.cores.toFixed(2)} ${t('dashboard:dashboard.resources.cpu.used')}` : 
                 '0 cores'}
             </Typography>
@@ -280,7 +288,7 @@ const PodDashboard = () => {
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Typography variant="h4" color="secondary">
-              {podMetrics ? 
+              {podMetrics?.memory?.usedGB ? 
                 `${podMetrics.memory.usedGB.toFixed(2)} GB` : 
                 '0 GB'}
             </Typography>

@@ -23,6 +23,78 @@ class K8sService {
     this.storageApi = this.kc.makeApiClient(k8s.StorageV1Api);
   }
 
+  // Pod 相關操作
+  async listPods(namespace, labelSelector) {
+    try {
+      const response = await this.k8sApi.listNamespacedPod(namespace, undefined, undefined, undefined, undefined, labelSelector);
+      return response.body;
+    } catch (error) {
+      console.error('Failed to list pods:', error);
+      throw error;
+    }
+  }
+
+  async createPod(namespace, podManifest) {
+    try {
+      const response = await this.k8sApi.createNamespacedPod(namespace, podManifest);
+      return response.body;
+    } catch (error) {
+      console.error('Failed to create pod:', error);
+      throw error;
+    }
+  }
+
+  async deletePod(namespace, name) {
+    try {
+      const response = await this.k8sApi.deleteNamespacedPod(name, namespace);
+      return response.body;
+    } catch (error) {
+      console.error('Failed to delete pod:', error);
+      throw error;
+    }
+  }
+
+  async getPod(namespace, name) {
+    try {
+      const response = await this.k8sApi.readNamespacedPod(name, namespace);
+      return response.body;
+    } catch (error) {
+      console.error('Failed to get pod:', error);
+      throw error;
+    }
+  }
+
+  async execInPod(namespace, podName, containerName, command) {
+    try {
+      const exec = new k8s.Exec(this.kc);
+      return new Promise((resolve, reject) => {
+        let stdout = '';
+        let stderr = '';
+
+        exec.exec(
+          namespace,
+          podName,
+          containerName,
+          command,
+          process.stdout,
+          process.stderr,
+          process.stdin,
+          true,
+          (status) => {
+            if (status.status === 'Success') {
+              resolve({ stdout, stderr });
+            } else {
+              reject(new Error(`Command failed with status: ${status.status}`));
+            }
+          }
+        );
+      });
+    } catch (error) {
+      console.error('Failed to exec in pod:', error);
+      throw error;
+    }
+  }
+
   // 生成部署預覽
   generateDeploymentPreview(config) {
     const deployment = {
@@ -698,4 +770,4 @@ class K8sService {
   }
 }
 
-module.exports = new K8sService(); 
+module.exports = new K8sService();

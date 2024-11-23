@@ -98,6 +98,7 @@
       "yamlTemplate": "YAML Template"
     },
     "basic": {
+      "hidequotapreview": "Hide Quota Preview",
       "useHelmChart": "Use Helm Chart",
       "workload": "Workload",
       "name": "Deployment Name",
@@ -546,6 +547,8 @@
       "title": "Repository Configuration",
       "search": "Search repositories...",
       "repository": "Repository",
+      "selectRepository": "Select repository",
+      "selectTag": "Select tag",
       "tag": "Tag",
       "errors": {
         "fetchFailed": "Failed to fetch repositories",

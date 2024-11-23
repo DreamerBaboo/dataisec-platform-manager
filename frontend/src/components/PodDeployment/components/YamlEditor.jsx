@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { logger } from '../../../utils/logger'; // 導入 logger
+import { logger } from '../../../utils/logger';
+import yaml from 'js-yaml';
 import {
   Dialog,
   DialogTitle,
@@ -61,8 +62,37 @@ const YamlEditor = ({
     setEditedContent(content);
   }, [content]);
 
+  const validateYaml = (content) => {
+    try {
+      if (!content || content.trim() === '') {
+        throw new Error('Template content cannot be empty');
+      }
+      yaml.load(content);
+      return true;
+    } catch (error) {
+      setError(`Invalid YAML: ${error.message}`);
+      return false;
+    }
+  };
+
   const handleSave = async () => {
     try {
+      if (!deploymentName) {
+        setError('Deployment name is required');
+        return;
+      }
+
+      // Validate YAML before saving
+      if (!validateYaml(editedContent)) {
+        return;
+      }
+
+      logger.info('開始保存模板內容', { 
+        deploymentName,
+        contentLength: editedContent.length,
+        contentPreview: editedContent.substring(0, 100)
+      });
+      
       setSaving(true);
       setError(null);
 
@@ -71,19 +101,25 @@ const YamlEditor = ({
         deploymentName,
         editedContent
       );
+      logger.info('模板內容保存成功');
 
       // Call onSave callback with the edited content
       if (onSave) {
         await onSave(editedContent);
+        logger.info('onSave 回調執行成功');
       }
       
       try {
-        logger.info('正在獲取預設值，deploymentName:', deploymentName);
+        logger.info('正在分析模板佔位符', { deploymentName });
         // Analyze template for new placeholders
         const { placeholders, defaultValues, categories } = 
           await templateService.getTemplatePlaceholders(deploymentName);
 
-        logger.info('獲取到的預設值:', { placeholders, defaultValues, categories });
+        logger.info('模板佔位符分析完成', { 
+          placeholdersCount: Object.keys(placeholders).length,
+          defaultValuesCount: Object.keys(defaultValues).length,
+          categoriesCount: categories?.length
+        });
 
         // Trigger template refresh in parent component
         if (onTemplateChange) {
@@ -94,19 +130,19 @@ const YamlEditor = ({
             categories
           });
         }
-      } catch (placeholderError) {
-        console.warn('無法獲取預設值，但模板已保存:', {
-          error: placeholderError,
-          deploymentName,
-          status: placeholderError.response?.status,
-          data: placeholderError.response?.data
-        });
+      } catch (error) {
+        logger.error('分析模板佔位符失敗', error);
+        setError('Failed to analyze template placeholders');
       }
-      
-      onClose();
-    } catch (err) {
-      console.error('保存模板失敗:', err);
-      setError(err.message || '保存模板時發生錯誤');
+    } catch (error) {
+      logger.error('保存模板失敗', { 
+        error: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        responseData: error.response?.data,
+        deploymentName 
+      });
+      setError(error.response?.data?.message || error.message || 'Failed to save template');
     } finally {
       setSaving(false);
     }
@@ -114,12 +150,19 @@ const YamlEditor = ({
 
   const handleEditorChange = (value) => {
     setEditedContent(value);
+    logger.debug('模板內容已更新', { 
+      deploymentName,
+      contentLength: value?.length 
+    });
   };
 
   return (
     <Dialog
       open={open}
-      onClose={onClose}
+      onClose={() => {
+        logger.info('關閉模板編輯器');
+        onClose();
+      }}
       maxWidth="lg"
       fullWidth
       PaperProps={{

@@ -24,7 +24,15 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper
+  Paper,
+  Checkbox,
+  DialogTitle,
+  DialogActions,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  Typography
 } from '@mui/material';
 import {
   Settings as SettingsIcon,
@@ -34,7 +42,9 @@ import {
   Add as AddIcon,
   Delete as DeleteIcon,
   Search as SearchIcon,
-  Clear as ClearIcon
+  Clear as ClearIcon,
+  Download as DownloadIcon,
+  Upload as UploadIcon
 } from '@mui/icons-material';
 import { useAppTranslation } from '../../hooks/useAppTranslation';
 
@@ -84,6 +94,19 @@ const PodDeploymentManagement = () => {
     storageClasses: [],
     persistentVolumes: []
   });
+
+  // Add new states for template download
+  const [templateDialog, setTemplateDialog] = useState(false);
+  const [availableTemplates, setAvailableTemplates] = useState([]);
+  const [selectedTemplates, setSelectedTemplates] = useState([]);
+  const [templateLoading, setTemplateLoading] = useState(false);
+
+  // Add new states for template upload
+  const [uploadDialog, setUploadDialog] = useState(false);
+  const [uploadLoading, setUploadLoading] = useState(false);
+  const [existingTemplates, setExistingTemplates] = useState([]);
+  const [confirmOverwrite, setConfirmOverwrite] = useState(false);
+  const [uploadFile, setUploadFile] = useState(null);
 
   const fetchNamespaces = async () => {
     try {
@@ -231,6 +254,153 @@ const PodDeploymentManagement = () => {
     }
   };
 
+  // Add function to fetch available templates
+  const fetchTemplates = async () => {
+    try {
+      setTemplateLoading(true);
+      const response = await axios.get('/api/deployment-templates/list-templates');
+      setAvailableTemplates(response.data.templates);
+    } catch (error) {
+      console.error('Error fetching templates:', error);
+      setError('Failed to fetch template list');
+    } finally {
+      setTemplateLoading(false);
+    }
+  };
+
+  // Add function to handle template selection
+  const handleTemplateToggle = (templateName) => {
+    setSelectedTemplates(prev => {
+      if (prev.includes(templateName)) {
+        return prev.filter(name => name !== templateName);
+      } else {
+        return [...prev, templateName];
+      }
+    });
+  };
+
+  // Add function to download selected templates
+  const handleTemplateDownload = async () => {
+    try {
+      setTemplateLoading(true);
+      const response = await axios.post('/api/deployment-templates/download-templates', 
+        { templates: selectedTemplates },
+        { responseType: 'blob' }
+      );
+      
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'deployment-templates.zip');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      setTemplateDialog(false);
+      setSelectedTemplates([]);
+    } catch (error) {
+      console.error('Error downloading templates:', error);
+      setError('Failed to download templates');
+    } finally {
+      setTemplateLoading(false);
+    }
+  };
+
+  // Add function to handle template upload
+  const handleTemplateUpload = async (file) => {
+    try {
+      if (!file) {
+        console.error('No file provided');
+        setError('Please select a file to upload');
+        return;
+      }
+
+      if (!file.name.toLowerCase().endsWith('.zip')) {
+        console.error('Invalid file type:', file.type);
+        setError('Only ZIP files are supported');
+        return;
+      }
+
+      setUploadLoading(true);
+      console.log('Uploading file:', file.name, 'Size:', file.size, 'Type:', file.type);
+      
+      const formData = new FormData();
+      formData.append('file', file);
+
+      // First check for existing templates
+      console.log('Checking for existing templates...');
+      const checkResponse = await axios.post('/api/deployment-templates/check-templates', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      console.log('Check response:', checkResponse.data);
+      
+      const { existingTemplates, allTemplates } = checkResponse.data;
+
+      if (existingTemplates.length > 0) {
+        setExistingTemplates(existingTemplates);
+        setUploadFile(file);
+        setConfirmOverwrite(true);
+      } else {
+        await uploadTemplates(file, false);
+      }
+    } catch (error) {
+      console.error('Error uploading templates:', error);
+      console.error('Error details:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        headers: error.response?.headers
+      });
+      setError('Failed to upload templates: ' + (error.response?.data?.error || error.message));
+    } finally {
+      setUploadLoading(false);
+    }
+  };
+
+  // Function to handle the actual upload
+  const uploadTemplates = async (file, overwrite) => {
+    try {
+      if (!file) {
+        console.error('No file provided');
+        setError('Please select a file to upload');
+        return;
+      }
+
+      setUploadLoading(true);
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('overwrite', overwrite);
+
+      await axios.post('/api/deployment-templates/upload-templates', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      setUploadDialog(false);
+      setConfirmOverwrite(false);
+      setUploadFile(null);
+      // Refresh template list if it's open
+      if (templateDialog) {
+        await fetchTemplates();
+      }
+    } catch (error) {
+      console.error('Error uploading templates:', error);
+      console.error('Error details:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        headers: error.response?.headers
+      });
+      setError('Failed to upload templates: ' + (error.response?.data?.error || error.message));
+    } finally {
+      setUploadLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" m={3}>
@@ -300,6 +470,25 @@ const PodDeploymentManagement = () => {
           {t('podDeployment:podDeployment.createNew')}
         </Button>
         <ImportConfig onImport={handleImportConfig} />
+        {/* <Button
+          variant="contained"
+          startIcon={<UploadIcon />}
+          onClick={() => setUploadDialog(true)}
+          sx={{ ml: 1 }}
+        >
+          {t('Upload Templates')}
+        </Button> */}
+        <Button
+          variant="contained"
+          startIcon={<DownloadIcon />}
+          onClick={() => {
+            setTemplateDialog(true);
+            fetchTemplates();
+          }}
+          sx={{ ml: 1 }}
+        >
+          {t('Download Templates')}
+        </Button>
       </Box>
 
       {error && (
@@ -324,8 +513,8 @@ const PodDeploymentManagement = () => {
                 <TableCell>{t('podDeployment:podDeployment.table.restarts')}</TableCell>
                 <TableCell>{t('podDeployment:podDeployment.table.age')}</TableCell>
                 <TableCell>{t('podDeployment:podDeployment.table.node')}</TableCell>
-                <TableCell>{t('podDeployment:podDeployment.table.ip')}</TableCell>
-                <TableCell align="right">{t('podDeployment:podDeployment.table.actions')}</TableCell>
+                {/* <TableCell>{t('podDeployment:podDeployment.table.ip')}</TableCell>
+                <TableCell align="right">{t('podDeployment:podDeployment.table.actions')}</TableCell> */}
               </TableRow>
             </TableHead>
             <TableBody>
@@ -345,7 +534,7 @@ const PodDeploymentManagement = () => {
                   <TableCell>{pod.age}</TableCell>
                   <TableCell>{pod.node}</TableCell>
                   <TableCell>{pod.ip}</TableCell>
-                  <TableCell>
+                  {/* <TableCell>
                     <Tooltip title={t('podDeployment:podDeployment.actions.configure')}>
                       <IconButton onClick={() => setConfigDialog({ open: true, pod })}>
                         <SettingsIcon />
@@ -372,7 +561,7 @@ const PodDeploymentManagement = () => {
                         <DeleteIcon />
                       </IconButton>
                     </Tooltip>
-                  </TableCell>
+                  </TableCell> */}
                 </TableRow>
               ))}
             </TableBody>
@@ -445,6 +634,165 @@ const PodDeploymentManagement = () => {
           />
         </DialogContent>
       </Dialog>
+
+      {/* Add Template Download Dialog */}
+      <Dialog 
+        open={templateDialog} 
+        onClose={() => setTemplateDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>{t('Download Deployment Templates')}</DialogTitle>
+        <DialogContent>
+          {templateLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <List>
+              {availableTemplates.map((template) => (
+                <ListItem key={template} dense button onClick={() => handleTemplateToggle(template)}>
+                  <ListItemIcon>
+                    <Checkbox
+                      edge="start"
+                      checked={selectedTemplates.includes(template)}
+                      tabIndex={-1}
+                      disableRipple
+                    />
+                  </ListItemIcon>
+                  <ListItemText primary={template} />
+                </ListItem>
+              ))}
+            </List>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setTemplateDialog(false)}>{t('Cancel')}</Button>
+          <Button 
+            onClick={handleTemplateDownload}
+            disabled={selectedTemplates.length === 0 || templateLoading}
+            variant="contained"
+          >
+            {t('Download')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Add Template Upload Dialog */}
+      <Dialog 
+        open={uploadDialog} 
+        onClose={() => {
+          setUploadDialog(false);
+          setUploadFile(null);
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>{t('Upload Deployment Templates')}</DialogTitle>
+        <DialogContent>
+          {uploadLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center' }}>
+              <input
+                type="file"
+                accept=".zip"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    console.log('File selected:', {
+                      name: file.name,
+                      type: file.type,
+                      size: file.size
+                    });
+                    handleTemplateUpload(file);
+                  }
+                }}
+                style={{ display: 'none' }}
+                id="template-upload-input"
+              />
+              <label htmlFor="template-upload-input">
+                <Button
+                  variant="contained"
+                  component="span"
+                  startIcon={<UploadIcon />}
+                >
+                  {t('Select Template Zip File')}
+                </Button>
+              </label>
+              <Typography variant="body2" color="textSecondary">
+                {t('Only .zip files are supported')}
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => {
+            setUploadDialog(false);
+            setUploadFile(null);
+          }}>
+            {t('Cancel')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Add Overwrite Confirmation Dialog */}
+      <Dialog
+        open={confirmOverwrite}
+        onClose={() => {
+          setConfirmOverwrite(false);
+          setUploadFile(null);
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>{t('Confirm Template Overwrite')}</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ mb: 2 }}>
+            {t('The following templates already exist:')}
+          </Typography>
+          <List>
+            {existingTemplates.map((template) => (
+              <ListItem key={template}>
+                <ListItemText primary={template} />
+              </ListItem>
+            ))}
+          </List>
+          <Typography>
+            {t('Do you want to overwrite these templates?')}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => {
+            setConfirmOverwrite(false);
+            setUploadFile(null);
+          }}>
+            {t('Cancel')}
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => {
+              uploadTemplates(uploadFile, true);
+              setConfirmOverwrite(false);
+            }}
+          >
+            {t('Overwrite')}
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              uploadTemplates(uploadFile, false);
+              setConfirmOverwrite(false);
+            }}
+          >
+            {t('Skip Existing')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
     </Box>
   );
 };

@@ -235,7 +235,7 @@ export const podDeploymentService = {
       const headers = getAuthHeaders();
       
       const response = await axios.post(
-        `${API_URL}/api/k8s/namespaces`,
+        `${API_URL}/api/namespaces`,
         { namespace },
         headers
       );

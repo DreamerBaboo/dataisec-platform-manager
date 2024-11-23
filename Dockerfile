@@ -16,7 +16,7 @@ COPY frontend/ ./
 ENV NODE_ENV=production
 
 # 構建前端
-RUN npm run build
+RUN npm run build:prod
 
 # 構建階段 - 後端
 FROM node:18-alpine as backend-builder

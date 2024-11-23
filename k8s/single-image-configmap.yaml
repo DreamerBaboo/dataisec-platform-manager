@@ -5,6 +5,8 @@ metadata:
 data:
   CONTAINER_RUNTIME: "nerdctl"
   CONTAINER_NAMESPACE: "k8s.io"
+  POD_NAMESPACE: dataisec
+  NODE_NAME: 192.168.170.126
   VITE_API_BASE_URL: "http://192.168.170.126:30002" 
   API_BASE_URL:  "http://192.168.170.126:30002" # replace with the target service url
   JWT_EXPIRES_IN: "24h"

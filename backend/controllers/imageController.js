@@ -7,12 +7,20 @@ const path = require('path');
 const multer = require('multer');
 const logger = require('../utils/logger');
 const dockerService = require('../services/dockerService');
+const os = require('os');
 
 // 確保上傳目錄存在
 const UPLOAD_DIR = path.join(__dirname, '../uploads');
 if (!fs.existsSync(UPLOAD_DIR)) {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
   logger.info('📁 Created upload directory:', UPLOAD_DIR);
+}
+
+// 確保臨時目錄存在
+const TEMP_DIR = path.join(__dirname, '../temp');
+if (!fs.existsSync(TEMP_DIR)) {
+  fs.mkdirSync(TEMP_DIR, { recursive: true });
+  logger.info('📁 Created temp directory:', TEMP_DIR);
 }
 
 // 修改 multer 配置
@@ -34,6 +42,27 @@ const upload = multer({
   limits: {
     fileSize: 1024 * 1024 * 10000, // 10GB
     files: 1
+  }
+});
+
+// 配置 multer
+const storage2 = multer.diskStorage({
+  destination: function (req, file, cb) {
+    // 確保目錄存在
+    fs.mkdirSync(TEMP_DIR, { recursive: true });
+    cb(null, TEMP_DIR);
+  },
+  filename: function (req, file, cb) {
+    // 使用 UUID 生成唯一文件名
+    const uniqueSuffix = require('uuid').v4();
+    cb(null, `${uniqueSuffix}-${file.originalname}`);
+  }
+});
+
+const upload2 = multer({
+  storage: storage2,
+  limits: {
+    fileSize: 1024 * 1024 * 1024 * 50 // 50GB 限制
   }
 });
 
@@ -87,6 +116,181 @@ const getImages = async (req, res) => {
     });
   }
 };
+
+// 打包映像檔
+async function packageImages(req, res) {
+  let outputPath = null;
+  
+  try {
+    const { images } = req.body;
+    
+    if (!Array.isArray(images) || images.length === 0) {
+      logger.error('無效的請求數據:', req.body);
+      return res.status(400).json({
+        success: false,
+        error: '請提供要打包的映像檔列表'
+      });
+    }
+
+    logger.info(`開始打包 ${images.length} 個映像檔:`, images);
+
+    // 檢查並創建臨時目錄
+    await fsPromises.mkdir(TEMP_DIR, { recursive: true });
+    
+    // 準備映像名稱列表
+    const imageNames = images.map(image => 
+      image.fullName || `${image.name}:${image.tag || 'latest'}`
+    );
+    
+    logger.info('準備打包的映像列表:', imageNames);
+
+    // 生成輸出文件路徑
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    outputPath = path.join(TEMP_DIR, `docker-images-${timestamp}.tar`);
+
+    try {
+      // 使用 containerRuntime 保存所有映像到單個文件
+      await containerRuntime.saveImage(imageNames.join(' '), outputPath);
+      
+      logger.info('映像檔打包完成，開始檢查文件:', outputPath);
+      
+      // 驗證文件是否存在且可讀
+      const stats = await fsPromises.stat(outputPath);
+      if (stats.size === 0) {
+        throw new Error('生成的文件大小為0');
+      }
+
+      logger.info(`文件大小: ${(stats.size / (1024 * 1024)).toFixed(2)} MB`);
+
+      // 設置響應頭
+      res.setHeader('Content-Type', 'application/x-tar');
+      res.setHeader('Content-Disposition', `attachment; filename="${path.basename(outputPath)}"`);
+      res.setHeader('Content-Length', stats.size);
+      res.setHeader('Transfer-Encoding', 'chunked');
+      
+      // 使用 stream 發送文件，設置較大的 buffer
+      const fileStream = fs.createReadStream(outputPath, {
+        highWaterMark: 64 * 1024 // 64KB chunks
+      });
+      
+      // 處理流錯誤
+      fileStream.on('error', (error) => {
+        logger.error('文件流讀取錯誤:', error);
+        cleanup(outputPath);
+        if (!res.headersSent) {
+          res.status(500).json({
+            success: false,
+            error: '文件傳輸失敗: ' + error.message
+          });
+        }
+      });
+
+      // 監控傳輸進度
+      let transferred = 0;
+      fileStream.on('data', (chunk) => {
+        transferred += chunk.length;
+        const progress = ((transferred / stats.size) * 100).toFixed(2);
+        logger.debug(`傳輸進度: ${progress}% (${(transferred / (1024 * 1024)).toFixed(2)}MB / ${(stats.size / (1024 * 1024)).toFixed(2)}MB)`);
+      });
+
+      // 監聽流結束事件
+      fileStream.on('end', () => {
+        logger.info('文件傳輸完成');
+      });
+
+      // 監聽響應完成事件
+      res.on('finish', () => cleanup(outputPath));
+
+      // 處理客戶端斷開連接
+      req.on('close', () => {
+        if (!res.writableEnded) {
+          logger.warn('客戶端斷開連接');
+          cleanup(outputPath);
+        }
+      });
+
+      // 發送文件
+      fileStream.pipe(res);
+
+    } catch (error) {
+      cleanup(outputPath);
+      throw error;
+    }
+
+  } catch (error) {
+    logger.error('打包映像檔失敗:', error);
+    cleanup(outputPath);
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        error: '打包映像檔失敗: ' + error.message
+      });
+    }
+  }
+}
+
+// 清理函數
+async function cleanup(filePath) {
+  if (filePath) {
+    try {
+      if (fs.existsSync(filePath)) {
+        await fsPromises.unlink(filePath);
+        logger.info('臨時文件清理完成:', filePath);
+      }
+    } catch (error) {
+      logger.error('清理臨時文件失敗:', error);
+    }
+  }
+}
+
+// 刪除映像
+async function deleteImages(req, res) {
+  try {
+    const { images } = req.body;
+    
+    if (!Array.isArray(images) || images.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: '請提供要刪除的映像列表'
+      });
+    }
+
+    logger.info('開始刪除映像:', images);
+
+    // 準備映像名稱列表
+    const imageNames = images.map(image => 
+      image || `${image.name}:${image.tag || 'latest'}`
+    );
+    logger.info('準備刪除的映像列表:', imageNames);
+    // 使用 containerRuntime 刪除映像
+    const results = await containerRuntime.deleteImage(imageNames);
+
+    // 檢查是否所有操作都成功
+    const allSuccess = results.every(result => result.success);
+    
+    if (allSuccess) {
+      res.json({
+        success: true,
+        message: '所有映像已成功刪除',
+        results
+      });
+    } else {
+      // 部分成功或全部失敗
+      res.status(207).json({
+        success: false,
+        message: '部分或全部映像刪除失敗',
+        results
+      });
+    }
+
+  } catch (error) {
+    logger.error('刪除映像失敗:', error);
+    res.status(500).json({
+      success: false,
+      error: '刪除映像失敗: ' + error.message
+    });
+  }
+}
 
 // 獲取映像檔列表
 async function listImages(req, res) {
@@ -262,10 +466,60 @@ async function listTags(req, res) {
   }
 }
 
+// 上傳並載入映像
+async function uploadAndLoadImage(req, res) {
+  let uploadedFile = null;
+  
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: '未提供映像檔'
+      });
+    }
+
+    uploadedFile = req.file.path;
+    logger.info('接收到上傳文件:', {
+      originalName: req.file.originalname,
+      size: `${(req.file.size / (1024 * 1024)).toFixed(2)} MB`,
+      path: uploadedFile
+    });
+
+    // 載入映像
+    logger.info('開始載入映像...');
+    const result = await containerRuntime.loadImage(uploadedFile);
+    
+    logger.info('映像載入完成:', result);
+
+    // 清理臨時文件
+    await cleanup(uploadedFile);
+    
+    res.json({
+      success: true,
+      message: '映像上傳並載入成功',
+      loadedImages: result.loadedImages
+    });
+
+  } catch (error) {
+    logger.error('上傳或載入映像失敗:', error);
+    
+    // 清理臨時文件
+    if (uploadedFile) {
+      await cleanup(uploadedFile);
+    }
+
+    res.status(500).json({
+      success: false,
+      error: '上傳或載入映像失敗: ' + error.message
+    });
+  }
+}
+
 module.exports = {
   listImages,
+  packageImages,
+  deleteImages,
   getImageDetails,
-  uploadImage,
   pullImage,
   removeImage,
   tagImage,
@@ -273,7 +527,9 @@ module.exports = {
   searchImages,
   saveImage,
   loadImage,
-  upload,
+  uploadAndLoadImage,
+  upload: upload2,
+  uploadImage,
   listRepositories,
   listTags
 };

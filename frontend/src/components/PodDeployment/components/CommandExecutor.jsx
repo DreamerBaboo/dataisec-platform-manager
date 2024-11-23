@@ -18,6 +18,7 @@ import { CheckCircle, Error, HourglassEmpty, PlayArrow, Close } from '@mui/icons
 import axios from 'axios';
 import { useAppTranslation } from '../../../hooks/useAppTranslation';
 import { getApiUrl } from '../../../utils/api';
+import { getDeploymentTemplatePath } from '../../../utils/paths';
 import { logger } from '../../../utils/logger'; // 導入 logger
 
 const CommandExecutor = ({ name, version, open, onClose }) => {
@@ -70,10 +71,17 @@ const CommandExecutor = ({ name, version, open, onClose }) => {
     for (let i = 0; i < commands.length; i++) {
       const { command, title, description } = commands[i];
       
+      // Transform the command to use the correct deployment template path
+      const transformedCommand = command.replace(
+        /\.\/backend\/deploymentTemplate/g,
+        getDeploymentTemplatePath()
+      );
+      
       logger.info(`⚡ 執行第 ${i + 1}/${commands.length} 個命令:`, {
         title,
         description,
-        command
+        originalCommand: command,
+        transformedCommand
       });
       
       setResults(prev => {
@@ -87,7 +95,7 @@ const CommandExecutor = ({ name, version, open, onClose }) => {
       });
 
       try {
-        const response = await axios.post(getApiUrl('api/execute'), { command });
+        const response = await axios.post(getApiUrl('api/execute'), { command: transformedCommand });
         
         setResults(prev => {
           const newResults = [...prev];

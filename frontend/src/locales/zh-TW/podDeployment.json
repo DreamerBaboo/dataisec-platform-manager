@@ -106,6 +106,7 @@
       "secrets": "密鑰"
     },
     "basic": {
+      "hidequotapreview": "隱藏配額預覽",
       "useHelmChart": "使用 Helm Chart",
       "workload": "工作負載",
       "name": "部署名稱",
@@ -606,6 +607,8 @@
       "title": "倉庫配置",
       "search": "搜索倉庫...",
       "repository": "倉庫",
+      "selectRepository": "選擇倉庫",
+      "selectTag": "選擇標籤",
       "tag": "標籤",
       "errors": {
         "unauthorized": "未授權訪問，請重新登入",

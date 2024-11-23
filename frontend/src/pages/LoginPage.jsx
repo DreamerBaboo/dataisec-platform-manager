@@ -37,7 +37,9 @@ function LoginPage() {
         alignItems: 'center',
         justifyContent: 'center',
         minHeight: '100vh',
-        bgcolor: 'background.default'
+        bgcolor: 'background.default',
+        margin: '0 auto',
+        padding: '0 16px'
       }}
     >
       <Paper

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { logger } from '../../../utils/logger.ts'; // 導入 logger
+import { logger } from '../../../utils/logger.ts';
 import {
   Box,
   Typography,
@@ -10,7 +10,6 @@ import {
   MenuItem,
   TextField,
   Paper,
-  Autocomplete,
   CircularProgress,
   Alert
 } from '@mui/material';
@@ -24,10 +23,10 @@ const RepositoryConfig = ({ config, onChange, errors }) => {
   const [tags, setTags] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
 
   const fetchRepositories = async () => {
     try {
+      setLoading(true);
       const token = localStorage.getItem('token');
       if (!token) {
         console.error('No token found');
@@ -41,13 +40,20 @@ const RepositoryConfig = ({ config, onChange, errors }) => {
       });
       
       logger.info('Repositories response:', response.data);
-      setRepositories(response.data);
+      if (Array.isArray(response.data)) {
+        const filteredRepos = response.data
+          .filter(repo => repo && repo.name && !repo.name.includes('sha256:'))
+          .sort((a, b) => a.name.localeCompare(b.name));
+        setRepositories(filteredRepos);
+      }
     } catch (error) {
       console.error('Failed to fetch repositories:', error);
       if (error.response?.status === 401) {
         console.error('Unauthorized: Token may be invalid or expired');
         localStorage.removeItem('token');
       }
+    } finally {
+      setLoading(false);
     }
   }; 
 
@@ -91,164 +97,140 @@ const RepositoryConfig = ({ config, onChange, errors }) => {
     }
   }, [config.repository]);
 
-  const handleRepositoryChange = async (event, newValue) => {
-    try {
-      const updatedConfig = {
-        ...config,
-        repository: newValue,
-        tag: '',
-        yamlTemplate: {
-          ...config.yamlTemplate,
-          placeholders: {
-            ...config.yamlTemplate?.placeholders,
-            repository: newValue,
-            tag: ''
+  const handleRepositoryChange = (event) => {
+    const repository = event.target.value;
+    logger.info('Repository selected:', repository);
+    
+    // Create a safe template structure with all required nested objects
+    const updatedTemplate = config.yamlTemplate ? {
+      ...config.yamlTemplate,
+      spec: config.yamlTemplate.spec ? {
+        ...config.yamlTemplate.spec,
+        template: config.yamlTemplate.spec.template ? {
+          ...config.yamlTemplate.spec.template,
+          spec: config.yamlTemplate.spec.template.spec ? {
+            ...config.yamlTemplate.spec.template.spec,
+            containers: config.yamlTemplate.spec.template.spec.containers ? [
+              {
+                ...config.yamlTemplate.spec.template.spec.containers[0],
+                image: repository
+              }
+            ] : [{ image: repository }]
+          } : { containers: [{ image: repository }] }
+        } : { spec: { containers: [{ image: repository }] } }
+      } : { template: { spec: { containers: [{ image: repository }] } } }
+    } : {
+      spec: {
+        template: {
+          spec: {
+            containers: [{ image: repository }]
           }
         }
-      };
+      }
+    };
 
-      onChange(updatedConfig);
+    const updatedConfig = {
+      ...config,
+      repository: repository,
+      tag: '',
+      yamlTemplate: updatedTemplate
+    };
 
-      await podDeploymentService.saveDeploymentConfig(
-        config.name,
-        config.version,
-        updatedConfig
-      );
-
-      await podDeploymentService.saveStorageConfig(
-        config.name,
-        config.version,
-        {
-          placeholders: updatedConfig.yamlTemplate.placeholders
-        }
-      );
-
-      logger.info('✅ Repository saved successfully:', {
-        repository: newValue,
-        configJson: true,
-        yaml: true
-      });
-
-      setError(null);
-    } catch (error) {
-      console.error('Failed to save repository:', error);
-      setError(t('podDeployment:podDeployment.repository.errors.saveFailed'));
-    }
+    logger.info('Updated config:', updatedConfig);
+    onChange(updatedConfig);
   };
 
-  const handleTagChange = async (event) => {
-    try {
-      const newTag = event.target.value;
-
-      const updatedConfig = {
-        ...config,
-        tag: newTag,
-        yamlTemplate: {
-          ...config.yamlTemplate,
-          placeholders: {
-            ...config.yamlTemplate?.placeholders,
-            tag: newTag
+  const handleTagChange = (event) => {
+    const tag = event.target.value;
+    onChange({
+      ...config,
+      tag,
+      yamlTemplate: {
+        ...config.yamlTemplate,
+        spec: {
+          ...config.yamlTemplate.spec,
+          template: {
+            ...config.yamlTemplate.spec.template,
+            spec: {
+              ...config.yamlTemplate.spec.template.spec,
+              containers: [
+                {
+                  ...config.yamlTemplate.spec.template.spec.containers[0],
+                  image: `${config.repository}:${tag}`
+                }
+              ]
+            }
           }
         }
-      };
-
-      onChange(updatedConfig);
-
-      await podDeploymentService.saveDeploymentConfig(
-        config.name,
-        config.version,
-        updatedConfig
-      );
-
-      await podDeploymentService.saveStorageConfig(
-        config.name,
-        config.version,
-        {
-          placeholders: updatedConfig.yamlTemplate.placeholders
-        }
-      );
-
-      logger.info('✅ Tag saved successfully:', {
-        tag: newTag,
-        configJson: true,
-        yaml: true
-      });
-
-      setError(null);
-    } catch (error) {
-      console.error('Failed to save tag:', error);
-      setError(t('podDeployment:podDeployment.repository.errors.saveFailed'));
-    }
-  };
-
-  const handleSearchChange = (event) => {
-    const term = event.target.value;
-    setSearchTerm(term);
-    if (term) {
-      searchImages(term);
-    } else {
-      fetchRepositories();
-    }
+      }
+    });
   };
 
   return (
     <Box>
-      <Typography variant="h6" gutterBottom>
-        {t('podDeployment:podDeployment.repository.title')}
-      </Typography>
-      <Paper sx={{ p: 3 }}>
-        <Grid container spacing={3}>
-          <Grid item xs={12}>
-            <TextField
-              fullWidth
-              label={t('podDeployment:podDeployment.repository.search')}
-              value={searchTerm}
-              onChange={handleSearchChange}
-              variant="outlined"
-            />
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Autocomplete
-              fullWidth
-              options={repositories}
-              value={config.yamlTemplate?.placeholders?.repository || null}
-              onChange={handleRepositoryChange}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label={t('podDeployment:podDeployment.repository.repository')}
-                  error={!!errors?.repository}
-                  helperText={errors?.repository}
-                />
-              )}
-              loading={loading}
-            />
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <FormControl fullWidth>
-              <InputLabel>{t('podDeployment:podDeployment.repository.tag')}</InputLabel>
-              <Select
-                value={config.yamlTemplate?.placeholders?.tag || ''}
-                onChange={handleTagChange}
-                label={t('podDeployment:podDeployment.repository.tag')}
-                error={!!errors?.tag}
-                disabled={!config.yamlTemplate?.placeholders?.repository}
-              >
-                {tags.map((tag) => (
-                  <MenuItem key={tag} value={tag}>{tag}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
+      <Grid container spacing={2}>
+        <Grid item xs={12}>
+          <Paper elevation={0} sx={{ p: 2 }}>
+            {loading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <>
+                <FormControl fullWidth error={!!errors?.repository}>
+                  <InputLabel>{t('podDeployment:podDeployment.repository.selectRepository')}</InputLabel>
+                  <Select
+                    value={config.repository || ''}
+                    onChange={handleRepositoryChange}
+                    label={t('podDeployment:podDeployment.repository.selectRepository')}
+                  >
+                    {repositories.map((repo) => (
+                      <MenuItem key={repo.id || repo.name} value={repo.name || repo}>
+                        {repo.name || repo}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {errors?.repository && (
+                    <Typography color="error" variant="caption">
+                      {errors.repository}
+                    </Typography>
+                  )}
+                </FormControl>
+
+                {config.repository && (
+                  <FormControl fullWidth sx={{ mt: 2 }} error={!!errors?.tag}>
+                    <InputLabel>{t('podDeployment:podDeployment.repository.selectTag')}</InputLabel>
+                    <Select
+                      value={config.tag || ''}
+                      onChange={handleTagChange}
+                      label={t('podDeployment:podDeployment.repository.selectTag')}
+                    >
+                      {tags.map((tag, index) => (
+                        <MenuItem key={`${tag}-${index}`} value={tag}>
+                          {tag}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                    {errors?.tag && (
+                      <Typography color="error" variant="caption">
+                        {errors.tag}
+                      </Typography>
+                    )}
+                  </FormControl>
+                )}
+
+                {error && (
+                  <Alert severity="error" sx={{ mt: 2 }}>
+                    {error}
+                  </Alert>
+                )}
+              </>
+            )}
+          </Paper>
         </Grid>
-      </Paper>
-      {error && (
-        <Alert severity="error" sx={{ mt: 2 }}>
-          {error}
-        </Alert>
-      )}
+      </Grid>
     </Box>
   );
 };
 
-export default RepositoryConfig; 
+export default RepositoryConfig;

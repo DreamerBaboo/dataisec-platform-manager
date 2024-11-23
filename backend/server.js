@@ -89,6 +89,16 @@ app.use((req, res, next) => {
   next();
 });
 
+// 增加請求大小限制
+app.use(express.json({ limit: '50gb' }));
+app.use(express.urlencoded({ limit: '50gb', extended: true }));
+
+// 增加超時時間
+app.use((req, res, next) => {
+  res.setTimeout(3600000); // 1小時超時
+  next();
+});
+
 app.use(bodyParser.json());
 
 // Import routes

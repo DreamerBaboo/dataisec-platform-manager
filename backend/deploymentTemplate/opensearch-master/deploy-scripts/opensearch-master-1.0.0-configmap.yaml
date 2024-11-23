@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opensearch-master-keyvalue-cm
+  namespace: opensearch-master
+data:
+  key1: abc

@@ -309,19 +309,19 @@ const getNodes = async (req, res) => {
       body: {
         size: 0,
         query: {
-          range: {
-            '@timestamp': {
-              gte: 'now-1m'
-            }
+        range: {
+          '@timestamp': {
+            gte: 'now-1m'
           }
+        }
         },
         aggs: {
-          unique_nodes: {
-            terms: {
-              field: 'kubernetes.node.name',
-              size: 100
-            }
-          }
+    unique_nodes: {
+      terms: {
+        field: 'kubernetes.node.name',
+        size: 100
+      }
+    }
         }
       }
     });
@@ -330,9 +330,9 @@ const getNodes = async (req, res) => {
     const nodes = response.body.aggregations.unique_nodes.buckets.map(bucket => ({
       name: bucket.key,
       count: bucket.doc_count
-    }));
+    }));nodes
 
-    console.log('Found nodes:', nodes);
+    console.log('Found nodes:', );
     res.json(nodes);
   } catch (error) {
     console.error('Error fetching nodes:', error);

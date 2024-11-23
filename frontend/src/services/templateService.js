@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { logger } from '../utils/logger';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -68,10 +69,23 @@ export const templateService = {
   // Save template content
   async saveTemplateContent(deploymentName, content) {
     try {
+      if (!deploymentName) {
+        throw new Error('Deployment name is required');
+      }
+
+      if (!content || content.trim() === '') {
+        throw new Error('Template content cannot be empty');
+      }
+
+      // Log the exact request being sent
       logger.info('Saving template content:', {
         deploymentName,
         contentLength: content.length,
-        contentPreview: content.substring(0, 100)
+        contentPreview: content.substring(0, 100),
+        endpoint: `${API_URL}/api/pod-deployments/templates/${deploymentName}/template`,
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
 
       const response = await axios.post(
@@ -85,11 +99,28 @@ export const templateService = {
         }
       );
 
-      logger.info('Save response:', response.data);
+      logger.info('Template save response:', {
+        status: response.status,
+        data: response.data
+      });
+
       return response.data;
     } catch (error) {
-      console.error('Failed to save template content:', error);
-      throw error;
+      // Enhanced error logging
+      logger.error('Failed to save template content:', {
+        error: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        responseData: error.response?.data,
+        deploymentName,
+        requestPayload: { 
+          contentPreview: content ? content.substring(0, 100) + '...' : 'empty'
+        }
+      });
+
+      // Throw a more informative error
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to save template';
+      throw new Error(errorMessage);
     }
   },
 

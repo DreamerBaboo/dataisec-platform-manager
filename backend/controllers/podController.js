@@ -212,7 +212,7 @@ const formatBytes = (bytes) => {
 // Add new endpoint for calculating selected pods' resources
 const calculateSelectedPodsResources = async (req, res) => {
   try {
-    const { podNames } = req.body;
+    const { podNames, namespace } = req.body;
     if (!Array.isArray(podNames) || podNames.length === 0) {
       return res.status(400).json({ message: 'Pod names array is required' });
     }
@@ -232,8 +232,13 @@ const calculateSelectedPodsResources = async (req, res) => {
                 }
               },
               {
-                terms: {
+                term: {
                   'kubernetes.pod.name': podNames
+                }
+              },
+              {
+                term: {
+                  'kubernetes.namespace': namespace
                 }
               }
             ]
@@ -256,11 +261,11 @@ const calculateSelectedPodsResources = async (req, res) => {
 
     const totalResources = {
       memory: {
-        used: response.body.aggregations.total_memory.value || 0,
-        usedGB: (response.body.aggregations.total_memory.value || 0) / (1024 * 1024 * 1024)
+        used: response.body?.aggregations?.total_memory?.value || 0,
+        usedGB: (response.body?.aggregations?.total_memory?.value || 0) / (1024 * 1024 * 1024)
       },
       cpu: {
-        cores: (response.body.aggregations.total_cpu.value || 0) / 1000000000
+        cores: (response.body?.aggregations?.total_cpu?.value || 0) / 1000000000
       }
     };
 

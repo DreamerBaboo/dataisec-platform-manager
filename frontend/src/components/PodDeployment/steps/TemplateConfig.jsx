@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { logger } from '../../../utils/logger.ts';  // 導入 logger 
+import { logger } from '../../../utils/logger';  // 修正導入路徑，移除 .ts 擴展名
 import {
   Box,
   Grid,
@@ -55,6 +55,7 @@ const TemplateConfig = ({ config, onChange, errors }) => {
   const [showPreview, setShowPreview] = useState(false);
   const [createNamespaceDialog, setCreateNamespaceDialog] = useState(false);
   const [newNamespace, setNewNamespace] = useState('');
+  const [hideResourceBox, setHideResourceBox] = useState(true);
 
   useEffect(() => {
     loadTemplate();
@@ -118,7 +119,7 @@ const TemplateConfig = ({ config, onChange, errors }) => {
       setTemplateContent(content);
       parseTemplate(content);
     } catch (error) {
-      console.error('Template loading error:', error);
+      logger.error('Template loading error:', error);
       setYamlError(error.message);
     }
   };
@@ -314,6 +315,7 @@ const TemplateConfig = ({ config, onChange, errors }) => {
       
       if (isNewNamespace) {
         setNewNamespace(namespaceValue);
+        setYamlError(''); // Clear any previous errors
         setCreateNamespaceDialog(true);
       } else {
         const updatedConfig = {
@@ -359,35 +361,48 @@ const TemplateConfig = ({ config, onChange, errors }) => {
 
   const handleCreateNamespace = async () => {
     try {
-      const response = await api.post('api/namespaces', {
-        name: newNamespace
+      const response = await api.post('api/k8s/namespaces', {
+        namespace: newNamespace
       });
       
-      if (response.success) {
-        const updatedNamespaces = await api.get('api/namespaces');
-        const namespaceNames = updatedNamespaces.map(ns => ns.name);
-        setNamespaces(namespaceNames);
-        
-        const updatedConfig = {
-          ...config,
-          namespace: newNamespace,
-          yamlTemplate: {
-            ...config.yamlTemplate,
-            placeholders: {
-              ...config.yamlTemplate?.placeholders,
-              namespace: newNamespace
-            }
+      const updatedNamespaces = await api.get('api/k8s/namespaces');
+      const namespaceNames = updatedNamespaces.map(ns => ns.name);
+      setNamespaces(namespaceNames);
+      
+      const updatedConfig = {
+        ...config,
+        namespace: newNamespace,
+        yamlTemplate: {
+          ...config.yamlTemplate,
+          placeholders: {
+            ...config.yamlTemplate?.placeholders,
+            namespace: newNamespace
           }
-        };
+        }
+      };
 
-        await api.post(`api/deployment-config/${config.name}/${config.version}`, updatedConfig);
+      await api.post(`api/deployment-config/${config.name}/${config.version}`, updatedConfig);
 
-        onChange(updatedConfig);
-        setCreateNamespaceDialog(false);
-      }
+      onChange(updatedConfig);
+      setCreateNamespaceDialog(false);
+      setYamlError(''); // Clear any previous errors
+      logger.info('Namespace created successfully:', newNamespace);
     } catch (error) {
       console.error('Failed to create namespace:', error);
-      setYamlError('Failed to create namespace');
+      let errorMessage = 'Failed to create namespace';
+      
+      // Handle specific error cases
+      if (error.status === 409) {
+        errorMessage = `Namespace "${newNamespace}" already exists`;
+      } else if (error.status === 400) {
+        errorMessage = `Invalid namespace name. Must consist of lowercase alphanumeric characters or "-", and must start and end with an alphanumeric character`;
+      } else if (error.message) {
+        // Extract meaningful part of the error message if available
+        const cleanMessage = error.message.replace(/^ApiError: /, '').replace(/^HTTP error! status: \d+ /, '');
+        errorMessage = `${errorMessage}: ${cleanMessage}`;
+      }
+      
+      setYamlError(errorMessage);
     }
   };
 
@@ -595,6 +610,9 @@ const TemplateConfig = ({ config, onChange, errors }) => {
               });
 
             if (categoryPlaceholders.length === 0) return null;
+            
+            // Hide the resource category
+            if (category === 'resource' && hideResourceBox) return null;
 
             return (
               <Grid item xs={12} md={6} key={category}>
@@ -644,17 +662,23 @@ const TemplateConfig = ({ config, onChange, errors }) => {
 
       <Dialog
         open={createNamespaceDialog}
-        onClose={() => setCreateNamespaceDialog(false)}
+        onClose={() => {
+          setCreateNamespaceDialog(false);
+          setYamlError(''); // Clear any error when closing
+        }}
       >
         <DialogTitle>
           {t('podDeployment:podDeployment.namespace.createTitle')}
         </DialogTitle>
         <DialogContent>
           <DialogContentText>
-            {t('podDeployment:podDeployment.namespace.createConfirm', {
-              namespace: newNamespace
-            })}
+            {`Create new namespace "${newNamespace}"?`}
           </DialogContentText>
+          {yamlError && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {yamlError}
+            </Alert>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => {
