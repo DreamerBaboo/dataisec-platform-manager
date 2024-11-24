@@ -141,7 +141,40 @@ const RepositoryConfig = ({ config, onChange, errors }) => {
 
     
   };
+  const saveRepositoryconfig = async (field, value) => {
+    try {
+      // Create a new config object with updated values
+      const updatedConfig = {
+        ...config,
+        [field]: value, // Update the top-level field
+        yamlTemplate: {
+          ...config.yamlTemplate,
+          placeholders: {
+            ...config.yamlTemplate?.placeholders,
+            [field]: value // Update the placeholder
+          }
+        }
+      };
 
+      // Update parent state
+      onChange(updatedConfig);
+
+      // Save to config.json
+      await podDeploymentService.saveDeploymentConfig(
+        config.name,
+        config.version,
+        updatedConfig
+      );
+
+      logger.info(`✅ Repository field ${field} saved to config.json:`, value);
+    } catch (error) {
+      console.error(`❌ Failed to save repository field ${field}:`, error);
+      setLocalErrors(prev => ({
+        ...prev,
+        [field]: 'Failed to save value'
+      }));
+    }
+  };
   const handleTagChange = (event) => {
     const tag = event.target.value;
     onChange({
@@ -183,7 +216,7 @@ const RepositoryConfig = ({ config, onChange, errors }) => {
                   <InputLabel>{t('podDeployment:podDeployment.repository.selectRepository')}</InputLabel>
                   <Select
                     value={config.repository || ''}
-                    onChange={handleRepositoryChange}
+                    onChange={(event) => saveRepositoryconfig('repository', event.target.value)}
                     label={t('podDeployment:podDeployment.repository.selectRepository')}
                   >
                     {repositories.map((repo) => (
@@ -204,7 +237,7 @@ const RepositoryConfig = ({ config, onChange, errors }) => {
                     <InputLabel>{t('podDeployment:podDeployment.repository.selectTag')}</InputLabel>
                     <Select
                       value={config.tag || ''}
-                      onChange={handleTagChange}
+                      onChange={(event) => saveRepositoryconfig('tag', event.target.value)}
                       label={t('podDeployment:podDeployment.repository.selectTag')}
                     >
                       {tags.map((tag, index) => (

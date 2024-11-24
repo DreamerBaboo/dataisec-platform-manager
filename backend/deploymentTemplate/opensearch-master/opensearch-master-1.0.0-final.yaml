@@ -14,7 +14,7 @@ roles:
 #  - ingest
 #  - remote_cluster_client
 
-replicas: 3 #[1,2,3,4,5,6]
+replicas: 1 #[1,2,3,4,5,6]
 
 # if not set, falls back to parsing .Values.imageTag, then .Chart.appVersion.
 majorVersion: ""
@@ -125,8 +125,8 @@ hostAliases: []
 #   - "bar.local"
 
 image:
-  repository:  "${REPOSITORY}"
-  tag: "latest" #["2.12.0"]
+  repository: "kindest/node" #[]
+  tag: "latest" #[2.12.0]
   pullPolicy: IfNotPresent
   insecureRegistry: true
 
@@ -140,7 +140,7 @@ opensearchJavaOpts: "-Xmx8G -Xms8G" #[-Xmx2G -Xms2G, -Xmx4G -Xms4G, -Xmx6G -Xms6
 
 resources:
   requests:
-    cpu: "500m" #[200m, 300m, 400m, 500m, 600m, 700m, 800m, 900m, 1000m,11000m ]
+    cpu: "200m" #[200m, 300m, 400m, 500m, 600m, 700m, 800m, 900m, 1000m,11000m ]
     memory: "2Gi" #[2Gi, 4Gi, 8Gi]
   limits:
     cpu: "2000m" #[2000m, 3000m, 4000m, 5000m, 6000m, 7000m, 8000m]

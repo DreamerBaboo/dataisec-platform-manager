@@ -72,8 +72,16 @@ class DockerService {
   async listTags(repository) {
     try {
       logger.info(`獲取倉庫標籤: ${repository}`);
-      const output = await this.executeCommand(['images', repository, '--format', '{{.Tag}}']);
-      const tags = output.split('\n').filter(Boolean);
+      // Use a more specific format string to get only the tags
+      const output = await this.executeCommand([
+        'images',
+        '--format',
+        '{{.Tag}}',
+        repository
+      ]);
+      const tags = output.split('\n')
+        .filter(Boolean)
+        .filter(tag => tag !== '<none>'); // Filter out <none> tags
       logger.info(`找到 ${tags.length} 個標籤，屬於 ${repository}`);
       return tags;
     } catch (error) {
