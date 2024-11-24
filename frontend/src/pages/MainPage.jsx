@@ -17,7 +17,7 @@ import { useAppTranslation } from '../hooks/useAppTranslation';
 import { logger } from '../utils/logger'; // 導入 logger
 
 function MainPage() {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const theme = useTheme();
   const { t, currentLanguage, changeLanguage, languages } = useAppTranslation(['navigation', 'common']);
  
@@ -32,7 +32,7 @@ function MainPage() {
   }, [open]);
 
   return (
-    <Box sx={{ display: 'contents', width: '100%', height: '100vh', overflow: 'hidden' }}>
+    <Box sx={{ display: 'flex', width: '100vw', height: '100vh', overflow: 'hidden' }}>
       <CssBaseline />
       <TopBar 
         open={open} 
@@ -42,21 +42,26 @@ function MainPage() {
       <SideMenu 
         open={open} 
         toggleDrawer={toggleDrawer}
+        drawerWidth={240}
+        variant="permanent"
+        sx={{
+          mt: '64px',
+          height: 'calc(100vh - 64px)',
+          '& .MuiDrawer-paper': {
+            mt: '64px',
+            height: 'calc(100vh - 64px)',
+          }
+        }}
       />
       <Box
         component="main"
         sx={{
           flexGrow: 1,
-          pl: 1,
-          width: 'calc(100% - 240px)',
-          height: 'calc(100vh - 64px)',
-          ml: { sm: `${open ? 240 : 56}px` },
-          mt: ['48px', '56px', '64px'],
-          transition: theme.transitions.create('margin', {
-            easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.leavingScreen,
-          }),
-          display: 'block',
+          p: '10px',
+          width: '100%',
+          height: 'calc(100% - 80px)',
+          mt: '70px',
+          overflow: 'auto'
         }}
       >
         <Routes>

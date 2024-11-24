@@ -369,6 +369,13 @@ spec:
     }
   };
 
+  // Update step visibility whenever config changes
+  useEffect(() => {
+    if (onStepVisibilityChange && config?.enableResourceQuota !== undefined) {
+      onStepVisibilityChange('namespaceQuota', config.enableResourceQuota);
+    }
+  }, [config?.enableResourceQuota]);
+
   return (
     <Box>
       <Typography variant="h6" gutterBottom>

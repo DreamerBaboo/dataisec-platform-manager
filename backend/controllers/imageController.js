@@ -448,6 +448,8 @@ async function listRepositories(req, res) {
   try {
     const repositories = await dockerService.listRepositories();
     res.json(repositories);
+    logger.info('Repositories:', repositories);
+    logger.info('Repositories RES: ', res);
   } catch (error) {
     logger.error('Failed to list repositories:', error);
     res.status(500).json({ error: '無法獲取映像庫列表' });

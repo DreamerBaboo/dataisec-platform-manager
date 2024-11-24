@@ -390,6 +390,23 @@ export const podDeploymentService = {
       throw error;
     }
   },
+
+  // Create host directory for persistent volume
+  async createHostDirectory(nodeName, path) {
+    try {
+      logger.info('📁 Creating host directory:', { nodeName, path });
+      const response = await axios.post(
+        `${API_URL}/api/k8s/nodes/${nodeName}/directories`,
+        { path },
+        getAuthHeaders()
+      );
+      logger.info('✅ Host directory created:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Failed to create host directory:', error);
+      throw error;
+    }
+  },
 };
 
 export default podDeploymentService;

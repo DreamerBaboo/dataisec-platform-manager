@@ -27,9 +27,6 @@ body {
   display: flex;
   justify-content: left;
   align-items: center;
-  min-width: 1332px;
-  min-height: 100vh;
-  max-width: 1513px;
 }
 
 h1 {

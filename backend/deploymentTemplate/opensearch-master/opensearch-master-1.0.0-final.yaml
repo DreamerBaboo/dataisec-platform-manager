@@ -14,7 +14,7 @@ roles:
 #  - ingest
 #  - remote_cluster_client
 
-replicas: 1 #[1,2,3,4,5,6]
+replicas: 3 #[1,2,3,4,5,6]
 
 # if not set, falls back to parsing .Values.imageTag, then .Chart.appVersion.
 majorVersion: ""
@@ -50,7 +50,7 @@ config:
     #transport.host: 0.0.0.0
     transport.tcp.port: 9300
     discovery.seed_hosts: ["opensearch-cluster-master-0"]
-    cluster.initial_master_nodes: ["opensearch-cluster-master-0,opensearch-cluster-master-0,opensearch-cluster-master-2"]
+    cluster.initial_master_nodes: ["opensearch-cluster-master-0,opensearch-cluster-master-1,opensearch-cluster-master-2"]
     # Setting network.host to a non-loopback address enables the annoying bootstrap checks. "Single-node" mode disables them again.
     # discovery.type: single-node
 
@@ -102,7 +102,7 @@ config:
 # syntax here
 extraEnvs:
   - name: OPENSEARCH_INITIAL_ADMIN_PASSWORD
-    value: "Cobr@8029@@123D" #["Cobr@8029@@123D"]
+    value: "Cobr@8029@@123D" # "{ADMIN_PASSWORD}" #[Cobr@8029@@123D]
 #  - name: MY_ENVIRONMENT_VAR
 #    value: the_value_goes_here
 
@@ -116,7 +116,7 @@ envFrom: []
 # A list of secrets and their paths to mount inside the pod
 # This is useful for mounting certificates for security and for mounting
 # the X-Pack license
-secretMounts: ${SECRET_MOUNT} #[123, 456]
+secretMounts: {} #[123, 456]
 
 hostAliases: []
 # - ip: "127.0.0.1"
@@ -155,11 +155,11 @@ initResources:
 
 sidecarResources: {}
   # limits:
-  #   cpu: "4"
-  #   # memory: "16Gi"
+  #   cpu: "1"
+  #   # memory: "500Mi"
   # requests:
-  #   cpu: "4"
-  #   memory: "16Gi"
+  #   cpu: "200m"
+  #   memory: "100Mi"
 
 networkHost: "0.0.0.0"
 
@@ -208,7 +208,7 @@ persistence:
   storageClass: "local-storage" #[local-storage]
   accessModes:
     - ReadWriteOnce #[ReadWriteOnce, ReadWriteMany, ReadOnlyMany]
-  size: 9T #[1Ti, 2Ti, 3Ti, 4Ti, 5Ti, 6Ti, 7Ti, 8Ti, 9T, 10Ti, 20Ti, 30Ti]
+  size: 9Ti #[1Ti, 2Ti, 3Ti, 4Ti, 5Ti, 6Ti, 7Ti, 8Ti, 9Ti, 10Ti, 20Ti, 30Ti]
   annotations: {}
 
 extraVolumes: []

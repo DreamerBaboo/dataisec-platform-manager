@@ -26,10 +26,12 @@ const getRepositories = async (req, res) => {
 const getTags = async (req, res) => {
   try {
     const { repository } = req.params;
+    console.log(`Getting tags for repository: ${repository}`);
     if (!repository) {
       return res.status(400).json({ error: 'Repository parameter is required' });
     }
     const tags = await dockerService.listTags(repository);
+    console.log(`Found ${tags.length} tags for repository: ${repository}`);
     res.json(tags);
   } catch (error) {
     console.error('Error getting tags:', error);

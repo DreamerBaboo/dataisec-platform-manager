@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Grid, Paper, Typography, Box } from '@mui/material';
 import ReactECharts from 'echarts-for-react';
 import RGL, { WidthProvider } from "react-grid-layout";
@@ -17,17 +17,59 @@ const DEFAULT_LAYOUT = [
 
 const LAYOUT_STORAGE_KEY = 'metrics-dashboard-layout';
 
-const MetricsDisplay = ({ metrics, selectedNode }) => {
+const MetricsDisplay = ({ metrics, selectedNode, refreshing }) => {
   const { t } = useAppTranslation();
   const [layout, setLayout] = useState(() => {
     const savedLayout = localStorage.getItem(LAYOUT_STORAGE_KEY);
     return savedLayout ? JSON.parse(savedLayout) : DEFAULT_LAYOUT;
   });
 
+  useEffect(() => {
+    logger.info('MetricsDisplay received metrics:', metrics);
+    logger.info('Selected node:', selectedNode);
+  }, [metrics, selectedNode]);
+
   const handleLayoutChange = useCallback((newLayout) => {
     setLayout(newLayout);
     localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(newLayout));
   }, []);
+
+  // Get the correct metrics based on selected node
+  const getCurrentMetrics = useCallback(() => {
+    if (!metrics) {
+      logger.warn('No metrics data available');
+      return null;
+    }
+
+    if (selectedNode === 'cluster') {
+      logger.info('Getting cluster metrics:', metrics.cluster);
+      return metrics.cluster;
+    }
+
+    logger.info('Getting node metrics:', metrics.nodes?.[selectedNode]);
+    return metrics.nodes?.[selectedNode];
+  }, [metrics, selectedNode]);
+
+  const currentMetrics = getCurrentMetrics();
+
+  if (!currentMetrics) {
+    logger.warn('No metrics available for display');
+    return (
+      <Box sx={{ mt: 2 }}>
+        <Typography>{t('dashboard:messages.noMetricsAvailable')}</Typography>
+      </Box>
+    );
+  }
+
+  logger.info('Rendering metrics:', {
+    cpu: currentMetrics.cpu?.length,
+    memory: currentMetrics.memory?.length,
+    network: {
+      tx: currentMetrics.network?.tx?.length,
+      rx: currentMetrics.network?.rx?.length
+    },
+    storage: currentMetrics.storage
+  });
 
   const formatValue = (value, type) => {
     if (value === undefined || value === null) return 'N/A';
@@ -55,19 +97,6 @@ const MetricsDisplay = ({ metrics, selectedNode }) => {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
   };
-
-  // Get the correct metrics based on selected node
-  const currentMetrics = selectedNode === 'cluster' 
-    ? metrics?.cluster 
-    : metrics?.nodes?.[selectedNode];
-
-  if (!currentMetrics) {
-    return (
-      <Box sx={{ mt: 2 }}>
-        <Typography>{t('dashboard:messages.noMetricsAvailable')}</Typography>
-      </Box>
-    );
-  }
 
   const getChartOption = (data, title, type = 'line', options = {}) => {
     if (!data || (!Array.isArray(data) && type !== 'pie')) {
@@ -294,66 +323,76 @@ const MetricsDisplay = ({ metrics, selectedNode }) => {
       isResizable={true}
       isDraggable={true}
     >
-      {['cpu', 'memory', 'network', 'storage'].map(metricType => (
-        <div key={metricType}>
-          <Paper 
-            sx={{ 
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden'
-            }}
-            elevation={2}
-          >
-            <Box className="drag-handle" sx={{ 
-              p: 1.5,
-              cursor: 'move',
-              borderBottom: 1,
-              borderColor: 'divider',
-              bgcolor: (theme) => theme.palette.mode === 'dark' 
-                ? 'grey.800' 
-                : 'grey.100',
-              minHeight: '40px'
-            }}>
-              <Typography variant="subtitle1" fontWeight="medium">
-                {t('dashboard:dashboard.resources.' + `${metricType}Usage`)}
-              </Typography>
-            </Box>
-            <Box sx={{ 
-              flex: 1, 
-              p: 1,
-              minHeight: 0,
-              display: 'flex',
-              flexDirection: 'column'
-            }}>
-              <ReactECharts
-                option={getChartOption(
-                  metricType === 'network' ? currentMetrics?.network?.rx : currentMetrics?.[metricType],
-                  '',
-                  metricType === 'storage' ? 'pie' : 'line',
-                  {
-                    valueType: metricType === 'network' ? 'bytesPerSecond' : 
-                             metricType === 'memory' ? 'gigabytes' :
-                             metricType === 'cpu' ? 'cores' : 'percentage',
-                    seriesName: metricType === 'network' ? t('dashboard:dashboard.network.receive') : t('dashboard:dashboard.resources.' + `${metricType}Usage`)
-                  }
-                )}
-                style={{ 
-                  height: '100%',
-                  minHeight: '200px',
-                  width: '100%'
-                }}
-                opts={{ 
-                  renderer: 'canvas',
-                  devicePixelRatio: window.devicePixelRatio,
-                  width: 'auto',
-                  height: 'auto'
-                }}
-              />
-            </Box>
-          </Paper>
-        </div>
-      ))}
+      <Box key="cpu" sx={{ p: 2 }}>
+        <Paper sx={{ p: 2, height: '100%' }}>
+          <Box className="drag-handle" sx={{ cursor: 'move', mb: 2 }}>
+            <Typography variant="h6">{t('dashboard:dashboard.cpu')}</Typography>
+          </Box>
+          <ReactECharts
+            option={getChartOption(
+              currentMetrics.cpu,
+              t('dashboard:dashboard.cpu'),
+              'line',
+              { valueType: 'cores', seriesName: t('dashboard:dashboard.cpuUsage') }
+            )}
+            style={{ height: '90%', width: '100%' }}
+            opts={{ renderer: 'svg' }}
+          />
+        </Paper>
+      </Box>
+
+      <Box key="memory" sx={{ p: 2 }}>
+        <Paper sx={{ p: 2, height: '100%' }}>
+          <Box className="drag-handle" sx={{ cursor: 'move', mb: 2 }}>
+            <Typography variant="h6">{t('dashboard:dashboard.memory')}</Typography>
+          </Box>
+          <ReactECharts
+            option={getChartOption(
+              currentMetrics.memory,
+              t('dashboard:dashboard.memory'),
+              'line',
+              { valueType: 'gigabytes', seriesName: t('dashboard:dashboard.memoryUsage') }
+            )}
+            style={{ height: '90%', width: '100%' }}
+            opts={{ renderer: 'svg' }}
+          />
+        </Paper>
+      </Box>
+
+      <Box key="network" sx={{ p: 2 }}>
+        <Paper sx={{ p: 2, height: '100%' }}>
+          <Box className="drag-handle" sx={{ cursor: 'move', mb: 2 }}>
+            <Typography variant="h6">{t('dashboard:dashboard.network')}</Typography>
+          </Box>
+          <ReactECharts
+            option={getChartOption(
+              currentMetrics.network?.tx,
+              t('dashboard:dashboard.network'),
+              'line',
+              { valueType: 'bytesPerSecond', seriesName: t('dashboard:dashboard.networkTx') }
+            )}
+            style={{ height: '90%', width: '100%' }}
+            opts={{ renderer: 'svg' }}
+          />
+        </Paper>
+      </Box>
+
+      <Box key="storage" sx={{ p: 2 }}>
+        <Paper sx={{ p: 2, height: '100%' }}>
+          <Box className="drag-handle" sx={{ cursor: 'move', mb: 2 }}>
+            <Typography variant="h6">{t('dashboard:dashboard.storage')}</Typography>
+          </Box>
+          <ReactECharts
+            option={getChartOption(
+              currentMetrics.storage,
+              t('dashboard:dashboard.storage'),
+              'pie'
+            )}
+            style={{ height: '90%', width: '100%' }}
+            opts={{ renderer: 'svg' }}
+          />
+        </Paper>
+      </Box>
     </ReactGridLayout>
   );
 };

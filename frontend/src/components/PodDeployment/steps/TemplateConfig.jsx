@@ -204,10 +204,7 @@ const TemplateConfig = ({ config, onChange, errors }) => {
   };
 
   const getPlaceholderCategory = (placeholder) => {
-    if (placeholder === 'namespace' || 
-        placeholder === 'storage_class' ||
-        placeholder === 'storage_access_mode' ||
-        placeholder === 'persistence_size') {
+    if (placeholder === 'namespace') {
       return null;
     }
 
@@ -218,6 +215,18 @@ const TemplateConfig = ({ config, onChange, errors }) => {
         placeholder.includes('limit') ||
         placeholder.includes('request')) {
       return 'resource';
+    }
+    if (placeholder.includes('repository') || placeholder.includes('tag')) {
+      return 'image';
+    }
+    if (placeholder.includes('service_port') || placeholder.includes('target_service_port') || placeholder.includes('node_port') || placeholder.includes('web_port')) {
+      return 'service';
+    }
+    if (placeholder.includes('replica_count')) {
+      return 'deployment';
+    }
+    if (placeholder.includes('storage_class') || placeholder.includes('storage_access_mode') || placeholder.includes('persistence_size')) {
+      return 'storage';
     }
 
     for (const [category, items] of Object.entries(PLACEHOLDER_CATEGORIES)) {
@@ -585,13 +594,13 @@ const TemplateConfig = ({ config, onChange, errors }) => {
           {t('podDeployment:podDeployment.yamlTemplate.placeholders')}
         </Typography>
         
-        <SearchBar
+        {/* <SearchBar
           value={placeholderFilter}
           onChange={(e) => setPlaceholderFilter(e.target.value)}
           onClear={() => setPlaceholderFilter('')}
           placeholder={t('podDeployment:podDeployment.yamlTemplate.searchPlaceholders')}
           sx={{ mb: 2 }}
-        />
+        /> */}
 
         <Grid container spacing={2}>
           {Object.entries(PLACEHOLDER_CATEGORIES).map(([category, _]) => {
@@ -600,19 +609,21 @@ const TemplateConfig = ({ config, onChange, errors }) => {
                 const matchesFilter = key.toLowerCase().includes(placeholderFilter.toLowerCase());
                 const placeholderCategory = getPlaceholderCategory(key);
                 return matchesFilter && 
-                       placeholderCategory === category && 
-                       key !== 'namespace' && 
-                       key !== 'repository' && 
-                       key !== 'tag' &&
-                       key !== 'storage_class' &&
-                       key !== 'storage_access_mode' &&
-                       key !== 'persistence_size';
+                       placeholderCategory === category// && 
+                      //  key !== 'namespace' && 
+                      //  key !== 'repository' && 
+                      //  key !== 'tag' &&
+                      //  key !== 'storage_class' &&
+                      //  key !== 'storage_access_mode' &&
+                      //  key !== 'persistence_size';
               });
 
             if (categoryPlaceholders.length === 0) return null;
             
             // Hide the resource category
             if (category === 'resource' && hideResourceBox) return null;
+            if (category === 'storage' && hideResourceBox) return null;
+            if (category === 'image' && hideResourceBox) return null;
 
             return (
               <Grid item xs={12} md={6} key={category}>

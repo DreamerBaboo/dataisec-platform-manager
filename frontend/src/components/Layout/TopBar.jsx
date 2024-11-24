@@ -18,24 +18,18 @@ const TopBar = ({ open, drawerWidth, handleDrawerToggle }) => {
     <AppBar
       position="fixed"
       sx={{
-        width: { sm: `calc(100% - ${open ? drawerWidth : 56}px)` },
-        ml: { sm: `${open ? drawerWidth : 56}px` },
+        width: '100%',
         zIndex: (theme) => theme.zIndex.drawer + 1,
-        transition: theme.transitions.create(['width', 'margin'], {
-          easing: theme.transitions.easing.sharp,
-          duration: theme.transitions.duration.leavingScreen,
-        }),
       }}
     >
       <Toolbar>
         <IconButton
           color="inherit"
-          aria-label="open drawer"
+          aria-label="toggle drawer"
           onClick={handleDrawerToggle}
           edge="start"
           sx={{
             marginRight: 2,
-            ...(open && { display: 'none' }),
           }}
         >
           <MenuIcon />

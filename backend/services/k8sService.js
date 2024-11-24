@@ -1,5 +1,6 @@
 const k8s = require('@kubernetes/client-node');
 const yaml = require('js-yaml');
+const k8sConfig = require('../config/k8s.config');
 const { exec } = require('child_process');
 const util = require('util');
 const execAsync = util.promisify(exec);
@@ -766,6 +767,84 @@ class K8sService {
     } catch (error) {
       console.error('❌ kubectl command failed:', error);
       throw new Error(`kubectl command execution failed: ${error.message}`);
+    }
+  }
+
+  // 在節點上創建目錄
+  async createDirectoryOnNode(nodeName, directoryPath) {
+    try {
+      // 驗證路徑
+      if (!directoryPath.startsWith('/')) {
+        throw new Error('Directory path must be absolute (start with /)');
+      }
+
+      // 創建一個臨時 Pod 來執行 mkdir 命令
+      const podManifest = {
+        apiVersion: 'v1',
+        kind: 'Pod',
+        metadata: {
+          name: `mkdir-${Math.random().toString(36).substring(7)}`,
+          namespace: 'dataisec'
+        },
+        spec: {
+          serviceAccountName: 'dataisec-platform-sa',
+          nodeSelector: {
+            'kubernetes.io/hostname': nodeName
+          },
+          containers: [{
+            name: 'mkdir',
+            image: k8sConfig.images.busyboxImage,
+            command: ['/bin/sh', '-c', `mkdir -p ${directoryPath} && chmod 777 ${directoryPath}`],
+            securityContext: {
+              privileged: true
+            },
+            volumeMounts: [{
+              name: 'host-root',
+              mountPath: '/',
+              subPath: '.'
+            }]
+          }],
+          volumes: [{
+            name: 'host-root',
+            hostPath: {
+              path: '/'
+            }
+          }],
+          restartPolicy: 'Never'
+        }
+      };
+
+      // 創建 Pod
+      await this.k8sApi.createNamespacedPod('dataisec', podManifest);
+
+      // 等待 Pod 完成
+      let podStatus = '';
+      let retries = 30; // 最多等待 30 秒
+      while (retries > 0) {
+        const pod = await this.k8sApi.readNamespacedPod(podManifest.metadata.name, 'dataisec');
+        podStatus = pod.body.status.phase;
+        if (podStatus === 'Succeeded' || podStatus === 'Failed') {
+          break;
+        }
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        retries--;
+      }
+
+      // 檢查結果
+      if (podStatus === 'Failed') {
+        throw new Error('Failed to create directory on node');
+      }
+
+      // 清理 Pod
+      await this.k8sApi.deleteNamespacedPod(podManifest.metadata.name, 'dataisec');
+
+      return {
+        success: true,
+        message: `Directory ${directoryPath} created on node ${nodeName}`
+      };
+    } catch (error) {
+      console.error('Failed to create directory on node:', error);
+      throw error;
     }
   }
 }

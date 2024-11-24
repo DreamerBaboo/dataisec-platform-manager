@@ -248,9 +248,9 @@ const PodDashboard = () => {
 
   // Render metrics cards
   const MetricsCards = () => (
-    <Grid container spacing={3}>
+    <Grid container spacing={2}>
       <Grid item xs={12} md={6}>
-        <Paper sx={{ p: 2, height: '100%' }}>
+        <Paper sx={{ p: 2.5, width: '100%', height: '100%' }}>
           <Box className="drag-handle" sx={{ 
             cursor: 'move',
             mb: 1,
@@ -273,7 +273,7 @@ const PodDashboard = () => {
         </Paper>
       </Grid>
       <Grid item xs={12} md={6}>
-        <Paper sx={{ p: 2, height: '100%' }}>
+        <Paper sx={{ p: 2, width: '100%', height: '100%' }}>
           <Box className="drag-handle" sx={{ 
             cursor: 'move',
             mb: 1,
@@ -299,7 +299,7 @@ const PodDashboard = () => {
   );
 
   return (
-    <Box sx={{top: '64px', left: '240px', width: '100%', minWidth: '1182px' }}>
+    <Box sx={{top: '64px', left: '240px', width: '94vw' }}>
       {/* Dashboard Area */}
       <Paper sx={{ width: '100%', height: '100%', p: 2, mb: 3 }}>
         <ReactGridLayout
@@ -344,7 +344,7 @@ const PodDashboard = () => {
 
           {/* Namespace Distribution Chart */}
           <div key="namespaceChart">
-            <Paper sx={{ height: '100%', p: 2 }}>
+            <Paper sx={{ width: '100%', height: '100%', p: 2 }}>
               <Box className="drag-handle" sx={{ 
                 cursor: 'move',
                 mb: 1,

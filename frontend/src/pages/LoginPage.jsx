@@ -37,6 +37,7 @@ function LoginPage() {
         alignItems: 'center',
         justifyContent: 'center',
         minHeight: '100vh',
+        minWidth: '100vh',
         bgcolor: 'background.default',
         margin: '0 auto',
         padding: '0 16px'
@@ -46,7 +47,7 @@ function LoginPage() {
         elevation={3}
         sx={{
           p: 4,
-          width: '100%',
+          width: '100vh',
           maxWidth: 400,
           bgcolor: 'background.paper'
         }}

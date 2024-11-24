@@ -79,6 +79,7 @@ const PodDeploymentManagement = () => {
   const [pods, setPods] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   // Dialog states
   const [configDialog, setConfigDialog] = useState({ open: false, pod: null });
@@ -123,7 +124,10 @@ const PodDeploymentManagement = () => {
   const fetchPods = async () => {
     try {
       logger.info('🔍 Fetching pods for namespace:', selectedNamespace || 'all namespaces');
-      setLoading(true);
+      // Only set loading true on initial load, not during refresh
+      if (!isRefreshing) {
+        setLoading(true);
+      }
       const response = await axios.get(`/api/pods${selectedNamespace ? `?namespace=${selectedNamespace}` : ''}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
@@ -135,8 +139,19 @@ const PodDeploymentManagement = () => {
       setError(err.message);
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
   };
+
+  // Add auto-refresh interval
+  useEffect(() => {
+    const refreshInterval = setInterval(() => {
+      setIsRefreshing(true);
+      fetchPods();
+    }, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(refreshInterval);
+  }, [selectedNamespace]); // Re-create interval when namespace changes
 
   useEffect(() => {
     logger.info('🚀 Component mounted');
@@ -150,6 +165,7 @@ const PodDeploymentManagement = () => {
 
   const handleRefresh = () => {
     logger.info('🔄 Manually refreshing pods...');
+    setIsRefreshing(true);
     fetchPods();
   };
 
@@ -401,16 +417,15 @@ const PodDeploymentManagement = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" m={3}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
   return (
-    <Box sx={{ width: '100%', height: '100%', minWidth: '1182px' }}>
+    <Box sx={{ width: '94vw', height: '100%', minWidth: '1182px' }}>
+      {/* Show refresh indicator during background refresh */}
+      {isRefreshing && (
+        <Box sx={{ position: 'fixed', top: '1rem', right: '1rem' }}>
+          <CircularProgress size={24} />
+        </Box>
+      )}
+      
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={4}>
           <FormControl fullWidth>
@@ -469,15 +484,15 @@ const PodDeploymentManagement = () => {
         >
           {t('podDeployment:podDeployment.createNew')}
         </Button>
-        <ImportConfig onImport={handleImportConfig} />
-        {/* <Button
+        {/* <ImportConfig onImport={handleImportConfig} /> */}
+        { <Button
           variant="contained"
           startIcon={<UploadIcon />}
           onClick={() => setUploadDialog(true)}
           sx={{ ml: 1 }}
         >
           {t('Upload Templates')}
-        </Button> */}
+        </Button> }
         <Button
           variant="contained"
           startIcon={<DownloadIcon />}
@@ -497,7 +512,8 @@ const PodDeploymentManagement = () => {
         </Alert>
       )}
 
-      {loading ? (
+      {/* Show loading indicator only on initial load */}
+      {loading && !isRefreshing ? (
         <Box display="flex" justifyContent="center" m={3}>
           <CircularProgress />
         </Box>

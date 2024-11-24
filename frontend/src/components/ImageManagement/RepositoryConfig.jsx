@@ -47,9 +47,10 @@ const RepositoryConfig = ({ open, onClose }) => {
         // Filter out sha256 and process repository names
         const filteredRepos = response
           .filter(repo => {
-            // Skip non-string values and sha256 hashes
+            // Skip non-string values
             if (typeof repo !== 'string') return false;
-            return !repo.includes('sha256:');
+            // Filter out any repository names containing sha256
+            return !repo.toLowerCase().includes('sha256');
           })
           .filter((name, index, self) => self.indexOf(name) === index) // Remove duplicates
           .slice(0, 100); // Limit to maximum 100 items for performance

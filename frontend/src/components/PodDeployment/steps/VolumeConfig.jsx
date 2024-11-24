@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useImperativeHandle } from 'react';
 import { logger } from '../../../utils/logger.ts'; // 導入 logger
 import {
   Box,
@@ -19,7 +19,8 @@ import {
   DialogContent,
   DialogActions,
   Autocomplete,
-  FormHelperText
+  FormHelperText,
+  Snackbar
 } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon, Visibility as VisibilityIcon, VisibilityOff as VisibilityOffIcon } from '@mui/icons-material';
 import { useAppTranslation } from '../../../hooks/useAppTranslation';
@@ -44,6 +45,9 @@ const VolumeConfig = ({ config, onChange, errors = {} }) => {
     provisioner: 'kubernetes.io/no-provisioner'
   });
   const [showStoragePreview, setShowStoragePreview] = useState(false);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarVariant, setSnackbarVariant] = useState('success');
 
   // Load existing configuration when component mounts
   useEffect(() => {
@@ -161,63 +165,14 @@ const VolumeConfig = ({ config, onChange, errors = {} }) => {
     fetchNodes();
   }, []);
 
-  // 初始化持久卷的默認結構
-  const handleAddPersistentVolume = () => {
-    setPersistentVolumes([
-      ...persistentVolumes,
-      {
-        name: `${config.name}-pv-${persistentVolumes.length + 1}`,
-        local: {
-          path: ''
-        },
-        capacity: {
-          storage: ''
-        },
-        volumeMode: 'Filesystem',
-        accessModes: ['ReadWriteOnce'],
-        persistentVolumeReclaimPolicy: 'Retain',
-        nodeAffinity: {
-          required: {
-            nodeSelectorTerms: [{
-              matchExpressions: [{
-                key: 'kubernetes.io/hostname',
-                operator: 'In',
-                values: ['']
-              }]
-            }]
-          }
-        }
-      }
-    ]);
-  };
-
-  // 處理持久卷字段變更
-  const handlePVChange = (index, field, value) => {
-    const newPVs = [...persistentVolumes];
-    
-    // 根據字段路徑更新值
-    switch (field) {
-      case 'path':
-        newPVs[index].local.path = value;
-        break;
-      case 'capacity':
-        newPVs[index].capacity.storage = value;
-        break;
-      case 'nodeSelector':
-        newPVs[index].nodeAffinity.required.nodeSelectorTerms[0].matchExpressions[0].values = [value];
-        break;
-      default:
-        newPVs[index][field] = value;
-    }
-    
-    setPersistentVolumes(newPVs);
-  };
-
   // 驗證容量式的函數
   const validateStorageCapacity = (value) => {
+    if (!value) {
+      return t('podDeployment:errors.storageRequired');
+    }
     const regex = /^[1-9][0-9]*[KMGT]i$/;
     if (!regex.test(value)) {
-      return 'Invalid format. Must be a number followed by Ki, Mi, Gi, or Ti (e.g., 1Gi, 500Mi)';
+      return t('podDeployment:errors.invalidStorageFormat');
     }
 
     const size = parseInt(value.replace(/[KMGT]i$/, ''));
@@ -231,10 +186,91 @@ const VolumeConfig = ({ config, onChange, errors = {} }) => {
     };
 
     if (size > maxSizes[unit]) {
-      return `Size too large. Maximum allowed is ${maxSizes[unit]}${unit}`;
+      return t('podDeployment:errors.storageTooLarge', { max: maxSizes[unit], unit });
     }
 
     return '';
+  };
+
+  // 驗證持久卷名稱的函數
+  const validatePVName = (name) => {
+    const regex = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/;
+    if (!name) {
+      return t('podDeployment:errors.pvNameRequired');
+    }
+    if (!regex.test(name)) {
+      return t('podDeployment:errors.pvNameInvalid');
+    }
+    if (name.length > 253) {
+      return t('podDeployment:errors.pvNameTooLong');
+    }
+    return '';
+  };
+
+  // 驗證路徑的函數
+  const validatePath = (path) => {
+    if (!path) {
+      return t('podDeployment:errors.pathRequired');
+    }
+    if (!path.startsWith('/')) {
+      return t('podDeployment:errors.pathMustStartWithSlash');
+    }
+    return '';
+  };
+
+  // 驗證節點選擇器的函數
+  const validateNodeSelector = (node) => {
+    if (!node) {
+      return t('podDeployment:errors.nodeSelectorRequired');
+    }
+    return '';
+  };
+
+  // 驗證所有持久卷
+  const validatePersistentVolumes = () => {
+    if (persistentVolumes.length === 0) {
+      return true;
+    }
+
+    const errors = {};
+    let isValid = true;
+
+    persistentVolumes.forEach((pv, index) => {
+      // Validate name
+      const nameError = validatePVName(pv.name);
+      if (nameError) {
+        errors[`pv${index}name`] = nameError;
+        isValid = false;
+      }
+
+      // Validate path
+      const pathError = validatePath(pv.local.path);
+      if (pathError) {
+        errors[`pv${index}path`] = pathError;
+        isValid = false;
+      }
+
+      // Validate capacity
+      const capacityError = validateStorageCapacity(pv.capacity.storage);
+      if (capacityError) {
+        errors[`pv${index}Capacity`] = capacityError;
+        isValid = false;
+      }
+
+      // Validate node selector
+      const nodeSelectorValue = pv.nodeAffinity?.required?.nodeSelectorTerms?.[0]?.matchExpressions?.[0]?.values?.[0];
+      const nodeSelectorError = validateNodeSelector(nodeSelectorValue);
+      if (nodeSelectorError) {
+        errors[`pv${index}nodeSelector`] = nodeSelectorError;
+        isValid = false;
+      }
+    });
+
+    setLocalErrors(errors);
+    if (!isValid) {
+      setError(t('podDeployment:errors.invalidPersistentVolumes'));
+    }
+    return isValid;
   };
 
   // 處理容量值變更 - 只在輸入時更新值
@@ -262,6 +298,92 @@ const VolumeConfig = ({ config, onChange, errors = {} }) => {
         delete newErrors[`pv${index}Capacity`];
         return newErrors;
       });
+    }
+  };
+
+  // 處理持久卷字段變更
+  const handlePVChange = async (index, field, value) => {
+    const newPVs = [...persistentVolumes];
+    
+    // 根據字段路徑更新值
+    switch (field) {
+      case 'path':
+        newPVs[index].local.path = value;
+        break;
+      case 'capacity.storage':
+        newPVs[index].capacity.storage = value;
+        break;
+      case 'nodeSelector':
+        const oldNode = newPVs[index].nodeAffinity?.required?.nodeSelectorTerms?.[0]?.matchExpressions?.[0]?.values?.[0];
+        newPVs[index].nodeAffinity.required.nodeSelectorTerms[0].matchExpressions[0].values = [value];
+        
+        // 如果節點有變更且路徑已設置，則創建目錄
+        const path = newPVs[index].local?.path;
+        if (value && value !== oldNode && path) {
+          try {
+            await podDeploymentService.createHostDirectory(value, path);
+            // Show success message
+            setSnackbarMessage(t('podDeployment:messages.hostDirectoryCreated'));
+            setSnackbarVariant('success');
+            setSnackbarOpen(true);
+          } catch (error) {
+            console.error('Failed to create host directory:', error);
+            setSnackbarMessage(t('podDeployment:errors.hostDirectoryCreationFailed'));
+            setSnackbarVariant('error');
+            setSnackbarOpen(true);
+          }
+        }
+        
+        // 清除節點選擇器錯誤
+        if (value) {
+          setLocalErrors(prev => {
+            const newErrors = { ...prev };
+            delete newErrors[`pv${index}nodeSelector`];
+            return newErrors;
+          });
+        }
+        break;
+      default:
+        newPVs[index][field] = value;
+    }
+    
+    setPersistentVolumes(newPVs);
+
+    // 通知父組件配置已更改
+    onChange({
+      ...config,
+      persistentVolumes: newPVs,
+      isValid: validatePersistentVolumes()
+    });
+  };
+
+  // Save to deploy-scripts folder when navigating
+  const handleNext = async () => {
+    try {
+      // Only validate if there are persistent volumes
+      if (persistentVolumes.length > 0) {
+        const isValid = validatePersistentVolumes();
+        if (!isValid) {
+          return false;
+        }
+      }
+
+      const deployScriptsPath = path.join('deploymentTemplate', config.name, 'deploy-scripts');
+      const combinedYaml = generatePreview();
+      
+      if (combinedYaml) {
+        await podDeploymentService.saveDeployScript(
+          config.name,
+          config.version,
+          'storage.yaml',
+          combinedYaml
+        );
+      }
+      return true;
+    } catch (error) {
+      console.error('Failed to save deploy script:', error);
+      setError(t('podDeployment:errors.failedToSaveDeployScript'));
+      return false;
     }
   };
 
@@ -373,6 +495,64 @@ spec:
     return yamlContent;
   };
 
+  // 處理存儲類配置變更
+  const handleStorageConfigChange = (field, value) => {
+    const updatedConfig = {
+      ...config,
+      yamlTemplate: {
+        ...config.yamlTemplate,
+        placeholders: {
+          ...config.yamlTemplate?.placeholders,
+          [field]: value
+        }
+      }
+    };
+    onChange(updatedConfig);
+  };
+
+  // 處理添加持久卷
+  const handleAddPersistentVolume = () => {
+    setPersistentVolumes([
+      ...persistentVolumes,
+      {
+        name: `${config.name}-pv-${persistentVolumes.length + 1}`,
+        local: {
+          path: ''
+        },
+        capacity: {
+          storage: ''
+        },
+        volumeMode: 'Filesystem',
+        accessModes: ['ReadWriteOnce'],
+        persistentVolumeReclaimPolicy: 'Retain',
+        nodeAffinity: {
+          required: {
+            nodeSelectorTerms: [{
+              matchExpressions: [{
+                key: 'kubernetes.io/hostname',
+                operator: 'In',
+                values: ['']
+              }]
+            }]
+          }
+        }
+      }
+    ]);
+  };
+
+  // 處理刪除持久卷
+  const handleDeletePersistentVolume = (index) => {
+    const newPVs = persistentVolumes.filter((_, i) => i !== index);
+    setPersistentVolumes(newPVs);
+
+    // 如果刪除後沒有持久卷，可能需要更新相關狀態
+    if (newPVs.length === 0) {
+      // 可選：在沒有 PV 時自動刪除存儲類
+      // setShowStorageClass(false);
+    }
+  };
+
+  // 處理創建存儲類
   const handleCreateStorageClass = async () => {
     try {
       setLoading(true);
@@ -405,7 +585,7 @@ spec:
     }
   };
 
-  // Delete storage class and PV files
+  // 處理刪除存儲類
   const handleDeleteStorageClass = async () => {
     try {
       setLoading(true);
@@ -424,44 +604,9 @@ spec:
     }
   };
 
-  // Save to deploy-scripts folder when navigating
-  const handleNext = async () => {
-    try {
-      const deployScriptsPath = path.join('deploymentTemplate', config.name, 'deploy-scripts');
-      const combinedYaml = generatePreview();
-      
-      if (combinedYaml) {
-        await podDeploymentService.saveDeployScript(
-          config.name,
-          config.version,
-          'storage.yaml',
-          combinedYaml
-        );
-      }
-    } catch (error) {
-      console.error('Failed to save deploy script:', error);
-      setError(t('podDeployment:errors.failedToSaveDeployScript'));
-    }
-  };
-
   // 從模板中獲取預設
   const defaultValues = config.yamlTemplate?.defaultValues || {};
   const placeholders = config.yamlTemplate?.placeholders || {};
-
-  // 處理存儲類配置變更
-  const handleStorageConfigChange = (field, value) => {
-    const updatedConfig = {
-      ...config,
-      yamlTemplate: {
-        ...config.yamlTemplate,
-        placeholders: {
-          ...config.yamlTemplate?.placeholders,
-          [field]: value
-        }
-      }
-    };
-    onChange(updatedConfig);
-  };
 
   // 在 UI 中渲染持久卷字段
   const renderPersistentVolumeFields = (pv, index) => {
@@ -523,9 +668,10 @@ spec:
               fullWidth
               label={t('podDeployment:podDeployment.volume.capacity')}
               value={pv.capacity.storage}
-              onChange={(e) => handlePVChange(index, 'capacity', e.target.value)}
+              onChange={(e) => handleCapacityChange(index, e.target.value)}
               placeholder="10Gi"
               helperText={t('podDeployment:podDeployment.volume.capacityHelp')}
+              onBlur={(e) => handleCapacityBlur(index, e.target.value)}
             />
           </Grid>
           
@@ -595,18 +741,6 @@ spec:
         </Grid>
       </Paper>
     );
-  };
-
-  // 添加刪除持久卷的處理函數
-  const handleDeletePersistentVolume = (index) => {
-    const newPVs = persistentVolumes.filter((_, i) => i !== index);
-    setPersistentVolumes(newPVs);
-
-    // 如果刪除後沒有持久卷，可能需要更新相關狀態
-    if (newPVs.length === 0) {
-      // 可選：在沒有 PV 時自動刪除存儲類
-      // setShowStorageClass(false);
-    }
   };
 
   return (
@@ -862,6 +996,13 @@ spec:
       </Dialog>
 
       {/* ... 其他對話框和組件 ... */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={() => setSnackbarOpen(false)}
+        message={snackbarMessage}
+        severity={snackbarVariant}
+      />
     </Box>
   );
 };

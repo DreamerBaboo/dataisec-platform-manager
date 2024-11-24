@@ -1,9 +1,9 @@
 const jwt = require('jsonwebtoken');
 
 const authenticateToken = (req, res, next) => {
-  console.log('🔐 Checking authentication...');
+  // console.log('🔐 Checking authentication...');
   const authHeader = req.headers['authorization'];
-  console.log('🔑 Auth header:', authHeader);
+  // console.log('🔑 Auth header:', authHeader);
 
   if (!authHeader) {
     console.log('❌ No auth header found');
@@ -24,7 +24,7 @@ const authenticateToken = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log('✅ Token verified for user:', decoded.username);
+    // console.log('✅ Token verified for user:', decoded.username);
     req.user = decoded;
     next();
   } catch (error) {

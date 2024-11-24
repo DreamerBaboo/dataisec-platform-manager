@@ -411,8 +411,8 @@ const ImageList = () => {
   };
 
   return (
-    <Box sx={{ height: '90vh', display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <Paper sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <Box sx={{  height: '100%' }}>
+      <Paper sx={{ width: '94vw', height: '80vh', p: 2 }}>
         <Toolbar
           sx={{
             pl: { sm: 2 },

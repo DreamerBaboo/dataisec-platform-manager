@@ -138,6 +138,8 @@ const RepositoryConfig = ({ config, onChange, errors }) => {
 
     logger.info('Updated config:', updatedConfig);
     onChange(updatedConfig);
+
+    
   };
 
   const handleTagChange = (event) => {

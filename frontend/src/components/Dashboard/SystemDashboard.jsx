@@ -7,7 +7,7 @@ import { useAppTranslation } from '../../hooks/useAppTranslation';
 import { api } from '../../utils/api';
 import { logger } from '../../utils/logger.ts';  // 使用命名導出
 
-const REFRESH_INTERVAL = 30000; // 30 seconds
+const REFRESH_INTERVAL = 60000; // 60 seconds
 
 // 添加重試配置
 const RETRY_ATTEMPTS = 3;
@@ -21,6 +21,7 @@ const SystemDashboard = () => {
   const [nodes, setNodes] = useState([]);
   const [selectedNode, setSelectedNode] = useState('cluster');
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(null);
   const refreshTimerRef = useRef(null);
   const { t } = useAppTranslation();
@@ -58,7 +59,7 @@ const SystemDashboard = () => {
     }
   };
 
-  // 更新獲取節點列表的函數
+  // 獲取節點列表
   const fetchNodes = useCallback(async () => {
     try {
       setError(null);
@@ -66,12 +67,15 @@ const SystemDashboard = () => {
       
       const data = await retryOperation(async () => {
         logger.info('Making API request to fetch nodes...');
-        const response = await api.get('api/metrics/nodes');
-        if (!response || !response.data || !Array.isArray(response.data)) {
-          logger.error('Invalid response format:', response);
-          throw new Error('Invalid response format: expected array in data field');
+        const nodes = await api.get('api/k8s/nodes');
+        logger.info('Response data:', nodes);
+        
+        if (!Array.isArray(nodes)) {
+          logger.error('Invalid response format:', nodes);
+          throw new Error('Invalid response format: expected array of nodes');
         }
-        return response.data;
+        
+        return nodes;
       });
 
       logger.info('Raw node data received:', data);
@@ -102,7 +106,7 @@ const SystemDashboard = () => {
     if (!selectedNode) return;
 
     try {
-      setLoading(true);
+      setRefreshing(true);
       setError(null);
       
       const endpoint = selectedNode === 'cluster' 
@@ -111,27 +115,10 @@ const SystemDashboard = () => {
 
       const metricsData = await retryOperation(async () => {
         const response = await api.get(endpoint);
-        if (!response || !response.data) {
-          throw new Error('Invalid metrics response format');
+        if (!response) {
+          throw new Error('No response received from server');
         }
-
-        // Validate metrics data structure
-        const data = response.data;
-        const metrics = selectedNode === 'cluster' ? data.cluster : data[selectedNode];
-        
-        if (!metrics || typeof metrics !== 'object') {
-          throw new Error('Invalid metrics data structure');
-        }
-
-        // Validate required metric types exist
-        const requiredMetrics = ['cpu', 'memory', 'network', 'storage'];
-        const missingMetrics = requiredMetrics.filter(metric => !metrics[metric]);
-        
-        if (missingMetrics.length > 0) {
-          logger.warn(`Missing metrics for ${selectedNode}:`, missingMetrics);
-        }
-
-        return data;
+        return response;
       });
 
       setMetrics(prev => ({
@@ -146,90 +133,67 @@ const SystemDashboard = () => {
       console.error('獲取指標數據失敗:', error);
       const errorMessage = error.response?.data?.message || error.message;
       setError(`獲取指標數據失敗: ${errorMessage}`);
-      
-      // Keep existing metrics data but mark the failed node as null
-      if (selectedNode === 'cluster') {
-        setMetrics(prev => ({ ...prev, cluster: null }));
-      } else {
-        setMetrics(prev => ({
-          ...prev,
-          nodes: { ...prev.nodes, [selectedNode]: null }
-        }));
-      }
     } finally {
-      setLoading(false);
+      setRefreshing(false);
+      if (loading) setLoading(false);
     }
-  }, [selectedNode]);
+  }, [selectedNode, loading]);
 
   // 更新自動刷新邏輯
   useEffect(() => {
-    logger.info('Setting up auto refresh, page visible:', isPageVisible);
-    
     const refreshData = async () => {
       try {
-        logger.info('Auto refresh triggered');
-        await fetchNodes();  // 先更新節點列表
-        await fetchMetrics(); // 然後更新指標數據
+        await fetchNodes();
+        await fetchMetrics();
       } catch (error) {
         logger.error('Auto refresh failed:', error);
       }
     };
     
     if (isPageVisible) {
-      // 立即執行一次完整刷新
       refreshData();
-      
-      // 設置定時器，每30秒刷新一次
       refreshTimerRef.current = setInterval(refreshData, REFRESH_INTERVAL);
 
       return () => {
         if (refreshTimerRef.current) {
-          logger.info('Clearing refresh timer');
           clearInterval(refreshTimerRef.current);
           refreshTimerRef.current = null;
         }
       };
     } else {
-      // 頁面不可見時清除定時器
       if (refreshTimerRef.current) {
-        logger.info('Clearing refresh timer due to page invisibility');
         clearInterval(refreshTimerRef.current);
         refreshTimerRef.current = null;
       }
     }
-  }, [fetchNodes, fetchMetrics, isPageVisible]);
+  }, [isPageVisible, fetchNodes, fetchMetrics]);
 
   // 更新手動刷新函數
   const handleRefresh = useCallback(async () => {
-    if (refreshTimerRef.current) {
-      clearInterval(refreshTimerRef.current);
-      refreshTimerRef.current = null;
-    }
-
-    logger.info('Manual refresh triggered');
     try {
-      setLoading(true);
-      await fetchNodes();  // 先更新節點列表
-      await fetchMetrics(); // 然後更新指標數據
-
-      // 重新設置自動刷新定時器
-      if (isPageVisible) {
-        refreshTimerRef.current = setInterval(async () => {
-          await fetchNodes();
-          await fetchMetrics();
-        }, REFRESH_INTERVAL);
-      }
+      setRefreshing(true);
+      await fetchNodes();
+      await fetchMetrics();
     } catch (error) {
       logger.error('Manual refresh failed:', error);
-      setError('Failed to refresh metrics');
+      const errorMessage = error.response?.data?.message || error.message;
+      setError(`刷新失敗: ${errorMessage}`);
     } finally {
-      setLoading(false);
+      setRefreshing(false);
     }
-  }, [fetchNodes, fetchMetrics, isPageVisible]);
+  }, [fetchNodes, fetchMetrics]);
+
+  // 獲取當前選擇節點的指標數據
+  const getCurrentMetrics = useCallback(() => {
+    if (selectedNode === 'cluster') {
+      return metrics.cluster;
+    }
+    return metrics.nodes[selectedNode];
+  }, [selectedNode, metrics]);
 
   return (
-    <Box sx={{ width: '100%', height: '100%', minWidth: '1182px' }}>
-      <Paper sx={{ width: '100%', height: '100%' }}>
+    <Box sx={{ width: '94vw', height: '100%' }}>
+      <Paper sx={{ width: '100%', height: '100%', p: 0 }}>
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
@@ -281,11 +245,17 @@ const SystemDashboard = () => {
               <span>
                 <IconButton 
                   onClick={handleRefresh}
-                  disabled={loading}
+                  disabled={refreshing}
                   size="small"
                   sx={{ ml: 1 }}
                 >
-                  <RefreshIcon />
+                  <RefreshIcon sx={{ 
+                    animation: refreshing ? 'spin 1s linear infinite' : 'none',
+                    '@keyframes spin': {
+                      '0%': { transform: 'rotate(0deg)' },
+                      '100%': { transform: 'rotate(360deg)' }
+                    }
+                  }} />
                 </IconButton>
               </span>
             </Tooltip>
@@ -298,7 +268,11 @@ const SystemDashboard = () => {
           </Box>
         ) : (
           <Box sx={{ p: 2 }}>
-            <MetricsDisplay metrics={selectedNode === 'cluster' ? metrics.cluster : metrics.nodes[selectedNode]} selectedNode={selectedNode} />
+            <MetricsDisplay 
+              metrics={getCurrentMetrics()} 
+              selectedNode={selectedNode} 
+              refreshing={refreshing}
+            />
           </Box>
         )}
       </Paper>
