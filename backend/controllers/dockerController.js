@@ -2,6 +2,7 @@ const dockerService = require('../services/dockerService');
 const multer = require('multer');
 const path = require('path');
 const os = require('os');
+const fs = require('fs'); // added fs module
 
 // 配置 multer 用於處理檔案上傳
 const upload = multer({
@@ -26,10 +27,11 @@ const getRepositories = async (req, res) => {
 const getTags = async (req, res) => {
   try {
     const { repository } = req.params;
-    console.log(`Getting tags for repository: ${repository}`);
+    console.log(`Fetching tags for repository: ${repository}`);
     if (!repository) {
       return res.status(400).json({ error: 'Repository parameter is required' });
     }
+
     const tags = await dockerService.listTags(repository);
     console.log(`Found ${tags.length} tags for repository: ${repository}`);
     res.json(tags);

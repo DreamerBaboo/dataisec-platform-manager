@@ -791,9 +791,15 @@ class K8sService {
           nodeSelector: {
             'kubernetes.io/hostname': nodeName
           },
+          initContainers: [{
+            name: 'pull-check',
+            image: k8sConfig.images.busyboxImage,
+            command: ['/bin/sh', '-c', 'exit 0'] // 檢查映像是否存在
+          }],
           containers: [{
             name: 'mkdir',
             image: k8sConfig.images.busyboxImage,
+            imagePullPolicy: 'IfNotPresent', // 只在映像不存在時才拉取
             command: ['/bin/sh', '-c', `mkdir -p ${directoryPath} && chmod 777 ${directoryPath}`],
             securityContext: {
               privileged: true

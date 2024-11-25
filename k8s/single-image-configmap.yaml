@@ -33,4 +33,4 @@ data:
   KUBERNETES_CA_CERT_PATH: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
   KUBECONFIG_PATH: "/etc/kubernetes/admin.conf"
   ALLOWED_ORIGINS: "http://localhost:5173,http://localhost:3001,http://192.168.170.126:3001"
-  BUSYBOX_IMAGE: "your-registry.com/busybox:latest"  # Replace with your actual registry and image path
+  BUSYBOX_IMAGE: "busybox:latest"  # Replace with your actual registry and image path

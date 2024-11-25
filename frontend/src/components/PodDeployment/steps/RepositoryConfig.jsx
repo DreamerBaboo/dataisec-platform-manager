@@ -41,9 +41,10 @@ const RepositoryConfig = ({ config, onChange, errors }) => {
       
       logger.info('Repositories response:', response.data);
       if (Array.isArray(response.data)) {
-        const filteredRepos = response.data
+        const filteredRepos = Array.from(new Set(response.data
           .filter(repo => repo && repo.name && !repo.name.includes('sha256:'))
-          .sort((a, b) => a.name.localeCompare(b.name));
+          .map(repo => repo.name)))
+          .sort((a, b) => a.localeCompare(b));
         setRepositories(filteredRepos);
       }
     } catch (error) {
@@ -97,50 +98,6 @@ const RepositoryConfig = ({ config, onChange, errors }) => {
     }
   }, [config.repository]);
 
-  const handleRepositoryChange = (event) => {
-    const repository = event.target.value;
-    logger.info('Repository selected:', repository);
-    
-    // Create a safe template structure with all required nested objects
-    const updatedTemplate = config.yamlTemplate ? {
-      ...config.yamlTemplate,
-      spec: config.yamlTemplate.spec ? {
-        ...config.yamlTemplate.spec,
-        template: config.yamlTemplate.spec.template ? {
-          ...config.yamlTemplate.spec.template,
-          spec: config.yamlTemplate.spec.template.spec ? {
-            ...config.yamlTemplate.spec.template.spec,
-            containers: config.yamlTemplate.spec.template.spec.containers ? [
-              {
-                ...config.yamlTemplate.spec.template.spec.containers[0],
-                image: repository
-              }
-            ] : [{ image: repository }]
-          } : { containers: [{ image: repository }] }
-        } : { spec: { containers: [{ image: repository }] } }
-      } : { template: { spec: { containers: [{ image: repository }] } } }
-    } : {
-      spec: {
-        template: {
-          spec: {
-            containers: [{ image: repository }]
-          }
-        }
-      }
-    };
-
-    const updatedConfig = {
-      ...config,
-      repository: repository,
-      tag: '',
-      yamlTemplate: updatedTemplate
-    };
-
-    logger.info('Updated config:', updatedConfig);
-    onChange(updatedConfig);
-
-    
-  };
   const saveRepositoryconfig = async (field, value) => {
     try {
       // Create a new config object with updated values
@@ -175,31 +132,7 @@ const RepositoryConfig = ({ config, onChange, errors }) => {
       }));
     }
   };
-  const handleTagChange = (event) => {
-    const tag = event.target.value;
-    onChange({
-      ...config,
-      tag,
-      yamlTemplate: {
-        ...config.yamlTemplate,
-        spec: {
-          ...config.yamlTemplate.spec,
-          template: {
-            ...config.yamlTemplate.spec.template,
-            spec: {
-              ...config.yamlTemplate.spec.template.spec,
-              containers: [
-                {
-                  ...config.yamlTemplate.spec.template.spec.containers[0],
-                  image: `${config.repository}:${tag}`
-                }
-              ]
-            }
-          }
-        }
-      }
-    });
-  };
+ 
 
   return (
     <Box>
@@ -219,9 +152,9 @@ const RepositoryConfig = ({ config, onChange, errors }) => {
                     onChange={(event) => saveRepositoryconfig('repository', event.target.value)}
                     label={t('podDeployment:podDeployment.repository.selectRepository')}
                   >
-                    {repositories.map((repo) => (
-                      <MenuItem key={repo.id || repo.name} value={repo.name || repo}>
-                        {repo.name || repo}
+                    {repositories.map((repo, index) => (
+                      <MenuItem key={`${repo}-${index}`} value={repo}>
+                        {repo}
                       </MenuItem>
                     ))}
                   </Select>

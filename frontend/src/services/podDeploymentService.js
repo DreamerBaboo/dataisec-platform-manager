@@ -392,21 +392,126 @@ export const podDeploymentService = {
   },
 
   // Create host directory for persistent volume
-  async createHostDirectory(nodeName, path) {
+  async createHostDirectory(nodeName, path, options = {}) {
     try {
-      logger.info('📁 Creating host directory:', { nodeName, path });
+      // 1. 輸入驗證
+      if (!nodeName?.trim()) {
+        throw new Error('Node name is required');
+      }
+      if (!path?.trim()) {
+        throw new Error('Directory path is required');
+      }
+
+      // 2. 路徑驗證和清理
+      const sanitizedPath = this.sanitizePath(path);
+
+      // 3. 構建請求數據
+      const requestData = {
+        path: sanitizedPath,
+        mode: options.mode || '0755',
+        recursive: options.recursive !== false,
+        owner: options.owner || '1000:1000' // 默認用戶和組 ID
+      };
+
+      logger.info('📁 Creating host directory:', { 
+        nodeName, 
+        path: sanitizedPath,
+        options: requestData 
+      });
+
+      // 4. 發送請求
       const response = await axios.post(
         `${API_URL}/api/k8s/nodes/${nodeName}/directories`,
-        { path },
+        requestData,
         getAuthHeaders()
       );
+
+      // 5. 驗證響應
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || 'Failed to create directory');
+      }
+
       logger.info('✅ Host directory created:', response.data);
       return response.data;
+
     } catch (error) {
-      console.error('❌ Failed to create host directory:', error);
-      throw error;
+      // 6. 錯誤處理
+      logger.error('❌ Failed to create host directory:', {
+        error,
+        nodeName,
+        path,
+        details: error.response?.data
+      });
+
+      // 7. 轉換錯誤
+      const errorResponse = {
+        success: false,
+        message: this.getDirectoryErrorMessage(error),
+        path,
+        node: nodeName
+      };
+
+      throw errorResponse;
     }
   },
+
+  // 輔助方法：路徑清理
+  sanitizePath(path) {
+    // 移除多餘的斜線
+    let sanitized = path.replace(/\/+/g, '/');
+    
+    // 確保以斜線開始
+    if (!sanitized.startsWith('/')) {
+      sanitized = '/' + sanitized;
+    }
+    
+    // 移除結尾斜線（除非是根目錄）
+    if (sanitized.length > 1 && sanitized.endsWith('/')) {
+      sanitized = sanitized.slice(0, -1);
+    }
+    
+    // 檢查非法字符
+    const invalidChars = /[<>:"|?*\x00-\x1F]/g;
+    if (invalidChars.test(sanitized)) {
+      throw new Error('Path contains invalid characters');
+    }
+    
+    // 防止目錄遍歷
+    if (sanitized.includes('..')) {
+      throw new Error('Directory traversal is not allowed');
+    }
+    
+    return sanitized;
+  },
+
+  // 輔助方法：錯誤信息處理
+  getDirectoryErrorMessage(error) {
+    if (error.response) {
+      const status = error.response.status;
+      const message = error.response.data?.message;
+
+      switch (status) {
+        case 400:
+          return `Invalid request: ${message || 'Bad parameters'}`;
+        case 403:
+          return `Permission denied: ${message || 'Insufficient privileges'}`;
+        case 404:
+          return `Not found: ${message || 'Node or path not found'}`;
+        case 409:
+          return `Conflict: ${message || 'Directory already exists'}`;
+        case 500:
+          return `Server error: ${message || 'Internal server error'}`;
+        default:
+          return message || `HTTP error ${status}`;
+      }
+    }
+
+    if (error.request) {
+      return 'Network error: Unable to reach the server';
+    }
+
+    return error.message || 'Unknown error occurred';
+  }
 };
 
 export default podDeploymentService;

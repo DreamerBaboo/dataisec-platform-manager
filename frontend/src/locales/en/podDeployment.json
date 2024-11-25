@@ -216,7 +216,13 @@
       "cephfs": "CephFS",
       "csi": "CSI",
       "secretName": "Secret Name",
-      "configMapName": "ConfigMap Name"
+      "configMapName": "ConfigMap Name",
+      "createDirectory": "Create Directory",
+      "hostPathHelp": "Enter the host path and click the button to create the directory",
+      "directoryCreated": "Directory created successfully"
+    },
+    "messages": {
+      "directoryCreated": "Directory created successfully"
     },
     "configMaps": {
       "title": "Configuration Maps",
@@ -278,7 +284,9 @@
       "errors": {
         "duplicateName": "Secret name already exists",
         "saveFailed": "Failed to save secret",
-        "deleteFailed": "Failed to delete secret"
+        "deleteFailed": "Failed to delete secret",
+        "nodeAndPathRequired": "Please select a node and enter the path",
+      "failedToCreateDirectory": "Failed to create directory"
       },
       "validation": {
         "keyRequired": "Key is required",

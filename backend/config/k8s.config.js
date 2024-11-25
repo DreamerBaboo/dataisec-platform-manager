@@ -1,7 +1,7 @@
 const config = {
   images: {
     // Default to environment variable or fallback to a default value
-    busyboxImage: process.env.BUSYBOX_IMAGE || 'your-registry.com/busybox:latest'
+    busyboxImage: process.env.BUSYBOX_IMAGE || 'busybox:latest'
   }
 };
 

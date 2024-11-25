@@ -62,7 +62,21 @@ class DockerService {
   async listRepositories() {
     try {
       const output = await this.executeCommand(['images', '--format', '{"Repository":"{{.Repository}}","Tag":"{{.Tag}}","ID":"{{.ID}}","CreatedAt":"{{.CreatedAt}}","Size":"{{.Size}}"}']);
-      return this.parseRepositories(output);
+      const allImages = this.parseRepositories(output);
+      
+      // Create a Map to store unique repositories with their details
+      const uniqueRepos = new Map();
+      
+      allImages.forEach(image => {
+        if (!uniqueRepos.has(image.name)) {
+          uniqueRepos.set(image.name, image);
+        }
+      });
+      
+      // Convert Map values back to array
+      return Array.from(uniqueRepos.values())
+        .filter(image => image.name !== '<none>' && !image.name.includes('sha256:'))
+        .sort((a, b) => a.name.localeCompare(b.name));
     } catch (error) {
       logger.error('無法列出倉庫:', error);
       throw error;
@@ -72,18 +86,29 @@ class DockerService {
   async listTags(repository) {
     try {
       logger.info(`獲取倉庫標籤: ${repository}`);
-      // Use a more specific format string to get only the tags
       const output = await this.executeCommand([
         'images',
         '--format',
-        '{{.Tag}}',
-        repository
+        '{"Repository":"{{.Repository}}","Tag":"{{.Tag}}"}',
       ]);
-      const tags = output.split('\n')
+      
+      // Parse the output into objects
+      const images = output.split('\n')
         .filter(Boolean)
-        .filter(tag => tag !== '<none>'); // Filter out <none> tags
-      logger.info(`找到 ${tags.length} 個標籤，屬於 ${repository}`);
-      return tags;
+        .map(line => JSON.parse(line))
+        .filter(img => img.Tag !== '<none>' && img.Repository !== '<none>');
+
+      // Filter images for the specified repository and extract tags
+      const matchingTags = images
+        .filter(img => img.Repository === repository)
+        .map(img => img.Tag)
+        .filter(Boolean);
+
+      // Remove duplicates and sort
+      const uniqueTags = [...new Set(matchingTags)].sort((a, b) => a.localeCompare(b));
+      
+      logger.info(`找到 ${uniqueTags.length} 個標籤，屬於 ${repository}`);
+      return uniqueTags;
     } catch (error) {
       logger.error(`無法列出 ${repository} 的標籤:`, error);
       throw error;

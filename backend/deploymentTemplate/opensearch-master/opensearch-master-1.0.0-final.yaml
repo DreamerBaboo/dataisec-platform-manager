@@ -125,8 +125,8 @@ hostAliases: []
 #   - "bar.local"
 
 image:
-  repository: "kindest/node" #[]
-  tag: "latest" #[2.12.0]
+  repository: "ghcr.io/open-webui/open-webui" #[]
+  tag: "main" #[2.12.0]
   pullPolicy: IfNotPresent
   insecureRegistry: true
 

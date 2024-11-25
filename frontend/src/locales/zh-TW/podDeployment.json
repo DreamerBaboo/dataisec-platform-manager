@@ -90,7 +90,9 @@
       "failedToFetchNodes": "獲取節點失敗",
       "failedToCreateStorageClass": "創建存儲類失敗",
       "failedToDeleteStorage": "刪除存儲配置失敗",
-      "failedToSaveDeployScript": "保存部署腳本失敗"
+      "failedToSaveDeployScript": "保存部署腳本失敗",
+      "nodeAndPathRequired": "請先選擇節點並輸入路徑",
+      "failedToCreateDirectory": "創建目錄失敗"
     },
     "filter": {
       "namespace": "命名空間",
@@ -261,7 +263,10 @@
       "createStorageClassTitle": "創建存儲類",
       "reclaimPolicy": "回收策略",
       "volumeBindingMode": "卷繫結模式",
-      "provisioner": "提供者"
+      "provisioner": "提供者",
+      "createDirectory": "創建目錄",
+      "hostPathHelp": "輸入主機路徑並點擊按鈕創建目錄",
+      "directoryCreated": "目錄創建成功"
     },
     "configMaps": {
       "title": "配置映射",
@@ -638,7 +643,7 @@
       "preview": "預覽",
       "validation": {
         "nameRequired": "名稱為必填項",
-        "provisionerRequired": "供應���為必填項",
+        "provisionerRequired": "供應者為必填項",
         "capacityRequired": "容量為必填項",
         "accessModeRequired": "至少需要一個訪問模式"
       }
@@ -713,7 +718,13 @@
       "persistenceSize": "持久化存儲大小",
       "createStorageClass": "創建存儲類",
       "deleteStorageClass": "刪除存儲類",
-      "preview": "預覽配置"
+      "preview": "預覽配置",
+      "createDirectory": "創建目錄",
+      "hostPathHelp": "輸入主機路徑並點擊按鈕創建目錄",
+      "directoryCreated": "目錄創建成功"
+    },
+    "messages": {
+      "directoryCreated": "目錄創建成功"
     }
   }
 } 

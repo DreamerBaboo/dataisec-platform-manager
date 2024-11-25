@@ -13,7 +13,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: opensearch-master-storageclass
   local:
-    path: /data/dataisec
+    path: /data/dataisec-3
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -21,4 +21,4 @@ spec:
         - key: kubernetes.io/hostname
           operator: In
           values:
-          - null
+          - kind-control-plane
