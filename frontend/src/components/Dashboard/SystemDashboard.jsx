@@ -113,20 +113,37 @@ const SystemDashboard = () => {
         ? 'api/metrics/system'
         : `api/metrics/system/node/${selectedNode}`;
 
+      logger.info(`Fetching metrics from endpoint: ${endpoint}`);
+      
       const metricsData = await retryOperation(async () => {
         const response = await api.get(endpoint);
+        logger.info('Received metrics data:', response);
+        
         if (!response) {
           throw new Error('No response received from server');
         }
         return response;
       });
 
-      setMetrics(prev => ({
-        ...prev,
-        [selectedNode === 'cluster' ? 'cluster' : 'nodes']: selectedNode === 'cluster' 
-          ? metricsData 
-          : { ...prev.nodes, [selectedNode]: metricsData[selectedNode] }
-      }));
+      // 更新處理邏輯以確保數據結構一致
+      setMetrics(prev => {
+        const newMetrics = { ...prev };
+        
+        if (selectedNode === 'cluster') {
+          // 保留原有的節點數據，只更新集群數據
+          newMetrics.cluster = metricsData.cluster;
+        } else {
+          // 保留集群數據，更新特定節點的數據
+          newMetrics[selectedNode] = metricsData[selectedNode];
+        }
+
+        logger.info('Updated metrics state:', {
+          selectedNode,
+          newMetrics: newMetrics
+        });
+
+        return newMetrics;
+      });
 
       setLastUpdate(new Date());
     } catch (error) {
@@ -185,10 +202,13 @@ const SystemDashboard = () => {
 
   // 獲取當前選擇節點的指標數據
   const getCurrentMetrics = useCallback(() => {
+    logger.info('Getting current metrics for node:', selectedNode);
+    logger.info('Current metrics state:', metrics);
+    
     if (selectedNode === 'cluster') {
-      return metrics.cluster;
+      return { cluster: metrics.cluster };  // 返回與原始數據結構一致的格式
     }
-    return metrics.nodes[selectedNode];
+    return { [selectedNode]: metrics[selectedNode] };  // 返回與原始數據結構一致的格式
   }, [selectedNode, metrics]);
 
   return (

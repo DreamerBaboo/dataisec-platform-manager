@@ -24,9 +24,39 @@ const MetricsDisplay = ({ metrics, selectedNode, refreshing }) => {
     return savedLayout ? JSON.parse(savedLayout) : DEFAULT_LAYOUT;
   });
 
+  // 使用 state 來追蹤處理後的指標
+  const [processedMetrics, setProcessedMetrics] = useState(null);
+
+  // 當原始指標數據變化時處理數據
   useEffect(() => {
-    logger.info('MetricsDisplay received metrics:', metrics);
+    logger.info('MetricsDisplay received raw metrics:', metrics);
     logger.info('Selected node:', selectedNode);
+
+    if (!metrics) {
+      logger.warn('No metrics data available');
+      setProcessedMetrics(null);
+      return;
+    }
+
+    // 檢查數據結構
+    if (selectedNode === 'cluster') {
+      if (!metrics.cluster) {
+        logger.warn('No cluster metrics found in:', metrics);
+        setProcessedMetrics(null);
+        return;
+      }
+      logger.info('Processing cluster metrics:', metrics.cluster);
+      setProcessedMetrics(metrics.cluster);
+    } else {
+      // 對於節點指標，直接檢查節點名稱
+      if (!metrics[selectedNode]) {
+        logger.warn(`No metrics found for node ${selectedNode} in:`, metrics);
+        setProcessedMetrics(null);
+        return;
+      }
+      logger.info(`Processing node metrics for ${selectedNode}:`, metrics[selectedNode]);
+      setProcessedMetrics(metrics[selectedNode]);
+    }
   }, [metrics, selectedNode]);
 
   const handleLayoutChange = useCallback((newLayout) => {
@@ -34,26 +64,32 @@ const MetricsDisplay = ({ metrics, selectedNode, refreshing }) => {
     localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(newLayout));
   }, []);
 
-  // Get the correct metrics based on selected node
-  const getCurrentMetrics = useCallback(() => {
-    if (!metrics) {
-      logger.warn('No metrics data available');
-      return null;
-    }
+  // 添加更詳細的數據驗證
+  const validateMetrics = (data) => {
+    if (!data) return false;
+    
+    const hasValidCpu = Array.isArray(data.cpu) && data.cpu.length > 0;
+    const hasValidMemory = Array.isArray(data.memory) && data.memory.length > 0;
+    const hasValidNetwork = data.network && 
+                          Array.isArray(data.network.tx) && 
+                          Array.isArray(data.network.rx);
+    const hasValidStorage = data.storage && 
+                          typeof data.storage.total === 'number' && 
+                          typeof data.storage.used === 'number';
 
-    if (selectedNode === 'cluster') {
-      logger.info('Getting cluster metrics:', metrics.cluster);
-      return metrics.cluster;
-    }
+    logger.info('Metrics validation result:', {
+      hasValidCpu,
+      hasValidMemory,
+      hasValidNetwork,
+      hasValidStorage,
+      data
+    });
 
-    logger.info('Getting node metrics:', metrics.nodes?.[selectedNode]);
-    return metrics.nodes?.[selectedNode];
-  }, [metrics, selectedNode]);
+    return hasValidCpu && hasValidMemory && hasValidNetwork && hasValidStorage;
+  };
 
-  const currentMetrics = getCurrentMetrics();
-
-  if (!currentMetrics) {
-    logger.warn('No metrics available for display');
+  // 如果沒有處理後的指標，顯示加載狀態
+  if (!processedMetrics) {
     return (
       <Box sx={{ mt: 2 }}>
         <Typography>{t('dashboard:messages.noMetricsAvailable')}</Typography>
@@ -61,15 +97,20 @@ const MetricsDisplay = ({ metrics, selectedNode, refreshing }) => {
     );
   }
 
-  logger.info('Rendering metrics:', {
-    cpu: currentMetrics.cpu?.length,
-    memory: currentMetrics.memory?.length,
-    network: {
-      tx: currentMetrics.network?.tx?.length,
-      rx: currentMetrics.network?.rx?.length
-    },
-    storage: currentMetrics.storage
-  });
+  // 驗證數據結構
+  if (!validateMetrics(processedMetrics)) {
+    logger.error('Invalid metrics structure:', processedMetrics);
+    return (
+      <Box sx={{ mt: 2 }}>
+        <Typography color="error">
+          {t('dashboard:messages.invalidMetricsFormat')}
+        </Typography>
+        <Typography variant="caption" color="textSecondary">
+          {`Selected node: ${selectedNode}`}
+        </Typography>
+      </Box>
+    );
+  }
 
   const formatValue = (value, type) => {
     if (value === undefined || value === null) return 'N/A';
@@ -330,7 +371,7 @@ const MetricsDisplay = ({ metrics, selectedNode, refreshing }) => {
           </Box>
           <ReactECharts
             option={getChartOption(
-              currentMetrics.cpu,
+              processedMetrics.cpu,
               t('dashboard:dashboard.cpu'),
               'line',
               { valueType: 'cores', seriesName: t('dashboard:dashboard.cpuUsage') }
@@ -348,7 +389,7 @@ const MetricsDisplay = ({ metrics, selectedNode, refreshing }) => {
           </Box>
           <ReactECharts
             option={getChartOption(
-              currentMetrics.memory,
+              processedMetrics.memory,
               t('dashboard:dashboard.memory'),
               'line',
               { valueType: 'gigabytes', seriesName: t('dashboard:dashboard.memoryUsage') }
@@ -366,7 +407,7 @@ const MetricsDisplay = ({ metrics, selectedNode, refreshing }) => {
           </Box>
           <ReactECharts
             option={getChartOption(
-              currentMetrics.network?.tx,
+              processedMetrics.network?.tx,
               t('dashboard:dashboard.network'),
               'line',
               { valueType: 'bytesPerSecond', seriesName: t('dashboard:dashboard.networkTx') }
@@ -384,7 +425,7 @@ const MetricsDisplay = ({ metrics, selectedNode, refreshing }) => {
           </Box>
           <ReactECharts
             option={getChartOption(
-              currentMetrics.storage,
+              processedMetrics.storage,
               t('dashboard:dashboard.storage'),
               'pie'
             )}
@@ -397,8 +438,22 @@ const MetricsDisplay = ({ metrics, selectedNode, refreshing }) => {
   );
 };
 
-// 使用 memo 並添加自定義比較函數
+// 改進 memo 比較函數
 export default React.memo(MetricsDisplay, (prevProps, nextProps) => {
-  return JSON.stringify(prevProps.metrics) === JSON.stringify(nextProps.metrics) &&
-         prevProps.selectedNode === nextProps.selectedNode;
+  const hasMetricsChanged = JSON.stringify(prevProps.metrics) !== JSON.stringify(nextProps.metrics);
+  const hasNodeChanged = prevProps.selectedNode !== nextProps.selectedNode;
+  const hasRefreshingChanged = prevProps.refreshing !== nextProps.refreshing;
+
+  logger.info('MetricsDisplay props comparison:', {
+    hasMetricsChanged,
+    hasNodeChanged,
+    hasRefreshingChanged,
+    prevNode: prevProps.selectedNode,
+    nextNode: nextProps.selectedNode,
+    prevMetricsKeys: Object.keys(prevProps.metrics || {}),
+    nextMetricsKeys: Object.keys(nextProps.metrics || {}),
+    selectedNodeMetrics: nextProps.metrics?.[nextProps.selectedNode]
+  });
+
+  return !hasMetricsChanged && !hasNodeChanged && !hasRefreshingChanged;
 });

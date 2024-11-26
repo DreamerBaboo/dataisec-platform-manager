@@ -157,13 +157,15 @@ const getNodeMetrics = async (req, res) => {
     const nodeName = req.params.nodeName;
 
     if (!nodeName) {
+      console.warn('[getNodeMetrics] Missing node name in request');
       return res.status(400).json({ message: 'Node name is required' });
     }
 
     console.log(`[getNodeMetrics] Starting metrics retrieval for node: ${nodeName}, timeRange: ${timeRange}`);
-    console.log(`[getNodeMetrics] Using OpenSearch index: ${process.env.OPENSEARCH_SYSTEM_METRICS_INDEX}`);
+    console.log(`[getNodeMetrics] OpenSearch index: ${process.env.OPENSEARCH_SYSTEM_METRICS_INDEX}`);
 
-    const queryBody = {
+    // 構建查詢體，使用與 cluster metrics 相似的結構
+    const searchBody = {
       size: 0,
       query: {
         bool: {
@@ -192,11 +194,18 @@ const getNodeMetrics = async (req, res) => {
             time_zone: 'Asia/Taipei'
           },
           aggs: {
-            cpu_usage: {
+            // CPU 指標 - 使用與 cluster metrics 相同的字段
+            total_cpu_usage: {
               avg: {
                 field: 'kubernetes.node.cpu.usage.nanocores'
               }
             },
+            total_cpu_cores: {
+              max: {
+                field: 'kubernetes.node.cpu.capacity.cores'
+              }
+            },
+            // 記憶體指標
             memory_total: {
               max: {
                 field: 'kubernetes.node.memory.capacity.bytes'
@@ -207,11 +216,7 @@ const getNodeMetrics = async (req, res) => {
                 field: 'kubernetes.node.memory.usage.bytes'
               }
             },
-            memory_free: {
-              avg: {
-                field: 'kubernetes.node.memory.available.bytes'
-              }
-            },
+            // 網絡指標
             network_in: {
               avg: {
                 field: 'kubernetes.node.network.rx.bytes'
@@ -222,6 +227,7 @@ const getNodeMetrics = async (req, res) => {
                 field: 'kubernetes.node.network.tx.bytes'
               }
             },
+            // 存儲指標
             fs_total: {
               max: {
                 field: 'kubernetes.node.fs.capacity.bytes'
@@ -231,78 +237,59 @@ const getNodeMetrics = async (req, res) => {
               avg: {
                 field: 'kubernetes.node.fs.used.bytes'
               }
-            },
-            fs_free: {
-              avg: {
-                field: 'kubernetes.node.fs.available.bytes'
-              }
             }
           }
         }
       }
     };
 
-    console.log('[getNodeMetrics] OpenSearch query:', JSON.stringify(queryBody, null, 2));
+    console.log('[getNodeMetrics] OpenSearch query:', JSON.stringify(searchBody, null, 2));
 
-    const response = await client.search({
+    const searchResponse = await client.search({
       index: process.env.OPENSEARCH_SYSTEM_METRICS_INDEX,
-      body: queryBody
+      body: searchBody
     });
 
-    console.log('[getNodeMetrics] OpenSearch raw response:', JSON.stringify(response.body, null, 2));
+    console.log('[getNodeMetrics] OpenSearch response status:', searchResponse.statusCode);
 
-    if (!response.body?.aggregations?.time_buckets?.buckets) {
-      console.error('[getNodeMetrics] Invalid response structure. Expected aggregations.time_buckets.buckets');
-      console.error('[getNodeMetrics] Response body:', JSON.stringify(response.body, null, 2));
+    if (!searchResponse?.body?.aggregations?.time_buckets?.buckets) {
+      console.error('[getNodeMetrics] Invalid response structure');
       return res.status(500).json({ 
         message: 'Invalid response format from metrics store',
         details: {
-          hasAggregations: !!response.body?.aggregations,
-          hasTimeBuckets: !!response.body?.aggregations?.time_buckets,
-          hasBuckets: !!response.body?.aggregations?.time_buckets?.buckets
+          hasBody: !!searchResponse?.body,
+          hasAggregations: !!searchResponse?.body?.aggregations,
+          hasTimeBuckets: !!searchResponse?.body?.aggregations?.time_buckets,
+          hasBuckets: !!searchResponse?.body?.aggregations?.time_buckets?.buckets
         }
       });
     }
 
-    const buckets = response.body.aggregations.time_buckets.buckets;
-    console.log(`[getNodeMetrics] Found ${buckets.length} time buckets for node ${nodeName}`);
+    const buckets = searchResponse.body.aggregations.time_buckets.buckets;
+    console.log(`[getNodeMetrics] Found ${buckets.length} time buckets`);
 
-    if (buckets.length === 0) {
-      console.warn(`[getNodeMetrics] No metrics found for node ${nodeName} in the last ${timeRange}`);
-      console.log('[getNodeMetrics] Query details:', {
-        index: process.env.OPENSEARCH_SYSTEM_METRICS_INDEX,
-        nodeName,
-        timeRange
-      });
-      return res.status(404).json({ 
-        message: `No metrics found for node ${nodeName}`,
-        details: {
-          timeRange,
-          index: process.env.OPENSEARCH_SYSTEM_METRICS_INDEX
-        }
-      });
-    }
-
-    // Log the first bucket to help debug field mappings
-    console.log('[getNodeMetrics] Sample bucket data:', JSON.stringify(buckets[0], null, 2));
-
+    // 使用與 cluster metrics 相同的數據處理邏輯
     const metrics = {
       [nodeName]: {
-        cpu: buckets.map(bucket => ({
+        cpu: buckets.map(bucket => {
+          const usedCores = (bucket.total_cpu_usage.value || 0) / 1000000000; // 將 nanocores 轉換為 cores
+          const totalCores = bucket.total_cpu_cores.value || 1;
+          return {
             timestamp: bucket.key_as_string,
-          value: (bucket.cpu_usage.value || 0) / 1000000000, // 將 nanocores 轉換為 cores
-          display: `${((bucket.cpu_usage.value || 0) / 1000000000).toFixed(2)} cores`,
+            value: usedCores,
+            display: `${usedCores.toFixed(2)} cores`,
+            total: totalCores,
             valueType: 'cores'
-        })),
+          };
+        }),
         memory: buckets.map(bucket => {
-          const total = bucket.memory_free.value + bucket.memory_used.value || 1;
+          const total = bucket.memory_total.value || 1;
           const used = bucket.memory_used.value || 0;
-          const free = bucket.memory_free.value || 0;
           const percentage = (used / total) * 100;
           return {
             timestamp: bucket.key_as_string,
             value: used,
-            display: `${percentage.toFixed(2)}`,
+            display: `${percentage.toFixed(2)}%`,
             used: formatBytes(used),
             total: formatBytes(total),
             valueType: 'gigabytes'
@@ -325,29 +312,30 @@ const getNodeMetrics = async (req, res) => {
         storage: {
           total: buckets[0]?.fs_total.value || 0,
           used: buckets[0]?.fs_used.value || 0,
-          free: buckets[0]?.fs_free.value || 0,
+          free: (buckets[0]?.fs_total.value || 0) - (buckets[0]?.fs_used.value || 0),
           displayTotal: formatBytes(buckets[0]?.fs_total.value || 0),
           displayUsed: formatBytes(buckets[0]?.fs_used.value || 0),
-          displayFree: formatBytes(buckets[0]?.fs_free.value || 0)
+          displayFree: formatBytes((buckets[0]?.fs_total.value || 0) - (buckets[0]?.fs_used.value || 0))
         }
       }
     };
 
     console.log(`[getNodeMetrics] Successfully processed metrics for node ${nodeName}`);
-    console.log('[getNodeMetrics] Returning metrics structure:', JSON.stringify(metrics, null, 2));
-
     res.json(metrics);
+
   } catch (error) {
-    console.error('[getNodeMetrics] Error:', error);
+    console.error('[getNodeMetrics] Error occurred:', error);
     console.error('[getNodeMetrics] Error details:', {
       message: error.message,
       stack: error.stack,
-      response: error.response?.body
+      opensearchResponse: error.meta?.body || 'No OpenSearch response available'
     });
+
     res.status(500).json({ 
       message: 'Failed to fetch node metrics', 
       error: error.message,
-      details: error.response?.body || error.stack
+      details: error.stack,
+      opensearchError: error.meta?.body || null
     });
   }
 };
