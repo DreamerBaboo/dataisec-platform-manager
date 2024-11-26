@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { logger } from '../../../utils/logger.ts';  // 導入 logger 
 import {
   Box,
   Typography,
@@ -233,7 +234,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
                     <Grid item xs={5}>
                       <TextField
                         fullWidth
-                        label={t('podDeployment:secret.fields.key')}
+                        label={t('podDeployment:podDeployment.secret.fields.key')}
                         value={entry.key}
                         onChange={(e) => handleEntryChange(index, 'key', e.target.value)}
                       />
@@ -241,7 +242,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
                     <Grid item xs={5}>
                       <TextField
                         fullWidth
-                        label={t('podDeployment:secret.fields.value')}
+                        label={t('podDeployment:podDeployment.secret.fields.value')}
                         value={entry.value}
                         onChange={(e) => handleEntryChange(index, 'value', e.target.value)}
                       />
@@ -260,7 +261,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
                   startIcon={<AddIcon />}
                   onClick={handleAddEntry}
                 >
-                  {t('podDeployment:secret.actions.addEntry')}
+                  {t('podDeployment:podDeployment.secret.actions.addEntry')}
                 </Button>
               </Grid>
             </Grid>
@@ -274,7 +275,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
               <Grid item xs={12}>
                 <TextField
                   fullWidth
-                  label={t('podDeployment:secret.fields.registry')}
+                  label={t('podDeployment:podDeployment.secret.fields.registry')}
                   value={newSecret.data.registry || ''}
                   onChange={(e) => handleDataChange('registry', e.target.value)}
                 />
@@ -282,7 +283,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
               <Grid item xs={12}>
                 <TextField
                   fullWidth
-                  label={t('podDeployment:secret.fields.username')}
+                  label={t('podDeployment:podDeployment.secret.fields.username')}
                   value={newSecret.data.username || ''}
                   onChange={(e) => handleDataChange('username', e.target.value)}
                 />
@@ -291,7 +292,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
                 <TextField
                   fullWidth
                   type="password"
-                  label={t('podDeployment:secret.fields.password')}
+                  label={t('podDeployment:podDeployment.secret.fields.password')}
                   value={newSecret.data.password || ''}
                   onChange={(e) => handleDataChange('password', e.target.value)}
                 />
@@ -299,7 +300,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
               <Grid item xs={12}>
                 <TextField
                   fullWidth
-                  label={t('podDeployment:secret.fields.email')}
+                  label={t('podDeployment:podDeployment.secret.fields.email')}
                   value={newSecret.data.email || ''}
                   onChange={(e) => handleDataChange('email', e.target.value)}
                 />
@@ -312,7 +313,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
         return (
           <Box sx={{ mt: 2 }}>
             <Typography variant="subtitle2" color="textSecondary" sx={{ mb: 1 }}>
-              {t('podDeployment:secret.fields.certificate')}
+              {t('podDeployment:podDeployment.secret.fields.certificate')}
             </Typography>
             <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
               <MonacoEditor
@@ -329,7 +330,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
               />
             </Paper>
             <Typography variant="subtitle2" color="textSecondary" sx={{ mb: 1 }}>
-              {t('podDeployment:secret.fields.privateKey')}
+              {t('podDeployment:podDeployment.secret.fields.privateKey')}
             </Typography>
             <Paper variant="outlined" sx={{ p: 2 }}>
               <MonacoEditor
@@ -352,7 +353,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
         return (
           <Box sx={{ mt: 2 }}>
             <Typography variant="subtitle2" color="textSecondary" sx={{ mb: 1 }}>
-              {t('podDeployment:secret.fields.serviceAccountToken')}
+              {t('podDeployment:podDeployment.secret.fields.serviceAccountToken')}
             </Typography>
             <Paper variant="outlined" sx={{ p: 2 }}>
               <MonacoEditor
@@ -379,7 +380,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
               <Grid item xs={12}>
                 <TextField
                   fullWidth
-                  label={t('podDeployment:secret.fields.username')}
+                  label={t('podDeployment:podDeployment.secret.fields.username')}
                   value={newSecret.data.username || ''}
                   onChange={(e) => handleDataChange('username', e.target.value)}
                 />
@@ -388,7 +389,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
                 <TextField
                   fullWidth
                   type="password"
-                  label={t('podDeployment:secret.fields.password')}
+                  label={t('podDeployment:podDeployment.secret.fields.password')}
                   value={newSecret.data.password || ''}
                   onChange={(e) => handleDataChange('password', e.target.value)}
                   InputProps={{
@@ -418,7 +419,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
         return (
           <Box sx={{ mt: 2 }}>
             <Typography variant="subtitle2" color="textSecondary" sx={{ mb: 1 }}>
-              {t('podDeployment:secret.fields.sshPrivateKey')}
+              {t('podDeployment:podDeployment.secret.fields.sshPrivateKey')}
             </Typography>
             <Paper variant="outlined" sx={{ p: 2 }}>
               <MonacoEditor
@@ -446,7 +447,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
               <Grid item xs={12}>
                 <TextField
                   fullWidth
-                  label={t('podDeployment:secret.fields.registry')}
+                  label={t('podDeployment:podDeployment.secret.fields.registry')}
                   value={newSecret.data.registry || ''}
                   onChange={(e) => handleDataChange('registry', e.target.value)}
                 />
@@ -454,7 +455,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
               <Grid item xs={12}>
                 <TextField
                   fullWidth
-                  label={t('podDeployment:secret.fields.username')}
+                  label={t('podDeployment:podDeployment.secret.fields.username')}
                   value={newSecret.data.username || ''}
                   onChange={(e) => handleDataChange('username', e.target.value)}
                 />
@@ -463,7 +464,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
                 <TextField
                   fullWidth
                   type="password"
-                  label={t('podDeployment:secret.fields.password')}
+                  label={t('podDeployment:podDeployment.secret.fields.password')}
                   value={newSecret.data.password || ''}
                   onChange={(e) => handleDataChange('password', e.target.value)}
                   InputProps={{
@@ -488,7 +489,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
               <Grid item xs={12}>
                 <TextField
                   fullWidth
-                  label={t('podDeployment:secret.fields.email')}
+                  label={t('podDeployment:podDeployment.secret.fields.email')}
                   value={newSecret.data.email || ''}
                   onChange={(e) => handleDataChange('email', e.target.value)}
                 />
@@ -504,7 +505,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
               <Grid item xs={12}>
                 <TextField
                   fullWidth
-                  label={t('podDeployment:secret.fields.tokenId')}
+                  label={t('podDeployment:podDeployment.secret.fields.tokenId')}
                   value={newSecret.data['token-id'] || ''}
                   onChange={(e) => handleDataChange('token-id', e.target.value)}
                 />
@@ -513,7 +514,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
                 <TextField
                   fullWidth
                   type="password"
-                  label={t('podDeployment:secret.fields.tokenSecret')}
+                  label={t('podDeployment:podDeployment.secret.fields.tokenSecret')}
                   value={newSecret.data['token-secret'] || ''}
                   onChange={(e) => handleDataChange('token-secret', e.target.value)}
                   InputProps={{
@@ -554,7 +555,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
       } else {
         if (updatedSecrets.some(s => s.name === newSecret.name)) {
           setLocalErrors({
-            submit: t('podDeployment:secret.errors.duplicateName')
+            submit: t('podDeployment:podDeployment.secret.errors.duplicateName')
           });
           return;
         }
@@ -574,7 +575,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
     } catch (error) {
       console.error('Failed to save Secret:', error);
       setLocalErrors({
-        submit: t('podDeployment:secret.errors.saveFailed')
+        submit: t('podDeployment:podDeployment.secret.errors.saveFailed')
       });
     }
   };
@@ -586,35 +587,35 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
       case SECRET_TYPES.OPAQUE:
         newSecret.data.entries?.forEach((entry, index) => {
           if (!entry.key) {
-            errors[`entry-${index}-key`] = t('podDeployment:secret.validation.keyRequired');
+            errors[`entry-${index}-key`] = t('podDeployment:podDeployment.secret.validation.keyRequired');
           }
           if (!entry.value) {
-            errors[`entry-${index}-value`] = t('podDeployment:secret.validation.valueRequired');
+            errors[`entry-${index}-value`] = t('podDeployment:podDeployment.secret.validation.valueRequired');
           }
         });
         break;
 
       case SECRET_TYPES.TLS:
         if (!validateTLSCertificate(newSecret.data['tls.crt'])) {
-          errors['tls.crt'] = t('podDeployment:secret.validation.invalidCertificate');
+          errors['tls.crt'] = t('podDeployment:podDeployment.secret.validation.invalidCertificate');
         }
         if (!validateTLSPrivateKey(newSecret.data['tls.key'])) {
-          errors['tls.key'] = t('podDeployment:secret.validation.invalidPrivateKey');
+          errors['tls.key'] = t('podDeployment:podDeployment.secret.validation.invalidPrivateKey');
         }
         break;
 
       case SECRET_TYPES.SSH_AUTH:
         if (!validateSSHPrivateKey(newSecret.data['ssh-privatekey'])) {
-          errors['ssh-privatekey'] = t('podDeployment:secret.validation.invalidSSHKey');
+          errors['ssh-privatekey'] = t('podDeployment:podDeployment.secret.validation.invalidSSHKey');
         }
         break;
 
       case SECRET_TYPES.DOCKER_CONFIG:
         if (!newSecret.data.username) {
-          errors.username = t('podDeployment:secret.validation.usernameRequired');
+          errors.username = t('podDeployment:podDeployment.secret.validation.usernameRequired');
         }
         if (!newSecret.data.password) {
-          errors.password = t('podDeployment:secret.validation.passwordRequired');
+          errors.password = t('podDeployment:podDeployment.secret.validation.passwordRequired');
         }
         break;
     }
@@ -694,7 +695,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
 
   // Add cleanup function
   const cleanupSecretYaml = async () => {
-    console.log ('config name', config.name);
+    logger.info ('config name', config.name);
   if (!config?.name || !config?.version) return;
   try {
     await podDeploymentService.deleteDeployScript(
@@ -702,7 +703,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
         config.version,
         `${config.name}-${config.version}-secret.yaml`
       );
-      console.log('✅ Secret YAML deleted successfully');
+      logger.info('✅ Secret YAML deleted successfully');
   } catch (error) {
       // Ignore 404 errors (file doesn't exist)
       if (error.response?.status !== 404) {
@@ -751,7 +752,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
     } catch (error) {
       console.error('Failed to delete Secret:', error);
       setLocalErrors({
-        submit: t('podDeployment:secret.errors.deleteFailed')
+        submit: t('podDeployment:podDeployment.secret.errors.deleteFailed')
       });
     }
   };
@@ -768,7 +769,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
   const handleRemoveEntry = (index) => {
     const updatedSecret = { ...newSecret };
     updatedSecret.data.entries = updatedSecret.data.entries.filter((_, i) => i !== index);
-    console.log ('remove entery');
+    logger.info ('remove entery');
     setNewSecret(updatedSecret);
   };
 
@@ -872,7 +873,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
                   <Grid item xs={5}>
                     <TextField
                       fullWidth
-                      label={t('podDeployment:secret.fields.key')}
+                      label={t('podDeployment:podDeployment.secret.fields.key')}
                       value={entry.key}
                       disabled
                     />
@@ -881,7 +882,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
                     <TextField
                       fullWidth
                       type={showValues[`${secret.name}-${index}`] ? 'text' : 'password'}
-                      label={t('podDeployment:secret.fields.value')}
+                      label={t('podDeployment:podDeployment.secret.fields.value')}
                       value={entry.value}
                       disabled
                       InputProps={{
@@ -912,7 +913,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
           return (
             <Box>
               <Typography variant="subtitle2" gutterBottom>
-                {t('podDeployment:secret.fields.serviceAccountToken')}
+                {t('podDeployment:podDeployment.secret.fields.serviceAccountToken')}
               </Typography>
               <TextField
                 fullWidth
@@ -950,7 +951,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
                 <Grid item xs={12}>
                   <TextField
                     fullWidth
-                    label={t('podDeployment:secret.fields.registry')}
+                    label={t('podDeployment:podDeployment.secret.fields.registry')}
                     value={secret.data.registry}
                     disabled
                   />
@@ -958,7 +959,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
                 <Grid item xs={12}>
                   <TextField
                     fullWidth
-                    label={t('podDeployment:secret.fields.username')}
+                    label={t('podDeployment:podDeployment.secret.fields.username')}
                     value={secret.data.username}
                     disabled
                   />
@@ -967,7 +968,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
                   <TextField
                     fullWidth
                     type={showValues[`${secret.name}-password`] ? 'text' : 'password'}
-                    label={t('podDeployment:secret.fields.password')}
+                    label={t('podDeployment:podDeployment.secret.fields.password')}
                     value={secret.data.password}
                     disabled
                     InputProps={{
@@ -992,7 +993,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
                 <Grid item xs={12}>
                   <TextField
                     fullWidth
-                    label={t('podDeployment:secret.fields.email')}
+                    label={t('podDeployment:podDeployment.secret.fields.email')}
                     value={secret.data.email}
                     disabled
                   />
@@ -1008,7 +1009,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
                 <Grid item xs={12}>
                   <TextField
                     fullWidth
-                    label={t('podDeployment:secret.fields.username')}
+                    label={t('podDeployment:podDeployment.secret.fields.username')}
                     value={secret.data.username}
                     disabled
                   />
@@ -1017,7 +1018,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
                   <TextField
                     fullWidth
                     type={showValues[secret.name] ? 'text' : 'password'}
-                    label={t('podDeployment:secret.fields.password')}
+                    label={t('podDeployment:podDeployment.secret.fields.password')}
                     value={secret.data.password}
                     disabled
                     InputProps={{
@@ -1047,7 +1048,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
           return (
             <Box>
               <Typography variant="subtitle2" gutterBottom>
-                {t('podDeployment:secret.fields.sshPrivateKey')}
+                {t('podDeployment:podDeployment.secret.fields.sshPrivateKey')}
               </Typography>
               <MonacoEditor
                 value={secret.data['ssh-privatekey'] || ''}
@@ -1072,7 +1073,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
                 <Grid item xs={12}>
                   <TextField
                     fullWidth
-                    label={t('podDeployment:secret.fields.tokenId')}
+                    label={t('podDeployment:podDeployment.secret.fields.tokenId')}
                     value={secret.data['token-id']}
                     disabled
                   />
@@ -1081,7 +1082,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
                   <TextField
                     fullWidth
                     type="password"
-                    label={t('podDeployment:secret.fields.tokenSecret')}
+                    label={t('podDeployment:podDeployment.secret.fields.tokenSecret')}
                     value={secret.data['token-secret']}
                     disabled
                     InputProps={{
@@ -1117,7 +1118,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Typography variant="subtitle1">
-              {secret.name} ({t(`podDeployment:secret.types.${secret.type.toLowerCase()}`)})
+              {secret.name} ({t(`podDeployment:podDeployment.secret.types.${secret.type.toLowerCase()}`)})
             </Typography>
             {SECRET_TYPE_INFO[secret.type] && (
               <Tooltip title={t(SECRET_TYPE_INFO[secret.type].description)}>
@@ -1146,7 +1147,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
       {/* Header with Create and Preview buttons */}
       <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="h6">
-          {t('podDeployment:secret.title')}
+          {t('podDeployment:podDeployment.secret.title')}
         </Typography>
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Button
@@ -1155,8 +1156,8 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
             onClick={() => setShowYaml(!showYaml)}
           >
             {showYaml 
-              ? t('podDeployment:secret.hidePreview')
-              : t('podDeployment:secret.showPreview')
+              ? t('podDeployment:podDeployment.secret.hidePreview')
+              : t('podDeployment:podDeployment.secret.showPreview')
             }
           </Button>
           <Button
@@ -1164,7 +1165,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
             startIcon={<AddIcon />}
             onClick={handleCreateSecret}
           >
-            {t('podDeployment:secret.add')}
+            {t('podDeployment:podDeployment.secret.add')}
           </Button>
         </Box>
       </Box>
@@ -1173,7 +1174,7 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
       {showYaml && secrets.length > 0 && (
         <Paper sx={{ p: 2, mb: 3 }}>
           <Typography variant="h6" gutterBottom>
-            {t('podDeployment:secret.preview')}
+            {t('podDeployment:podDeployment.secret.preview')}
           </Typography>
           <pre style={{ 
             margin: 0, 
@@ -1214,8 +1215,8 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
       >
         <DialogTitle>
           {editIndex !== null 
-            ? t('podDeployment:secret.edit')
-            : t('podDeployment:secret.create')
+            ? t('podDeployment:podDeployment.secret.edit')
+            : t('podDeployment:podDeployment.secret.create')
           }
         </DialogTitle>
         <DialogContent sx={{ width: '100%', p: 3 }}>
@@ -1224,12 +1225,12 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
             <Grid item xs={12}>
               <FormControl fullWidth>
                 <InputLabel>
-                  {t('podDeployment:secret.type')}
+                  {t('podDeployment:podDeployment.secret.type')}
                 </InputLabel>
                 <Select
                   value={selectedType}
                   onChange={(e) => handleTypeSelect(e.target.value)}
-                  label={t('podDeployment:secret.type')}
+                  label={t('podDeployment:podDeployment.secret.type')}
                 >
                   {Object.entries(SECRET_TYPES).map(([key, value]) => (
                     <MenuItem key={key} value={value}>
@@ -1244,13 +1245,13 @@ const SecretEditor = ({ config, onChange, errors = {} }) => {
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                label={t('podDeployment:secret.fields.name')}
+                label={t('podDeployment:podDeployment.secret.fields.name')}
                 value={newSecret.name}
                 onChange={(e) => setNewSecret(prev => ({
                   ...prev,
                   name: e.target.value
                 }))}
-                helperText={t('podDeployment:secret.nameHelp')}
+                helperText={t('podDeployment:podDeployment.secret.nameHelp')}
               />
             </Grid>
 

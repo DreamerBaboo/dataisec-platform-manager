@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { logger } from '../../../utils/logger'; // 導入 logger
 import {
   Stepper,
   Step,
@@ -21,6 +22,7 @@ import DeploymentPreview from './DeploymentPreview';
 import NamespaceQuotaConfig from '../steps/NamespaceQuotaConfig';
 import RepositoryConfig from '../steps/RepositoryConfig';
 import { podDeploymentService } from '../../../services/podDeploymentService';
+import CommandExecutor from './CommandExecutor';
 
 const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
   const { t } = useAppTranslation();
@@ -53,6 +55,7 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
     namespaceQuota: false,
     preview: true
   });
+  const [isCommandExecutorOpen, setIsCommandExecutorOpen] = useState(false);
 
   const steps = [
     'basicSetup',
@@ -127,8 +130,8 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
         }
         break;
         
-      case 7: // Namespace Quota
-        if (visibleSteps.namespaceQuota && !config.resourceQuota) {
+      case 8: // Namespace Quota
+        if (config.enableResourceQuota && !config.resourceQuota) {
           newErrors.resourceQuota = t('podDeployment:podDeployment.validation.resourceQuota.required');
         }
         break;
@@ -145,6 +148,23 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
         return;
       }
 
+      // 特殊處理 namespace quota 步驟
+      if (activeStep === 8) {
+        if (!deploymentConfig.enableResourceQuota) {
+          // 如果未啟用 quota，直接跳到下一步
+          setActiveStep(prevStep => prevStep + 1);
+          return;
+        }
+        // 如果啟用了 quota 但沒有設置值，不允許進入下一步
+        if (!deploymentConfig.resourceQuota) {
+          setErrors(prev => ({
+            ...prev,
+            resourceQuota: t('podDeployment:podDeployment.validation.resourceQuota.required')
+          }));
+          return;
+        }
+      }
+
       // 保存當前配置
       if (activeStep === 0) {
         const configToSave = {
@@ -152,7 +172,7 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
           timestamp: new Date().toISOString()
         };
         
-        console.log('💾 Preparing to save config:', {
+        logger.info('💾 Preparing to save config:', {
           name: configToSave.name,
           version: configToSave.version,
           isNewVersion: !versions.includes(configToSave.version)
@@ -169,7 +189,7 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
           const response = await podDeploymentService.getDeploymentVersions(configToSave.name);
           setVersions(Array.isArray(response.versions) ? response.versions : []);
           
-          console.log('✅ Configuration saved and versions updated');
+          logger.info('✅ Configuration saved and versions updated');
         } catch (error) {
           console.error('❌ Failed to save configuration:', error);
           setErrors(prev => ({
@@ -183,7 +203,7 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
       // 移動到下一步
       setActiveStep(prevStep => {
         const nextStep = prevStep + 1;
-        console.log('📊 Moving to next step:', {
+        logger.info('📊 Moving to next step:', {
           currentStep: prevStep,
           nextStep: nextStep,
           config: deploymentConfig
@@ -205,7 +225,7 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
 }, [activeStep, visibleSteps, steps]);
 
  const handleConfigChange = useCallback((newConfig) => {
-  console.log('🔄 Config change in StepperDeployment:', {
+  logger.info('🔄 Config change in StepperDeployment:', {
     currentConfig: deploymentConfig,
     newConfig: newConfig,
     isVersionChange: newConfig.version !== deploymentConfig.version
@@ -329,7 +349,7 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
 
   // 監聽配置變更
   useEffect(() => {
-    console.log('📊 Deployment config updated:', {
+    logger.info('📊 Deployment config updated:', {
       name: deploymentConfig.name,
       version: deploymentConfig.version,
       step: activeStep,
@@ -337,7 +357,7 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
     });
   }, [deploymentConfig, activeStep]);
 
-  // 修改版本監聽器
+  // 改版本監聽器
   useEffect(() => {
     const loadVersionConfig = async () => {
       if (!deploymentConfig.name || !deploymentConfig.version) return;
@@ -350,7 +370,7 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
             deploymentConfig.version
           );
           
-          console.log('📥 Loading version config:', {
+          logger.info('📥 Loading version config:', {
             name: deploymentConfig.name,
             version: deploymentConfig.version,
             config: versionConfig
@@ -406,6 +426,14 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
           </Box>
         </Box>
       )}
+
+      <CommandExecutor
+        name={deploymentConfig.name}
+        version={deploymentConfig.version}
+        namespace={deploymentConfig.yamlTemplate?.placeholders?.namespace || 'default'}
+        open={isCommandExecutorOpen}
+        onClose={() => setIsCommandExecutorOpen(false)}
+      />
     </Box>
   );
 };

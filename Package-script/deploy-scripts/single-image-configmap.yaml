@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dataisec-platform-config
+data:
+  CONTAINER_RUNTIME: "nerdctl"
+  CONTAINER_NAMESPACE: "k8s.io"
+  POD_NAMESPACE: dataisec
+  NODE_NAME: 192.168.170.126
+  VITE_API_BASE_URL: "http://192.168.170.126:30002" 
+  API_BASE_URL:  "http://192.168.170.126:30002" # replace with the target service url
+  JWT_EXPIRES_IN: "24h"
+  OPENSEARCH_URL: "https://192.168.170.126:9200"
+  OPENSEARCH_HOST: "192.168.170.126"
+  OPENSEARCH_PORT: "9200"
+  OPENSEARCH_POD_METRICS_INDEX: "metricbeat-*"
+  OPENSEARCH_SYSTEM_METRICS_INDEX: "metricbeat-*"
+  OPENSEARCH_LOGS_INDEX: "filebeat-*"
+  OPENSEARCH_TEMPLATE_INDEX: "pod-deployment-templates"
+  OPENSEARCH_DEPLOYMENT_LOG_INDEX: "pod-deployment-logs"
+  OPENSEARCH_AUDIT_LOG_INDEX: "pod-deployment-audit"
+  PORT: "3001"
+  KUBECONFIG: "/etc/kubernetes/admin.conf"
+  VITE_WS_PORT: "30002"
+  LOG_LEVEL: "debug"
+  REACT_APP_LOG_LEVEL: "debug"
+  LOG_FORMAT: "json"
+  NODE_ENV: "production"
+  WS_HEARTBEAT_INTERVAL: "30000"
+  KUBERNETES_SERVICE_HOST: "https://kubernetes.default.svc"
+  KUBERNETES_SERVICE_PORT: "443"
+  KUBERNETES_SERVICE_ACCOUNT_TOKEN_PATH: "/var/run/secrets/kubernetes.io/serviceaccount/token"
+  KUBERNETES_CA_CERT_PATH: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+  KUBECONFIG_PATH: "/etc/kubernetes/admin.conf"
+  ALLOWED_ORIGINS: "http://localhost:5173,http://localhost:3001,http://192.168.170.126:3001"
+  # Local Registry Configuration
+  LOCAL_REGISTRY_URL: "localhost:5000"
+  LOCAL_REGISTRY_BUSYBOX_IMAGE: "busybox:latest"

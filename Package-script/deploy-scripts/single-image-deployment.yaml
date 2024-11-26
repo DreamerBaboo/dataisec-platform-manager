@@ -1,0 +1,148 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dataisec-platform
+  labels:
+    app: dataisec-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dataisec-platform
+  template:
+    metadata:
+      labels:
+        app: dataisec-platform
+    spec:
+      serviceAccountName: dataisec-platform-sa
+      nodeSelector:
+        kubernetes.io/hostname: "192.168.170.126"
+      # 添加 DNS 配置
+      dnsPolicy: ClusterFirst
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "5"
+      securityContext:
+        fsGroup: 0 
+      containers:
+        - name: dataisec-platform
+          image: dreamerbaboo/dataisec-platform:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            # 明確映射 ConfigMap 中的環境變量
+            - name: VITE_API_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: dataisec-platform-config
+                  key: VITE_API_BASE_URL
+            - name: VITE_WS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: dataisec-platform-config
+                  key: VITE_WS_PORT
+            - name: NODE_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: dataisec-platform-config
+                  key: NODE_ENV
+            - name: REACT_APP_LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: dataisec-platform-config
+                  key: REACT_APP_LOG_LEVEL
+            - name: CONTAINER_RUNTIME
+              value: "nerdctl"
+            - name: CONTAINER_NAMESPACE
+              value: "k8s.io"
+            # 添加 Kubernetes API 服務器地址
+            - name: KUBERNETES_SERVICE_HOST
+              value: "kubernetes.default.svc"
+            - name: KUBERNETES_SERVICE_PORT
+              value: "443"
+            - name: CONTAINERD_ADDRESS
+              value: "/run/containerd/containerd.sock"
+            - name: CONTAINERD_NAMESPACE
+              value: "k8s.io"
+            # 添加 root 用戶配置
+            - name: USER
+              value: "root"
+          ports:
+            - containerPort: 3001
+              name: backend
+              protocol: TCP
+          securityContext:
+            privileged: true
+            runAsUser: 0
+            runAsGroup: 0
+          envFrom:
+            - configMapRef:
+                name: dataisec-platform-config
+            - secretRef:
+                name: dataisec-platform-secret
+          volumeMounts:
+            - name: kube-api-access
+              mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+              readOnly: true
+            # Docker socket 掛載
+            - name: docker-sock
+              mountPath: /var/run/docker.sock
+            # Containerd socket 掛載
+            - name: containerd-sock
+              mountPath: /run/containerd/containerd.sock
+            # 添加 nerdctl 二進制文件掛載
+            - name: nerdctl-binary
+              mountPath: /usr/local/bin/nerdctl
+            # 添加 containerd 配置目錄
+            - name: containerd-config
+              mountPath: /etc/containerd
+            # Add deployment templates volume mount
+            - name: deployment-templates
+              mountPath: /app/deploymentTemplate
+      volumes:
+        - name: kube-api-access
+          projected:
+            defaultMode: 420
+            sources:
+              - serviceAccountToken:
+                  expirationSeconds: 3600
+                  path: token
+              - configMap:
+                  name: kube-root-ca.crt
+                  items:
+                    - key: ca.crt
+                      path: ca.crt
+              - downwardAPI:
+                  items:
+                    - path: namespace
+                      fieldRef:
+                        apiVersion: v1
+                        fieldPath: metadata.namespace
+        # Docker socket volume
+        - name: docker-sock
+          hostPath:
+            path: /var/run/docker.sock
+            type: Socket
+        # Containerd socket volume
+        - name: containerd-sock
+          hostPath:
+            path: /run/containerd/containerd.sock
+            type: Socket
+        # nerdctl 二進制文件
+        - name: nerdctl-binary
+          hostPath:
+            path: /usr/local/bin/nerdctl
+            type: File
+        # containerd 配置目錄
+        - name: containerd-config
+          hostPath:
+            path: /etc/containerd
+            type: Directory
+        # Add deployment templates volume
+        - name: deployment-templates
+          persistentVolumeClaim:
+            claimName: dataisec-platform-deployment-templates-pvc

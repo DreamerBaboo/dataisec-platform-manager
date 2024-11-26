@@ -5,6 +5,7 @@ const podDeploymentController = require('../controllers/podDeploymentController'
 const path = require('path');
 const fs = require('fs').promises;
 const k8sService = require('../services/k8sService');
+const logger = require('../utils/logger');
 
 // Pod Deployment 路由
 router.post('/preview', authenticateToken, podDeploymentController.generatePreview);
@@ -46,7 +47,7 @@ router.post('/namespace', authenticateToken, async (req, res) => {
       namespace: result
     });
   } catch (error) {
-    console.error('Failed to create namespace:', error);
+    logger.error('Failed to create namespace:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -56,10 +57,10 @@ router.get('/namespaces', authenticateToken, podDeploymentController.getNamespac
 // Add template routes
 router.get('/templates/list', authenticateToken, async (req, res) => {
   try {
-    console.log('🔍 Getting template list');
+    logger.info('🔍 Getting template list');
     await podDeploymentController.getTemplateList(req, res);
   } catch (error) {
-    console.error('❌ Error in template list route:', error);
+    logger.error('❌ Error in template list route:', error);
     res.status(500).json({
       message: 'Failed to get template list',
       error: error.message
@@ -70,10 +71,10 @@ router.get('/templates/list', authenticateToken, async (req, res) => {
 // Add template upload route
 router.post('/templates/upload', authenticateToken, async (req, res) => {
   try {
-    console.log('📤 Uploading template');
+    logger.info('📤 Uploading template');
     await podDeploymentController.uploadTemplate(req, res);
   } catch (error) {
-    console.error('❌ Error in template upload route:', error);
+    logger.error('❌ Error in template upload route:', error);
     res.status(500).json({
       message: 'Failed to upload template',
       error: error.message
@@ -84,10 +85,10 @@ router.post('/templates/upload', authenticateToken, async (req, res) => {
 // Add template configuration route
 router.get('/templates/:deploymentName/config', authenticateToken, async (req, res) => {
   try {
-    console.log('🔍 Getting template configuration');
+    logger.info('🔍 Getting template configuration');
     await podDeploymentController.getTemplateConfig(req, res);
   } catch (error) {
-    console.error('❌ Error in template config route:', error);
+    logger.error('❌ Error in template config route:', error);
     res.status(500).json({
       message: 'Failed to get template configuration',
       error: error.message
@@ -98,10 +99,10 @@ router.get('/templates/:deploymentName/config', authenticateToken, async (req, r
 // Add template content save route
 router.post('/templates/:deploymentName/template', authenticateToken, async (req, res) => {
   try {
-    console.log('💾 Saving template content');
+    logger.info('💾 Saving template content');
     await podDeploymentController.saveTemplateContent(req, res);
   } catch (error) {
-    console.error('❌ Error in template save route:', error);
+    logger.error('❌ Error in template save route:', error);
     res.status(500).json({
       message: 'Failed to save template content',
       error: error.message
@@ -131,7 +132,7 @@ router.get('/:name/versions', authenticateToken, async (req, res) => {
       latestVersion: config.latestVersion
     });
   } catch (error) {
-    console.error('Failed to get versions:', error);
+    logger.error('Failed to get versions:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -154,12 +155,12 @@ function compareVersions(v1, v2) {
 router.get('/:name/versions/:version/config', authenticateToken, async (req, res) => {
   const { name, version } = req.params;
   try {
-    console.log('🔍 Getting config for:', { name, version });
+    logger.info('🔍 Getting config for:', { name, version });
 
     const deploymentDir = path.join(__dirname, '../deploymentTemplate', name);
     const configPath = path.join(deploymentDir, 'config.json');
 
-    console.log('📂 Looking for config at:', configPath);
+    logger.info('📂 Looking for config at:', configPath);
 
     // 確保目錄存在
     await fs.mkdir(deploymentDir, { recursive: true });
@@ -169,9 +170,9 @@ router.get('/:name/versions/:version/config', authenticateToken, async (req, res
     try {
       const fileContent = await fs.readFile(configPath, 'utf8');
       config = JSON.parse(fileContent);
-      console.log('📄 Found existing config file:', config);
+      logger.info('📄 Found existing config file:', config);
     } catch (error) {
-      console.log('📝 Creating new config file');
+      logger.info('📝 Creating new config file');
       // 如果文件不存在，創建默認配置
       config = {
         name,
@@ -208,12 +209,12 @@ router.get('/:name/versions/:version/config', authenticateToken, async (req, res
 
       // 保存新配置
       await fs.writeFile(configPath, JSON.stringify(config, null, 2));
-      console.log('✅ Created and saved new config file');
+      logger.info('✅ Created and saved new config file');
     }
 
     // 檢查請求的版本是否存在
     if (!config.versions[version]) {
-      console.log('📝 Adding new version to config:', version);
+      logger.info('📝 Adding new version to config:', version);
       config.versions[version] = {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -248,12 +249,12 @@ router.get('/:name/versions/:version/config', authenticateToken, async (req, res
 
       // 保存更新後的配置
       await fs.writeFile(configPath, JSON.stringify(config, null, 2));
-      console.log('✅ Saved updated config with new version');
+      logger.info('✅ Saved updated config with new version');
     }
 
     // 返回版本配置
     const versionConfig = config.versions[version];
-    console.log('✅ Returning version config:', versionConfig);
+    logger.info('✅ Returning version config:', versionConfig);
     
     if (!versionConfig) {
       throw new Error(`Version ${version} not found in config`);
@@ -266,7 +267,7 @@ router.get('/:name/versions/:version/config', authenticateToken, async (req, res
     });
 
   } catch (error) {
-    console.error('❌ Error handling version config request:', error);
+    logger.error('❌ Error handling version config request:', error);
     res.status(500).json({
       error: 'Failed to handle version config request',
       details: error.message,
@@ -289,7 +290,7 @@ router.get('/templates/:name/config', authenticateToken, async (req, res) => {
     const config = await fs.readFile(configPath, 'utf8');
     res.json(JSON.parse(config));
   } catch (error) {
-    console.error('Failed to read config:', error);
+    logger.error('Failed to read config:', error);
     res.status(500).json({ error: 'Failed to read configuration' });
   }
 });
@@ -298,17 +299,17 @@ router.get('/templates/:name/config', authenticateToken, async (req, res) => {
 router.get('/templates/:deploymentName/placeholders', authenticateToken, async (req, res) => {
   try {
     const { deploymentName } = req.params;
-    console.log('🔍 Getting placeholders for deployment:', deploymentName);
+    logger.info('🔍 Getting placeholders for deployment:', deploymentName);
     
     // 讀取模板文件
     const templatePath = path.join(__dirname, '../deploymentTemplate', deploymentName, `${deploymentName}-template.yaml`);
-    console.log('📂 Template path:', templatePath);
+    logger.info('📂 Template path:', templatePath);
     
     // 檢查文件是否存在
     try {
       await fs.access(templatePath);
     } catch (error) {
-      console.error('❌ Template file not found:', templatePath);
+      logger.error('❌ Template file not found:', templatePath);
       return res.status(404).json({
         message: 'Template file not found',
         path: templatePath
@@ -316,7 +317,7 @@ router.get('/templates/:deploymentName/placeholders', authenticateToken, async (
     }
     
     const content = await fs.readFile(templatePath, 'utf8');
-    console.log('📄 Template content length:', content.length);
+    logger.info('📄 Template content length:', content.length);
     
     // 解析預設值和分類
     const placeholders = [];
@@ -333,7 +334,7 @@ router.get('/templates/:deploymentName/placeholders', authenticateToken, async (
         const key = match[2];
         const value = match[3];
         
-        console.log(`📌 Found placeholder at line ${index + 1}:`, { category, key, value });
+        logger.info(`📌 Found placeholder at line ${index + 1}:`, { category, key, value });
         
         placeholders.push({
           key,
@@ -346,7 +347,7 @@ router.get('/templates/:deploymentName/placeholders', authenticateToken, async (
       }
     });
 
-    console.log('✅ Parsed placeholders:', {
+    logger.info('✅ Parsed placeholders:', {
       count: placeholders.length,
       categories: Array.from(categories)
     });
@@ -358,7 +359,7 @@ router.get('/templates/:deploymentName/placeholders', authenticateToken, async (
     });
     
   } catch (error) {
-    console.error('❌ Error getting template placeholders:', error);
+    logger.error('❌ Error getting template placeholders:', error);
     res.status(500).json({
       message: 'Failed to get template placeholders',
       error: error.message
@@ -387,7 +388,7 @@ router.post('/templates/:name/config', authenticateToken, async (req, res) => {
     
     res.json({ message: 'Configuration saved successfully' });
   } catch (error) {
-    console.error('Failed to save config:', error);
+    logger.error('Failed to save config:', error);
     res.status(500).json({ error: 'Failed to save configuration' });
   }
 });
@@ -429,7 +430,7 @@ router.post('/templates/:name/storage', authenticateToken, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Failed to save storage configuration:', error);
+    logger.error('Failed to save storage configuration:', error);
     res.status(500).json({
       error: 'Failed to save storage configuration',
       details: error.message
@@ -467,7 +468,7 @@ router.get('/templates/:name/storage/:version', authenticateToken, async (req, r
       persistentVolumeYaml
     });
   } catch (error) {
-    console.error('Failed to read storage configuration:', error);
+    logger.error('Failed to read storage configuration:', error);
     res.status(500).json({
       error: 'Failed to read storage configuration',
       details: error.message
@@ -479,11 +480,11 @@ router.get('/templates/:name/storage/:version', authenticateToken, async (req, r
 router.get('/:name/versions/:version/config', authenticateToken, async (req, res) => {
   try {
     const { name, version } = req.params;
-    console.log('🔍 Getting config for deployment:', name, 'version:', version);
+    logger.info('🔍 Getting config for deployment:', name, 'version:', version);
 
     const deploymentDir = path.join(__dirname, '../deploymentTemplate', name);
     const configPath = path.join(deploymentDir, 'config.json');
-    console.log('📂 Config path:', configPath);
+    logger.info('📂 Config path:', configPath);
 
     // 檢查目錄是否存在，不存在則創建
     await fs.mkdir(deploymentDir, { recursive: true });
@@ -493,10 +494,10 @@ router.get('/:name/versions/:version/config', authenticateToken, async (req, res
     try {
       const configFile = await fs.readFile(configPath, 'utf8');
       config = JSON.parse(configFile);
-      console.log('📄 Found existing config file');
+      logger.info('📄 Found existing config file');
     } catch (error) {
       // 如果文件不存在或無法解析，創建新的配置
-      console.log('📝 Creating new config file');
+      logger.info('📝 Creating new config file');
       config = {
         name,
         versions: {
@@ -532,12 +533,12 @@ router.get('/:name/versions/:version/config', authenticateToken, async (req, res
 
       // 保存新配置文件
       await fs.writeFile(configPath, JSON.stringify(config, null, 2));
-      console.log('✅ Created new config file');
+      logger.info('✅ Created new config file');
     }
 
     // 檢查版本是否存在，不則創建
     if (!config.versions?.[version]) {
-      console.log('📝 Adding new version to config');
+      logger.info('📝 Adding new version to config');
       config.versions[version] = {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -570,14 +571,14 @@ router.get('/:name/versions/:version/config', authenticateToken, async (req, res
 
       // 保存更新後的配置
       await fs.writeFile(configPath, JSON.stringify(config, null, 2));
-      console.log('✅ Updated config file with new version');
+      logger.info('✅ Updated config file with new version');
     }
 
-    console.log('✅ Returning configuration for version:', version);
+    logger.info('✅ Returning configuration for version:', version);
     res.json(config.versions[version]);
 
   } catch (error) {
-    console.error('❌ Failed to handle version config:', error);
+    logger.error('❌ Failed to handle version config:', error);
     res.status(500).json({
       error: 'Failed to handle version configuration',
       details: error.message
@@ -631,7 +632,7 @@ router.post('/:name/versions', authenticateToken, async (req, res) => {
     
     res.json({ message: 'Version created successfully', version });
   } catch (error) {
-    console.error('Failed to create version:', error);
+    logger.error('Failed to create version:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -659,7 +660,7 @@ router.post('/:name/versions/:version/config', authenticateToken, async (req, re
     
     res.json({ message: 'Configuration saved successfully' });
   } catch (error) {
-    console.error('Failed to save configuration:', error);
+    logger.error('Failed to save configuration:', error);
     res.status(500).json({ error: error.message });
   }
 });

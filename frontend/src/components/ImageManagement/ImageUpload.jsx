@@ -30,6 +30,8 @@ import {
 import { useDropzone } from 'react-dropzone';
 import { useSnackbar } from 'notistack';
 import { useAppTranslation } from '../../hooks/useAppTranslation';
+import { getApiUrl } from '../../utils/api';
+import { logger } from '../../utils/logger.ts';  // 導入 logger
 
 const ImageUpload = ({ open, onClose, onSuccess }) => {
   const { t } = useAppTranslation('imageManagement');
@@ -63,11 +65,11 @@ const ImageUpload = ({ open, onClose, onSuccess }) => {
   });
 
   const uploadFile = async (fileInfo) => {
-    console.log('📤 Starting file upload:', fileInfo.file.name);
-    console.log('📊 File size:', formatFileSize(fileInfo.file.size));
+    logger.info('📤 Starting file upload:', fileInfo.file.name);
+    logger.info('📊 File size:', formatFileSize(fileInfo.file.size));
 
     const formData = new FormData();
-    formData.append('image', fileInfo.file);
+    formData.append('file', fileInfo.file);
 
     try {
       const xhr = new XMLHttpRequest();
@@ -77,8 +79,8 @@ const ImageUpload = ({ open, onClose, onSuccess }) => {
       xhr.upload.onprogress = (event) => {
         if (event.lengthComputable) {
           const progress = Math.round((event.loaded * 100) / event.total);
-          console.log(`📊 Upload progress: ${progress}%`);
-          console.log(`📈 Uploaded: ${formatFileSize(event.loaded)} / ${formatFileSize(event.total)}`);
+          logger.info(`📊 Upload progress: ${progress}%`);
+          logger.info(`📈 Uploaded: ${formatFileSize(event.loaded)} / ${formatFileSize(event.total)}`);
           
           setUploadProgress(progress);
         }
@@ -101,16 +103,16 @@ const ImageUpload = ({ open, onClose, onSuccess }) => {
       }
 
       const response = await new Promise((resolve, reject) => {
-        xhr.open('POST', 'http://localhost:3001/api/images/upload');
+        xhr.open('POST', getApiUrl('api/images/upload'));  // Updated endpoint
         
         // 添加認證頭
         xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-        console.log('🔐 Added authorization header');
+        logger.info('🔐 Added authorization header');
         
         xhr.onload = () => {
-          console.log('📥 Upload response received:', xhr.status);
-          console.log('📄 Response headers:', xhr.getAllResponseHeaders());
-          console.log('📝 Response body:', xhr.responseText);
+          logger.info('📥 Upload response received:', xhr.status);
+          logger.info('📄 Response headers:', xhr.getAllResponseHeaders());
+          logger.info('📝 Response body:', xhr.responseText);
           
           if (xhr.status >= 200 && xhr.status < 300) {
             try {
@@ -130,7 +132,7 @@ const ImageUpload = ({ open, onClose, onSuccess }) => {
           }
         };
         
-        console.log('📤 Sending request with formData:', {
+        logger.info('📤 Sending request with formData:', {
           fileSize: fileInfo.file.size,
           fileName: fileInfo.file.name,
           fileType: fileInfo.file.type
@@ -139,13 +141,26 @@ const ImageUpload = ({ open, onClose, onSuccess }) => {
         xhr.send(formData);
       });
 
-      console.log('✅ Upload completed:', response);
-      
+      logger.info('✅ Upload completed:', response);
+
+      if (response.loadedImages) {
+        setExtractedImages(response.loadedImages);
+        setConfirmationOpen(true);
+        setProcessingStatus('');
+
+        enqueueSnackbar(t('imageManagement:message.uploadSuccess'), {
+          variant: 'success',
+          anchorOrigin: { vertical: 'bottom', horizontal: 'right' }
+        });
+      } else {
+        throw new Error('No images were loaded from the uploaded file');
+      }
+
       // 解析上傳的鏡像文件
-      console.log('🔍 Starting image extraction');
+      logger.info('🔍 Starting image extraction');
       setProcessingStatus(t('images:imageManagement.messages.extracting'));
       
-      const extractResponse = await fetch('http://localhost:3001/api/images/extract', {
+      const extractResponse = await fetch(getApiUrl('api/images/extract'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -160,7 +175,7 @@ const ImageUpload = ({ open, onClose, onSuccess }) => {
       }
       
       const { images } = await extractResponse.json();
-      console.log('✅ Extracted images:', images);
+      logger.info('✅ Extracted images:', images);
       
       setExtractedImages(images);
       setConfirmationOpen(true);
@@ -225,7 +240,7 @@ const ImageUpload = ({ open, onClose, onSuccess }) => {
       const repository = localStorage.getItem('repositoryHost') || 'localhost';
       const port = localStorage.getItem('repositoryPort') || '5000';
 
-      const response = await fetch('http://localhost:3001/api/images/retag', {
+      const response = await fetch(getApiUrl('api/images/retag'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -248,7 +263,7 @@ const ImageUpload = ({ open, onClose, onSuccess }) => {
       }
 
       const result = await response.json();
-      console.log('✅ Retag results:', result);
+      logger.info('✅ Retag results:', result);
 
       enqueueSnackbar(t('imageManagement:message.reTagSuccess'), {
         variant: 'success',

@@ -1,6 +1,7 @@
 import axios from 'axios';
+import { logger } from '../utils/logger';
 
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+const API_URL = import.meta.env.VITE_API_BASE_URL;
 
 export const templateService = {
   // Get list of available templates
@@ -23,7 +24,7 @@ export const templateService = {
       formData.append('template', file);
       formData.append('deploymentName', deploymentName);
 
-      console.log('Upload request details:', {
+      logger.info('Upload request details:', {
         fileName: file.name,
         deploymentName: deploymentName,
         formDataEntries: Array.from(formData.entries()).map(([key, value]) => ({
@@ -68,10 +69,23 @@ export const templateService = {
   // Save template content
   async saveTemplateContent(deploymentName, content) {
     try {
-      console.log('Saving template content:', {
+      if (!deploymentName) {
+        throw new Error('Deployment name is required');
+      }
+
+      if (!content || content.trim() === '') {
+        throw new Error('Template content cannot be empty');
+      }
+
+      // Log the exact request being sent
+      logger.info('Saving template content:', {
         deploymentName,
         contentLength: content.length,
-        contentPreview: content.substring(0, 100)
+        contentPreview: content.substring(0, 100),
+        endpoint: `${API_URL}/api/pod-deployments/templates/${deploymentName}/template`,
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
 
       const response = await axios.post(
@@ -85,25 +99,42 @@ export const templateService = {
         }
       );
 
-      console.log('Save response:', response.data);
+      logger.info('Template save response:', {
+        status: response.status,
+        data: response.data
+      });
+
       return response.data;
     } catch (error) {
-      console.error('Failed to save template content:', error);
-      throw error;
+      // Enhanced error logging
+      logger.error('Failed to save template content:', {
+        error: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        responseData: error.response?.data,
+        deploymentName,
+        requestPayload: { 
+          contentPreview: content ? content.substring(0, 100) + '...' : 'empty'
+        }
+      });
+
+      // Throw a more informative error
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to save template';
+      throw new Error(errorMessage);
     }
   },
 
   // Get template placeholders
   async getTemplatePlaceholders(deploymentName) {
     try {
-      console.log('Getting placeholders for deployment:', deploymentName);
+      logger.info('Getting placeholders for deployment:', deploymentName);
       const response = await axios.get(
         `${API_URL}/api/pod-deployment/templates/${deploymentName}/placeholders`,
         {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         }
       );
-      console.log('Placeholders response:', response.data);
+      logger.info('Placeholders response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Failed to get template placeholders:', error);

@@ -21,6 +21,22 @@ const getCommands = async (req, res) => {
       });
     }
 
+    // 讀取 config.json 獲取命名空間
+    const configPath = path.join(__dirname, '..', 'deploymentTemplate', name, 'config.json');
+    let namespace = 'default'; // 默認命名空間
+    
+    try {
+      const configContent = await fs.readFile(configPath, 'utf8');
+      const config = JSON.parse(configContent);
+
+     
+      if (config.versions[version]?.config?.namespace) {
+        namespace = config.versions[version]?.config?.namespace;
+      }
+    } catch (error) {
+      console.warn('⚠️ 無法讀取配置文件，使用默認命名空間:', error);
+    }
+
     // 定義執行順序
     const executionOrder = [
       'quota',
@@ -100,16 +116,13 @@ const getCommands = async (req, res) => {
           return executionOrder.indexOf(typeA) - executionOrder.indexOf(typeB);
         })
         .map(({ file, isDeployment }) => {
-          // 檢查是否為根目錄下的 final yaml
           const isFinalInRoot = !isDeployment && file.match(/^[^-]+-[^-]+-final\.(yaml|yml)$/);
           
-          // 提取類型
           const typeMatch = file.match(/-([^-]+)\.(yaml|yml)$/);
           const type = isFinalInRoot ? 'final' :
                       file.includes('final') ? 'final' : 
                       (typeMatch ? typeMatch[1].toLowerCase() : 'unknown');
           
-          // 根據檔案類型決定路徑
           const baseFolder = isFinalInRoot ? '' : (isDeployment ? '' : 'deploy-scripts');
           const filePath = path.join(
             './backend/deploymentTemplate',
@@ -118,9 +131,10 @@ const getCommands = async (req, res) => {
             file
           ).replace(/\\/g, '/');
           
+          // 添加命名空間到命令中
           const command = isDeployment
-            ? `helm upgrade --install ${name} ./backend/deploymentTemplate/${name} --values ${filePath}`
-            : `kubectl apply -f ${filePath}`;
+            ? `helm upgrade --install ${name} ./backend/deploymentTemplate/${name} -f ${filePath} --namespace ${namespace} --create-namespace`
+            : `kubectl apply -f ${filePath} --namespace ${namespace}`;
 
           const descriptions = commandDescriptions[type] || {
             titleKey: `commandExecutor.commands.${type}.title`,
@@ -132,7 +146,8 @@ const getCommands = async (req, res) => {
             command,
             fileName: file,
             titleKey: descriptions.titleKey,
-            descriptionKey: descriptions.descriptionKey
+            descriptionKey: descriptions.descriptionKey,
+            namespace // 添加命名空間到返回數據中
           };
         });
 

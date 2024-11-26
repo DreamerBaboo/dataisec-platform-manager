@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import { useAppTranslation } from '../../../hooks/useAppTranslation';
 import { generateDiffReport, hasMajorChanges } from '../../../utils/configDiff';
+import { logger } from '../../../utils/logger'; // 導入 logger
 
 const ConfigDiffViewer = ({ oldConfig, newConfig }) => {
   const { t } = useAppTranslation();

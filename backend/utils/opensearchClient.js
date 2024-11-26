@@ -1,7 +1,7 @@
 const { Client } = require('@opensearch-project/opensearch');
 
 const client = new Client({
-  node: process.env.OPENSEARCH_ENDPOINT,
+  node: process.env.OPENSEARCH_URL,
   auth: {
     username: process.env.OPENSEARCH_USERNAME,
     password: process.env.OPENSEARCH_PASSWORD

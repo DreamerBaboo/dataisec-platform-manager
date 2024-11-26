@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs').promises;
 const extract = require('extract-zip');
 const tar = require('tar');
+const archiver = require('archiver');
 const { promisify } = require('util');
 const pipeline = promisify(require('stream').pipeline);
 
@@ -313,6 +314,264 @@ router.post('/:name/save-final', express.json(), async (req, res) => {
   } catch (error) {
     console.error('Error saving final configuration:', error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Get list of template directories
+router.get('/list-templates', async (req, res) => {
+  try {
+    const templateDir = path.join(__dirname, '..', 'deploymentTemplate');
+    const directories = await fs.readdir(templateDir);
+    const dirStats = await Promise.all(
+      directories.map(async (dir) => {
+        const fullPath = path.join(templateDir, dir);
+        const stat = await fs.stat(fullPath);
+        return {
+          name: dir,
+          isDirectory: stat.isDirectory()
+        };
+      })
+    );
+    const templateDirs = dirStats.filter(item => item.isDirectory).map(item => item.name);
+    res.json({ templates: templateDirs });
+  } catch (error) {
+    console.error('Error listing templates:', error);
+    res.status(500).json({ error: 'Failed to list template directories' });
+  }
+});
+
+// Download selected templates as zip
+router.post('/download-templates', async (req, res) => {
+  try {
+    console.log('Received download request:', req.body);
+    const { templates } = req.body;
+    if (!templates || !Array.isArray(templates) || templates.length === 0) {
+      return res.status(400).json({ error: 'No templates selected' });
+    }
+
+    const templateDir = path.join(__dirname, '..', 'deploymentTemplate');
+    console.log('Template directory path:', templateDir);
+    
+    // Check if template directory exists
+    try {
+      await fs.access(templateDir);
+      console.log('Template directory exists and is accessible');
+    } catch (error) {
+      console.error('Template directory access error:', error);
+      return res.status(500).json({ error: 'Template directory not found or not accessible' });
+    }
+
+    // Verify all selected templates exist before starting the zip process
+    for (const template of templates) {
+      const fullPath = path.join(templateDir, template);
+      try {
+        const stats = await fs.stat(fullPath);
+        if (!stats.isDirectory()) {
+          return res.status(400).json({ error: `Selected item '${template}' is not a directory` });
+        }
+        console.log(`Template '${template}' verified as directory`);
+      } catch (error) {
+        console.error(`Error accessing template '${template}':`, error);
+        return res.status(400).json({ error: `Template '${template}' not found or not accessible` });
+      }
+    }
+
+    console.log('Creating zip archive...');
+    
+    // Set response headers
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename=deployment-templates.zip`);
+    
+    // Create zip archive with better compression
+    const archive = archiver('zip', {
+      zlib: { level: 9 }
+    });
+    
+    // Listen for all archive data to be written
+    archive.on('end', () => {
+      console.log('Archive write completed');
+    });
+
+    // Listen for archive errors
+    archive.on('error', (err) => {
+      console.error('Archive error:', err);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Archive creation failed: ' + err.message });
+      }
+    });
+
+    // good practice to catch warnings (ie stat failures and other non-blocking errors)
+    archive.on('warning', (err) => {
+      console.warn('Archive warning:', err);
+    });
+    
+    // Pipe archive data to response
+    archive.pipe(res);
+    
+    // Add selected directories to archive
+    for (const template of templates) {
+      const fullPath = path.join(templateDir, template);
+      console.log(`Adding template '${template}' to archive from path:`, fullPath);
+      archive.directory(fullPath, template);
+    }
+    
+    console.log('Finalizing archive...');
+    await archive.finalize();
+    console.log('Archive finalized successfully');
+
+  } catch (error) {
+    console.error('Error creating template archive:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Failed to create template archive: ' + error.message });
+    }
+  }
+});
+
+// Check for existing templates
+router.post('/check-templates', upload.single('file'), async (req, res) => {
+  try {
+    console.log('Received check-templates request:', {
+      file: req.file ? {
+        originalname: req.file.originalname,
+        mimetype: req.file.mimetype,
+        size: req.file.size
+      } : 'No file received',
+      body: req.body
+    });
+
+    if (!req.file) {
+      console.error('No file uploaded in check-templates');
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    if (!req.file.originalname.endsWith('.zip')) {
+      console.error('Invalid file type:', req.file.originalname);
+      return res.status(400).json({ error: 'Only ZIP files are supported' });
+    }
+
+    // Create temp directory for extraction
+    const tempDir = path.join(__dirname, '..', 'temp', 'template-check');
+    console.log('Creating temp directory:', tempDir);
+    
+    try {
+      await fs.rm(tempDir, { recursive: true, force: true });
+    } catch (error) {
+      console.log('No existing temp directory to clean up');
+    }
+    
+    await fs.mkdir(tempDir, { recursive: true });
+    
+    // Save uploaded file
+    const tempFile = path.join(tempDir, req.file.originalname);
+    console.log('Saving uploaded file to:', tempFile);
+    await fs.writeFile(tempFile, req.file.buffer);
+
+    // Extract zip to temp directory to check contents
+    const existingTemplates = [];
+    console.log('Extracting zip file...');
+    await extract(tempFile, { dir: tempDir });
+
+    // Get list of directories in the zip
+    console.log('Reading extracted contents...');
+    const entries = await fs.readdir(tempDir, { withFileTypes: true });
+    const templateDirs = entries.filter(entry => entry.isDirectory()).map(entry => entry.name);
+    console.log('Found directories:', templateDirs);
+
+    // Check which templates already exist
+    const templateDir = path.join(__dirname, '..', 'deploymentTemplate');
+    console.log('Checking against existing templates in:', templateDir);
+    
+    for (const dir of templateDirs) {
+      const fullPath = path.join(templateDir, dir);
+      try {
+        await fs.access(fullPath);
+        existingTemplates.push(dir);
+        console.log('Found existing template:', dir);
+      } catch (error) {
+        console.log('Template does not exist:', dir);
+      }
+    }
+
+    // Clean up temp directory
+    console.log('Cleaning up temp directory...');
+    await fs.rm(tempDir, { recursive: true, force: true });
+
+    console.log('Sending response:', {
+      existingTemplates,
+      allTemplates: templateDirs
+    });
+    
+    res.json({
+      existingTemplates,
+      allTemplates: templateDirs
+    });
+  } catch (error) {
+    console.error('Error checking templates:', error);
+    // Clean up temp directory on error
+    try {
+      const tempDir = path.join(__dirname, '..', 'temp', 'template-check');
+      await fs.rm(tempDir, { recursive: true, force: true });
+    } catch (cleanupError) {
+      console.error('Error during cleanup:', cleanupError);
+    }
+    res.status(500).json({ error: 'Failed to check templates: ' + error.message });
+  }
+});
+
+// Upload and extract templates with overwrite option
+router.post('/upload-templates', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const overwrite = req.body.overwrite === 'true';
+    const templateDir = path.join(__dirname, '..', 'deploymentTemplate');
+    
+    // Create temp directory for extraction
+    const tempDir = path.join(__dirname, '..', 'temp', 'template-upload');
+    await fs.mkdir(tempDir, { recursive: true });
+    
+    // Save uploaded file
+    const tempFile = path.join(tempDir, req.file.originalname);
+    await fs.writeFile(tempFile, req.file.buffer);
+
+    // Extract zip file
+    if (req.file.originalname.endsWith('.zip')) {
+      const extract = require('extract-zip');
+      await extract(tempFile, { dir: tempDir });
+    }
+
+    // Move extracted contents to template directory
+    const entries = await fs.readdir(tempDir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        const sourcePath = path.join(tempDir, entry.name);
+        const targetPath = path.join(templateDir, entry.name);
+
+        try {
+          if (!overwrite) {
+            await fs.access(targetPath);
+            continue; // Skip if directory exists and overwrite is false
+          }
+          // Remove existing directory if overwrite is true
+          await fs.rm(targetPath, { recursive: true, force: true }).catch(() => {});
+        } catch (error) {
+          // Directory doesn't exist, which is fine
+        }
+
+        // Copy directory
+        await fs.cp(sourcePath, targetPath, { recursive: true });
+      }
+    }
+
+    // Clean up temp directory
+    await fs.rm(tempDir, { recursive: true, force: true });
+
+    res.json({ message: 'Templates uploaded successfully' });
+  } catch (error) {
+    console.error('Error uploading templates:', error);
+    res.status(500).json({ error: 'Failed to upload templates: ' + error.message });
   }
 });
 

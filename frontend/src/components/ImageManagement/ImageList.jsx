@@ -36,7 +36,8 @@ import ImageUpload from './ImageUpload';
 import ImageDetails from './ImageDetails';
 import { useSnackbar } from 'notistack';
 import RepositoryConfig from './RepositoryConfig';
-import { getApiUrl } from '../../config/api';
+import { api, getApiUrl } from '../../utils/api';
+import { logger } from '../../utils/logger.ts';  // 導入 logger
 
 const ImageList = () => {
   const { t } = useAppTranslation("imageManagement");
@@ -57,56 +58,45 @@ const ImageList = () => {
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
   const [order, setOrder] = useState('desc');
   const [orderBy, setOrderBy] = useState('uploadDate');
-  const ROW_HEIGHT = 53; // 每行的高度（根據 MUI 的默認值）
-  const HEADER_HEIGHT = 56; // 表頭高度
-  const ROWS_PER_PAGE = 10; // 默認顯示 10 行
-  const TABLE_HEIGHT = ROW_HEIGHT * ROWS_PER_PAGE + HEADER_HEIGHT;
-
-  // const showNotification = (message, variant) => {
-  //   enqueueSnackbar(message, { 
-  //     variant,
-  //     autoHideDuration: 3000,
-  //     anchorOrigin: {
-  //       vertical: 'top',
-  //       horizontal: 'center'
-  //     }
-  //   });
-  // };
 
   const fetchImages = async () => {
-    console.log('🔄 Starting to fetch images...');
+    logger.info('🔄 Starting to fetch images...');
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(getApiUrl('api/images'), {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      
+      const response = await fetch(getApiUrl('api/images/list'), {  
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
       });
-      console.log('📥 Response received:', response.status, response.statusText);
-      
+
       if (!response.ok) {
-        console.error('❌ Response not OK:', response.status, response.statusText);
-        throw new Error('Failed to fetch images');
+        throw new Error(`Failed to fetch images: ${response.statusText}`);
       }
-      
+
       const data = await response.json();
-      console.log('📦 Raw data received:', data);
+      logger.info('📥 Response received:', data);
       
       // 確保數據格式正確
-      const formattedData = data.map(image => ({
-        id: image.id || image.ID || '',  // 支持兩種可能的 ID 格式
-        name: image.name || image.Repository || '',
-        tag: image.tag || image.Tag || 'latest',
-        size: image.size || 0,
-        uploadDate: image.createdAt,
-        status: image.status || 'available'
+      const formattedData = (Array.isArray(data) ? data : []).map(image => ({
+        id: image.ID || `${image.Repository}-${image.Tag}`,
+        name: image.Repository,
+        tag: image.Tag,
+        size: image.Size,
+        created: image.Created,
+        repository: image.Repository,
+        status: image.status || 'active'
       }));
       
-      console.log('✨ Formatted data:', formattedData);
+      logger.info('📦 Formatted data:', formattedData);
       setImages(formattedData);
-      setFilteredImages(formattedData);
+      
     } catch (error) {
       console.error('❌ Error fetching images:', error);
-      setError(error.message);
+      setError(error.message || '獲取鏡像列表失敗');
+      setImages([]);
     } finally {
       setLoading(false);
     }
@@ -128,35 +118,49 @@ const ImageList = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(getApiUrl('api/images'), {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      
+      const response = await fetch(getApiUrl('api/images/list'), {  
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
       });
-      
+
       if (!response.ok) {
-        throw new Error('Failed to fetch images');
+        throw new Error(`Failed to fetch images: ${response.statusText}`);
       }
-      
+
       const data = await response.json();
-      setImages(data);
-      setFilteredImages(data.filter(image => 
-        image.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        image.tag.toLowerCase().includes(searchTerm.toLowerCase())
-      ));
+      logger.info('📥 Response received:', data);
+      
+      // 確保數據格式正確
+      const formattedData = (Array.isArray(data) ? data : []).map(image => ({
+        id: image.ID || `${image.Repository}-${image.Tag}`,
+        name: image.Repository,
+        tag: image.Tag,
+        size: image.Size,
+        created: image.Created,
+        repository: image.Repository,
+        status: image.status || 'active'
+      }));
+      
+      logger.info('📦 Formatted data:', formattedData);
+      setImages(formattedData);
+      
     } catch (error) {
-      console.error('Error fetching images:', error);
-      setError(error.message);
+      console.error('❌ Error fetching images:', error);
+      setError(error.message || '獲取鏡像列表失敗');
+      setImages([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // 清除搜索內容
   const handleClearSearch = () => {
     setSearchTerm('');
     setFilteredImages(images);
   };
 
-  // 搜索處理
   const handleSearch = (value) => {
     setSearchTerm(value);
     if (!value.trim()) {
@@ -204,7 +208,7 @@ const ImageList = () => {
     }
 
     setSelected(newSelected);
-    console.log('👉 Selected images:', newSelected);
+    logger.info('👉 Selected images:', newSelected);
   };
 
   const isSelected = (imageName, imageTag) => {
@@ -213,118 +217,70 @@ const ImageList = () => {
 
   const handleBulkDelete = async () => {
     try {
-      console.log('🗑️ Starting bulk delete for images:', selected);
+      logger.info('🗑️ Starting bulk delete for images:', selected);
       
-      const response = await fetch('http://localhost:3001/api/images/delete', {
-        method: 'POST',
+      const response = await fetch(getApiUrl('api/images/delete'), {
+        method: 'DELETE',  
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({ 
-          images: selected  // 發送選中的鏡像數組
-        })
+        body: JSON.stringify({ images: selected })
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || t('imageManagement:message.deleteFailed'));
+        throw new Error(`Delete failed: ${response.statusText}`);
       }
 
       const result = await response.json();
-      console.log('✅ Delete result:', result);
+      logger.info('✅ Delete result:', result);
 
-      // 檢查是否有任何錯誤
-      const hasErrors = result.results.some(r => r.status === 'error');
+      const hasErrors = result.results?.some(r => r.status === 'error');
       
       if (hasErrors) {
-        // 如果有錯誤，顯示部分成功的消息
         enqueueSnackbar(t('imageManagement:message.partialDeleteFailed'), {
           variant: 'warning',
-          anchorOrigin: {
-            vertical: 'bottom',
-            horizontal: 'right'
-          }
+          anchorOrigin: { vertical: 'bottom', horizontal: 'right' }
         });
       } else {
-        // 全部成功
         enqueueSnackbar(t('imageManagement:message.deleteSuccess'), {
           variant: 'success',
-          anchorOrigin: {
-            vertical: 'bottom',
-            horizontal: 'right'
-          }
+          anchorOrigin: { vertical: 'bottom', horizontal: 'right' }
         });
       }
 
-      // 刷新鏡像列表
       fetchImages();
       setSelected([]);
     } catch (error) {
       console.error('❌ Error deleting images:', error);
       enqueueSnackbar(error.message || t('imageManagement:message.deleteFailed'), {
         variant: 'error',
-        anchorOrigin: {
-          vertical: 'bottom',
-          horizontal: 'right'
-        }
+        anchorOrigin: { vertical: 'bottom', horizontal: 'right' }
       });
     }
   };
 
   const handlePackage = async () => {
-    console.log('📦 Starting package process...');
+    logger.info('📦 開始打包映像檔...');
     setPackagingStatus(prev => ({ ...prev, loading: true, progress: 0 }));
     
-    // 顯示開始打包的通知
     const snackbarKey = enqueueSnackbar(t('imageManagement:message.packageStart'), {
       variant: 'info',
       persist: true,
-      anchorOrigin: {
-        vertical: 'bottom',
-        horizontal: 'right'
-      },
+      anchorOrigin: { vertical: 'bottom', horizontal: 'right' },
       action: (key) => (
-        <CircularProgress 
-          size={24} 
-          sx={{ color: 'white', marginLeft: 1 }} 
-        />
+        <CircularProgress size={24} sx={{ color: 'white', marginLeft: 1 }} />
       )
     });
     
-    setPackagingStatus(prev => ({ ...prev, snackbarKey }));
-
     try {
-      // 從選中的項目中獲取完整的鏡像信息
       const selectedImages = selected.map(imageKey => {
         const [name, tag] = imageKey.split(':');
-        return {
-          name,
-          tag,
-          fullName: imageKey
-        };
+        return { name, tag, fullName: imageKey };
       });
 
-      console.log('📦 Images to package:', selectedImages);
-
-      // 更新通知為準備中
-      closeSnackbar(snackbarKey);
-      const preparingKey = enqueueSnackbar(t('imageManagement:message.preparing'), {
-        variant: 'info',
-        persist: true,
-        anchorOrigin: {
-          vertical: 'bottom',
-          horizontal: 'right'
-        },
-        action: (key) => (
-          <CircularProgress 
-            size={24} 
-            sx={{ color: 'white', marginLeft: 1 }} 
-          />
-        )
-      });
-
-      const response = await fetch('http://localhost:3001/api/images/package', {
+      // 使用 fetch 直接處理二進制數據
+      const response = await fetch(getApiUrl('api/images/package'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -334,33 +290,14 @@ const ImageList = () => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to package images');
+        throw new Error(`打包失敗: ${response.statusText}`);
       }
 
-      // 更新通知為下載中
-      closeSnackbar(preparingKey);
-      const downloadingKey = enqueueSnackbar(t('imageManagement.message.downloading'), {
-        variant: 'info',
-        persist: true,
-        anchorOrigin: {
-          vertical: 'bottom',
-          horizontal: 'right'
-        },
-        action: (key) => (
-          <CircularProgress 
-            size={24} 
-            sx={{ color: 'white', marginLeft: 1 }} 
-          />
-        )
-      });
-
-      // 生成當前日期字符串 YYYY-MM-DD 格式
-      const today = new Date().toISOString().split('T')[0];
-      const filename = `images-${today}.tar`;
-      
+      // 處理下載
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
+      const filename = `docker-images-${new Date().toISOString().slice(0,10)}.tar`;
+      
       const a = document.createElement('a');
       a.href = url;
       a.download = filename;
@@ -369,25 +306,16 @@ const ImageList = () => {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
 
-      // 關閉下載通知並顯示成功通知
-      closeSnackbar(downloadingKey);
-        enqueueSnackbar(t('imageManagement.message.downloadSuccess'), { 
+      closeSnackbar(snackbarKey);
+      enqueueSnackbar(t('imageManagement:message.packageSuccess'), {
         variant: 'success',
-        autoHideDuration: 3000,
-        anchorOrigin: {
-          vertical: 'bottom',
-          horizontal: 'right'
-        }
+        autoHideDuration: 3000
       });
     } catch (error) {
-      console.error('❌ Error packaging images:', error);
-      enqueueSnackbar(error.message || t('imageManagement.message.packageFailed'), { 
+      logger.error('❌ 打包映像檔失敗:', error);
+      enqueueSnackbar(t('imageManagement:message.packageFailed'), {
         variant: 'error',
-        autoHideDuration: 3000,
-        anchorOrigin: {
-          vertical: 'bottom',
-          horizontal: 'right'
-        }
+        autoHideDuration: 3000
       });
     } finally {
       setPackagingStatus({
@@ -399,21 +327,10 @@ const ImageList = () => {
   };
 
   const handleViewDetails = async (imageId) => {
-    console.log('🔍 Viewing details for image:', imageId);
+    logger.info('🔍 Viewing details for image:', imageId);
     try {
-      const response = await fetch(`http://localhost:3001/api/images/${imageId}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Accept': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch image details');
-      }
-      
-      const details = await response.json();
-      console.log('📦 Image details received:', details);
+      const details = await api.get(`api/images/${imageId}`);
+      logger.info('📦 Image details received:', details);
       setSelectedImage(details);
     } catch (error) {
       console.error('❌ Error fetching image details:', error);
@@ -429,14 +346,12 @@ const ImageList = () => {
     });
   };
 
-  // 使用 MUI 的排序處理函數
   const handleRequestSort = (event, property) => {
     const isAsc = orderBy === property && order === 'asc';
     setOrder(isAsc ? 'desc' : 'asc');
     setOrderBy(property);
   };
 
-  // 使用 MUI 的表頭組件
   const headCells = [
     { id: 'name', label: t('imageManagement:table.name') },
     { id: 'tag', label: t('imageManagement:table.tag') },
@@ -445,9 +360,7 @@ const ImageList = () => {
     { id: 'status', label: t('imageManagement:table.status') },
   ];
 
-  // 修改格式化大小的函數
   const formatSize = (sizeString) => {
-    // 如果是數字，使用標準的格式化邏輯
     if (typeof sizeString === 'number') {
       const sizes = ['B', 'KB', 'MB', 'GB'];
       if (sizeString === 0) return '0 B';
@@ -455,41 +368,33 @@ const ImageList = () => {
       return `${Math.round(sizeString / (1024 ** i), 2)} ${sizes[i]}`;
     }
 
-    // 如果是字符串（從倉庫獲取的格式），直接返回
     if (typeof sizeString === 'string') {
-      // 處理可能的 "123MB" 或 "123 MB" 格式
       return sizeString.replace(/([0-9.]+)([A-Z]+)/, '$1 $2');
     }
 
     return 'Unknown size';
   };
 
-  // 修改日期格式化數
   const formatDate = (dateString) => {
     if (!dateString) return '-';
     
     try {
-      // 處理不同的日期格式
       let date;
       if (dateString.includes('ago')) {
-        // 處理 "x days ago" 格式
         const now = new Date();
         const days = parseInt(dateString.match(/\d+/)[0]);
         date = new Date(now.setDate(now.getDate() - days));
       } else if (dateString.includes('About')) {
-        // 處理 "About a minute ago" 等格式
         date = new Date();
       } else {
         date = new Date(dateString);
       }
 
-      // 檢查日期是否有效
       if (isNaN(date.getTime())) {
         console.warn('Invalid date:', dateString);
-        return dateString; // 如果無法解析，返回原始字符串
+        return dateString;
       }
 
-      // 使用 Intl.DateTimeFormat 格式化日期
       return new Intl.DateTimeFormat('zh-TW', {
         year: 'numeric',
         month: '2-digit',
@@ -501,70 +406,94 @@ const ImageList = () => {
       }).format(date);
     } catch (error) {
       console.error('Error formatting date:', error);
-      return dateString; // 發生錯誤時返回原始字符串
+      return dateString;
     }
   };
 
   return (
-    <Box sx={{ width: '100%' }}>
-      {/* 工具欄 */}
-      <Paper sx={{ mb: 2, p: 2 }}>
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
-          gap: 2 
-        }}>
-          <Typography variant="h6" component="div">
-            {t('imageManagement:common.imageList')} ({images.length})
+    <Box sx={{ 
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 2
+    }}>
+      <Paper sx={{ 
+        flex: 1,  // 讓 Paper 填充剩餘空間
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden' // 防止整個 Paper 滾動
+      }}>
+        <Toolbar
+          sx={{
+            pl: { sm: 2 },
+            pr: { xs: 1, sm: 1 }
+          }}
+        >
+          <Typography
+            sx={{ flex: '1 1 100%' }}
+            variant="h6"
+            component="div"
+          >
+            {t('imageManagement:common.imageList')}
+            {selected.length > 0 && (
+              <Typography
+                sx={{ ml: 2 }}
+                color="inherit"
+                variant="subtitle1"
+                component="span"
+              >
+                {selected.length} {t('common:selected')}
+              </Typography>
+            )}
           </Typography>
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center',
-            gap: 1,
-            flex: 1,
-            maxWidth: 500,
-            ml: 2
-          }}>
-            <TextField
-              size="small"
-              placeholder={t('imageManagement:message.searchImages')}
-              value={searchTerm}
-              onChange={(e) => handleSearch(e.target.value)}
-              sx={{ flex: 1 }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon color="action" />
-                  </InputAdornment>
-                ),
-                endAdornment: searchTerm && (
-                  <InputAdornment position="end">
-                    <IconButton
-                      size="small"
-                      onClick={handleClearSearch}
-                      edge="end"
-                    >
-                      <ClearIcon />
-                    </IconButton>
-                  </InputAdornment>
-                )
-              }}
-            />
-            <IconButton onClick={() => setConfigOpen(true)}>
-              <SettingsIcon />
-            </IconButton>
-            <IconButton onClick={handleRefresh} disabled={loading}>
-              <RefreshIcon />
-            </IconButton>
-          </Box>
-        </Box>
-      </Paper>
+          <TextField
+            size="small"
+            value={searchTerm}
+            onChange={(e) => handleSearch(e.target.value)}
+            placeholder={t('imageManagement:message.searchImages')}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+              endAdornment: searchTerm && (
+                <InputAdornment position="end">
+                  <IconButton size="small" onClick={handleClearSearch}>
+                    <ClearIcon />
+                  </IconButton>
+                </InputAdornment>
+              )
+            }}
+            sx={{ width: 300, mr: 2 }}
+          />
+          <IconButton onClick={handleRefresh} disabled={loading}>
+            <RefreshIcon />
+          </IconButton>
+          <IconButton onClick={() => setConfigOpen(true)}>
+            <SettingsIcon />
+          </IconButton>
+        </Toolbar>
 
-      {/* 表格 */}
-      <Paper sx={{ width: '100%', mb: 3 }}>
-        <TableContainer sx={{ maxHeight: TABLE_HEIGHT }}>
-          <Table stickyHeader>
+        <TableContainer sx={{ 
+          flex: 1,
+          overflow: 'auto', // 使表格容器可滾動
+          '&::-webkit-scrollbar': {
+            width: '0.4em',
+            height: '0.4em',
+          },
+          '&::-webkit-scrollbar-track': {
+            background: '#f1f1f1',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            background: '#888',
+            borderRadius: '4px',
+          },
+          '&::-webkit-scrollbar-thumb:hover': {
+            background: '#555',
+          },
+        }}>
+          <Table stickyHeader size="small">
             <TableHead>
               <TableRow>
                 <TableCell padding="checkbox">
@@ -651,8 +580,13 @@ const ImageList = () => {
         </TableContainer>
       </Paper>
 
-      {/* 操作按鈕區 */}
-      <Paper sx={{ p: 2, mt: 2 }}>
+      <Paper sx={{ 
+        p: 2,
+        position: 'sticky',
+        bottom: 0,
+        backgroundColor: 'background.paper',
+        zIndex: 1
+      }}>
         <Box sx={{ 
           display: 'flex', 
           justifyContent: 'space-between', 
@@ -693,7 +627,6 @@ const ImageList = () => {
         </Box>
       </Paper>
 
-      {/* 對話框 */}
       <ImageUpload
         open={uploadOpen}
         onClose={() => setUploadOpen(false)}
@@ -738,7 +671,6 @@ const ImageList = () => {
 };
 export default ImageList;
 
-// MUI 的排序輔助函數
 function descendingComparator(a, b, orderBy) {
   if (orderBy === 'size') {
     return b.size - a.size;
@@ -770,4 +702,3 @@ function stableSort(array, comparator) {
   });
   return stabilizedThis.map((el) => el[0]);
 }
-

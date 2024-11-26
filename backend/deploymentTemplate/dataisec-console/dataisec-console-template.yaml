@@ -88,8 +88,7 @@ readinessProbe:
   successThreshold: 1
 
 
-nodeSelector:
-  kubernetes.io/hostname: ${NODE_SELECTOR} #[{node-role.opensearch: master}]
+nodeSelector: ${NODE_SELECTOR} #[{node-role.opensearch: master}]
 
 tolerations: []
 

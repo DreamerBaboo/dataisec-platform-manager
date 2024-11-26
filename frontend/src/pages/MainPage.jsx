@@ -14,24 +14,25 @@ import UserProfile from '../components/UserProfile/UserProfile';
 import ImageList from '../components/ImageManagement/ImageList';
 import ImageUpload from '../components/ImageManagement/ImageUpload';
 import { useAppTranslation } from '../hooks/useAppTranslation';
+import { logger } from '../utils/logger'; // 導入 logger
 
 function MainPage() {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const theme = useTheme();
   const { t, currentLanguage, changeLanguage, languages } = useAppTranslation(['navigation', 'common']);
  
 
   const toggleDrawer = () => {
-    console.log('Toggling drawer. Current state:', open);
+    logger.info('Toggling drawer. Current state:', open);
     setOpen(!open);
   };
 
   useEffect(() => {
-    console.log('Drawer state changed to:', open);
+    logger.info('Drawer state changed to:', open);
   }, [open]);
 
   return (
-    <Box sx={{ display: 'contents', width: '100%', height: '100vh', overflow: 'hidden' }}>
+    <Box sx={{ display: 'flex', width: '100vw', height: '100vh', overflow: 'hidden' }}>
       <CssBaseline />
       <TopBar 
         open={open} 
@@ -41,19 +42,26 @@ function MainPage() {
       <SideMenu 
         open={open} 
         toggleDrawer={toggleDrawer}
+        drawerWidth={240}
+        variant="permanent"
+        sx={{
+          mt: '64px',
+          height: 'calc(100vh - 64px)',
+          '& .MuiDrawer-paper': {
+            mt: '64px',
+            height: 'calc(100vh - 64px)',
+          }
+        }}
       />
       <Box
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
-          width: { sm: `calc(100% - ${open ? 240 : 56}px)` },
-          ml: { sm: `${open ? 240 : 56}px` },
-          mt: ['48px', '56px', '64px'],
-          transition: theme.transitions.create('margin', {
-            easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.leavingScreen,
-          }),
+          p: '10px',
+          width: '100%',
+          height: 'calc(100% - 80px)',
+          mt: '70px',
+          overflow: 'auto'
         }}
       >
         <Routes>

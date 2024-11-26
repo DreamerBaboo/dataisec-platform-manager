@@ -1,0 +1,156 @@
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: deployment-template-pv
+  labels:
+    type: local
+spec:
+  capacity:
+    storage: 10Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: deployment-template-storage
+  local:
+    path: /data/deployment-template
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - your-node-name
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: deployment-template-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: dataisec-deployment-template-storage
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: dataisec-deployment-template-storage
+provisioner: kubernetes.io/no-provisioner
+reclaimPolicy: Retain
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: false
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dataisec-pod-management-config
+  namespace: default
+data:
+  .env: |
+    NODE_ENV=production
+    PORT=3001
+    API_BASE_URL=/api
+    OPENSEARCH_URL=http://localhost:9200
+    OPENSEARCH_USERNAME=admin
+    OPENSEARCH_PASSWORD=Cobr@8029@@123D
+    OPENSEARCH_POD_METRICS_INDEX=metricbeat-*
+    OPENSEARCH_SYSTEM_METRICS_INDEX=metricbeat-*
+    OPENSEARCH_LOGS_INDEX=filebeat-*
+    OPENSEARCH_TEMPLATE_INDEX=pod-deployment-templates
+    OPENSEARCH_DEPLOYMENT_LOG_INDEX=pod-deployment-logs
+    OPENSEARCH_AUDIT_LOG_INDEX=pod-deployment-audit
+    WS_HEARTBEAT_INTERVAL=30000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dataisec-pod-management
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dataisec-pod-management
+  template:
+    metadata:
+      labels:
+        app: dataisec-pod-management
+    spec:
+      serviceAccountName: dataisec-pod-management-sa
+      containers:
+      - name: dataisec-pod-management
+        image: dataisec-pod-management:latest
+        securityContext:
+          privileged: true
+        ports:
+        - containerPort: 3001
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+        volumeMounts:
+        - name: config-volume
+          mountPath: /app/config
+        - name: deployment-template
+          mountPath: /app/deploymentTemplate
+        - name: k8s-certs
+          mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+          readOnly: true
+        - name: containerd-sock
+          mountPath: /var/run/containerd/containerd.sock
+      volumes:
+      - name: config-volume
+        configMap:
+          name: dataisec-pod-management-config
+      - name: deployment-template
+        persistentVolumeClaim:
+          claimName: deployment-template-pvc
+      - name: k8s-certs
+        projected:
+          sources:
+          - serviceAccountToken:
+              expirationSeconds: 3600
+              audience: kubernetes.default.svc
+          - configMap:
+              name: kube-root-ca.crt
+              items:
+              - key: ca.crt
+                path: ca.crt
+      - name: containerd-sock
+        hostPath:
+          path: /run/containerd/containerd.sock
+          type: Socket
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dataisec-pod-management-service
+  namespace: default
+spec:
+  selector:
+    app: dataisec-pod-management
+  ports:
+  - port: 3001
+    targetPort: 3001
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dataisec-opensearch-service
+  namespace: default
+spec:
+  selector:
+    app: dataisec-opensearch
+  ports:
+  - port: 9200
+    targetPort: 9200
+  type: ClusterIP

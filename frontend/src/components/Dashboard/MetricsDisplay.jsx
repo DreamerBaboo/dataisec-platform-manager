@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Grid, Paper, Typography, Box } from '@mui/material';
 import ReactECharts from 'echarts-for-react';
 import RGL, { WidthProvider } from "react-grid-layout";
@@ -6,6 +6,7 @@ import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import { useAppTranslation } from '../../hooks/useAppTranslation';
 const ReactGridLayout = WidthProvider(RGL);
+import { logger } from '../../utils/logger.ts'; // 導入 logger
 
 const DEFAULT_LAYOUT = [
   { i: 'cpu', x: 0, y: 0, w: 6, h: 8, minW: 4, minH: 6 },
@@ -16,22 +17,104 @@ const DEFAULT_LAYOUT = [
 
 const LAYOUT_STORAGE_KEY = 'metrics-dashboard-layout';
 
-const MetricsDisplay = ({ metrics, selectedNode }) => {
+const MetricsDisplay = ({ metrics, selectedNode, refreshing }) => {
   const { t } = useAppTranslation();
   const [layout, setLayout] = useState(() => {
-    // 從 localStorage 讀取保存的布局，如果沒有則使用默認布局
     const savedLayout = localStorage.getItem(LAYOUT_STORAGE_KEY);
     return savedLayout ? JSON.parse(savedLayout) : DEFAULT_LAYOUT;
   });
 
-  // 當布局改變時保存到 localStorage
+  // 使用 state 來追蹤處理後的指標
+  const [processedMetrics, setProcessedMetrics] = useState(null);
+
+  // 當原始指標數據變化時處理數據
+  useEffect(() => {
+    logger.info('MetricsDisplay received raw metrics:', metrics);
+    logger.info('Selected node:', selectedNode);
+
+    if (!metrics) {
+      logger.warn('No metrics data available');
+      setProcessedMetrics(null);
+      return;
+    }
+
+    // 檢查數據結構
+    if (selectedNode === 'cluster') {
+      if (!metrics.cluster) {
+        logger.warn('No cluster metrics found in:', metrics);
+        setProcessedMetrics(null);
+        return;
+      }
+      logger.info('Processing cluster metrics:', metrics.cluster);
+      setProcessedMetrics(metrics.cluster);
+    } else {
+      // 對於節點指標，直接檢查節點名稱
+      if (!metrics[selectedNode]) {
+        logger.warn(`No metrics found for node ${selectedNode} in:`, metrics);
+        setProcessedMetrics(null);
+        return;
+      }
+      logger.info(`Processing node metrics for ${selectedNode}:`, metrics[selectedNode]);
+      setProcessedMetrics(metrics[selectedNode]);
+    }
+  }, [metrics, selectedNode]);
+
   const handleLayoutChange = useCallback((newLayout) => {
     setLayout(newLayout);
     localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(newLayout));
   }, []);
 
-  // 格式化數值的輔助函數
+  // 添加更詳細的數據驗證
+  const validateMetrics = (data) => {
+    if (!data) return false;
+    
+    const hasValidCpu = Array.isArray(data.cpu) && data.cpu.length > 0;
+    const hasValidMemory = Array.isArray(data.memory) && data.memory.length > 0;
+    const hasValidNetwork = data.network && 
+                          Array.isArray(data.network.tx) && 
+                          Array.isArray(data.network.rx);
+    const hasValidStorage = data.storage && 
+                          typeof data.storage.total === 'number' && 
+                          typeof data.storage.used === 'number';
+
+    logger.info('Metrics validation result:', {
+      hasValidCpu,
+      hasValidMemory,
+      hasValidNetwork,
+      hasValidStorage,
+      data
+    });
+
+    return hasValidCpu && hasValidMemory && hasValidNetwork && hasValidStorage;
+  };
+
+  // 如果沒有處理後的指標，顯示加載狀態
+  if (!processedMetrics) {
+    return (
+      <Box sx={{ mt: 2 }}>
+        <Typography>{t('dashboard:messages.noMetricsAvailable')}</Typography>
+      </Box>
+    );
+  }
+
+  // 驗證數據結構
+  if (!validateMetrics(processedMetrics)) {
+    logger.error('Invalid metrics structure:', processedMetrics);
+    return (
+      <Box sx={{ mt: 2 }}>
+        <Typography color="error">
+          {t('dashboard:messages.invalidMetricsFormat')}
+        </Typography>
+        <Typography variant="caption" color="textSecondary">
+          {`Selected node: ${selectedNode}`}
+        </Typography>
+      </Box>
+    );
+  }
+
   const formatValue = (value, type) => {
+    if (value === undefined || value === null) return 'N/A';
+    
     switch (type) {
       case 'percentage':
         return `${value.toFixed(2)}%`;
@@ -41,8 +124,8 @@ const MetricsDisplay = ({ metrics, selectedNode }) => {
         return `${formatBytes(value)}/s`;
       case 'cores':
         return `${value.toFixed(1)} cores`;
-      case 'gigabytes':  // 新增的 case
-        return `${formatBytes(value)}`;
+      case 'gigabytes':
+        return `${formatBytes(value * 1024 * 1024 * 1024)}`;
       default:
         return value.toString();
     }
@@ -55,16 +138,6 @@ const MetricsDisplay = ({ metrics, selectedNode }) => {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
   };
-
-  if (!metrics || !metrics[selectedNode]) {
-    return (
-      <Box sx={{ mt: 2 }}>
-        <Typography>{t('dashboard:messages.noMetricsAvailable')}</Typography>
-      </Box>
-    );
-  }
-
-  const nodeMetrics = metrics[selectedNode];
 
   const getChartOption = (data, title, type = 'line', options = {}) => {
     if (!data || (!Array.isArray(data) && type !== 'pie')) {
@@ -291,72 +364,96 @@ const MetricsDisplay = ({ metrics, selectedNode }) => {
       isResizable={true}
       isDraggable={true}
     >
-      {['cpu', 'memory', 'network', 'storage'].map(metricType => (
-        <div key={metricType}>
-          <Paper 
-            sx={{ 
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden'
-            }}
-            elevation={2}
-          >
-            <Box className="drag-handle" sx={{ 
-              p: 1.5,
-              cursor: 'move',
-              borderBottom: 1,
-              borderColor: 'divider',
-              bgcolor: (theme) => theme.palette.mode === 'dark' 
-                ? 'grey.800' 
-                : 'grey.100',
-              minHeight: '40px'
-            }}>
-              <Typography variant="subtitle1" fontWeight="medium">
-                {t('dashboard:dashboard.resources.' + `${metricType}Usage`)}
-              </Typography>
-            </Box>
-            <Box sx={{ 
-              flex: 1, 
-              p: 1,
-              minHeight: 0,
-              display: 'flex',
-              flexDirection: 'column'
-            }}>
-              <ReactECharts
-                option={getChartOption(
-                  metricType === 'network' ? nodeMetrics?.network?.rx : nodeMetrics?.[metricType],
-                  '',
-                  metricType === 'storage' ? 'pie' : 'line',
-                  {
-                    valueType: metricType === 'network' ? 'bytesPerSecond' : 
-                             metricType === 'memory' ? 'gigabytes' :
-                             metricType === 'cpu' ? 'cores' : 'percentage',
-                    seriesName: metricType === 'network' ? t('dashboard:dashboard.network.receive') : t('dashboard:dashboard.resources.' + `${metricType}Usage`)
-                  }
-                )}
-                style={{ 
-                  height: '100%',
-                  minHeight: '200px',
-                  width: '100%'
-                }}
-                opts={{ 
-                  renderer: 'canvas',
-                  devicePixelRatio: window.devicePixelRatio,
-                  width: 'auto',
-                  height: 'auto'
-                }}
-              />
-            </Box>
-          </Paper>
-        </div>
-      ))}
+      <Box key="cpu" sx={{ p: 2 }}>
+        <Paper sx={{ p: 2, height: '100%' }}>
+          <Box className="drag-handle" sx={{ cursor: 'move', mb: 2 }}>
+            <Typography variant="h6">{t('dashboard:dashboard.cpu')}</Typography>
+          </Box>
+          <ReactECharts
+            option={getChartOption(
+              processedMetrics.cpu,
+              t('dashboard:dashboard.cpu'),
+              'line',
+              { valueType: 'cores', seriesName: t('dashboard:dashboard.cpuUsage') }
+            )}
+            style={{ height: '90%', width: '100%' }}
+            opts={{ renderer: 'svg' }}
+          />
+        </Paper>
+      </Box>
+
+      <Box key="memory" sx={{ p: 2 }}>
+        <Paper sx={{ p: 2, height: '100%' }}>
+          <Box className="drag-handle" sx={{ cursor: 'move', mb: 2 }}>
+            <Typography variant="h6">{t('dashboard:dashboard.memory')}</Typography>
+          </Box>
+          <ReactECharts
+            option={getChartOption(
+              processedMetrics.memory,
+              t('dashboard:dashboard.memory'),
+              'line',
+              { valueType: 'gigabytes', seriesName: t('dashboard:dashboard.memoryUsage') }
+            )}
+            style={{ height: '90%', width: '100%' }}
+            opts={{ renderer: 'svg' }}
+          />
+        </Paper>
+      </Box>
+
+      <Box key="network" sx={{ p: 2 }}>
+        <Paper sx={{ p: 2, height: '100%' }}>
+          <Box className="drag-handle" sx={{ cursor: 'move', mb: 2 }}>
+            <Typography variant="h6">{t('dashboard:dashboard.network')}</Typography>
+          </Box>
+          <ReactECharts
+            option={getChartOption(
+              processedMetrics.network?.tx,
+              t('dashboard:dashboard.network'),
+              'line',
+              { valueType: 'bytesPerSecond', seriesName: t('dashboard:dashboard.networkTx') }
+            )}
+            style={{ height: '90%', width: '100%' }}
+            opts={{ renderer: 'svg' }}
+          />
+        </Paper>
+      </Box>
+
+      <Box key="storage" sx={{ p: 2 }}>
+        <Paper sx={{ p: 2, height: '100%' }}>
+          <Box className="drag-handle" sx={{ cursor: 'move', mb: 2 }}>
+            <Typography variant="h6">{t('dashboard:dashboard.storage')}</Typography>
+          </Box>
+          <ReactECharts
+            option={getChartOption(
+              processedMetrics.storage,
+              t('dashboard:dashboard.storage'),
+              'pie'
+            )}
+            style={{ height: '90%', width: '100%' }}
+            opts={{ renderer: 'svg' }}
+          />
+        </Paper>
+      </Box>
     </ReactGridLayout>
   );
 };
 
-// 使用 memo 並添加自定義比較函數
+// 改進 memo 比較函數
 export default React.memo(MetricsDisplay, (prevProps, nextProps) => {
-  return JSON.stringify(prevProps.metrics) === JSON.stringify(nextProps.metrics) &&
-         prevProps.selectedNode === nextProps.selectedNode;
+  const hasMetricsChanged = JSON.stringify(prevProps.metrics) !== JSON.stringify(nextProps.metrics);
+  const hasNodeChanged = prevProps.selectedNode !== nextProps.selectedNode;
+  const hasRefreshingChanged = prevProps.refreshing !== nextProps.refreshing;
+
+  logger.info('MetricsDisplay props comparison:', {
+    hasMetricsChanged,
+    hasNodeChanged,
+    hasRefreshingChanged,
+    prevNode: prevProps.selectedNode,
+    nextNode: nextProps.selectedNode,
+    prevMetricsKeys: Object.keys(prevProps.metrics || {}),
+    nextMetricsKeys: Object.keys(nextProps.metrics || {}),
+    selectedNodeMetrics: nextProps.metrics?.[nextProps.selectedNode]
+  });
+
+  return !hasMetricsChanged && !hasNodeChanged && !hasRefreshingChanged;
 });

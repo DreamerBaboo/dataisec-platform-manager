@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { logger } from '../../../utils/logger'; // 導入 logger
 import {
   FormControl,
   InputLabel,
@@ -25,7 +26,7 @@ const ImageSelector = ({ value, onChange }) => {
   const fetchRepositories = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/images/repositories', {
+      const response = await axios.get(getApiUrl('images/repositories'), {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       setRepositories(response.data);
@@ -41,7 +42,8 @@ const ImageSelector = ({ value, onChange }) => {
   const fetchTags = async (repository) => {
     try {
       setLoading(true);
-      const response = await axios.get(`/api/images/tags?repository=${repository}`, {
+      const response = await axios.get(getApiUrl(`images/tags`), {
+        params: { repository },
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       setTags(response.data);

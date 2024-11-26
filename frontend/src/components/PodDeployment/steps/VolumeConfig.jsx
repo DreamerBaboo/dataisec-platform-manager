@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { logger } from '../../../utils/logger.ts'; // 導入 logger
 import {
   Box,
   Button,
@@ -16,15 +17,18 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  Autocomplete,
+  FormHelperText
 } from '@mui/material';
-import { Add as AddIcon, Delete as DeleteIcon, Visibility as VisibilityIcon, VisibilityOff as VisibilityOffIcon } from '@mui/icons-material';
+import { Add as AddIcon, Delete as DeleteIcon, Visibility as VisibilityIcon, VisibilityOff as VisibilityOffIcon, CreateNewFolder as CreateNewFolderIcon } from '@mui/icons-material';
 import { useAppTranslation } from '../../../hooks/useAppTranslation';
 import axios from 'axios';
 import YAML from 'yaml';
 import PropTypes from 'prop-types';
 import { podDeploymentService } from '../../../services/podDeploymentService';
 import path from 'path';
+import { LoadingButton } from '@mui/lab';
 
 const VolumeConfig = ({ config, onChange, errors = {} }) => {
   const { t } = useAppTranslation();
@@ -41,21 +45,23 @@ const VolumeConfig = ({ config, onChange, errors = {} }) => {
     provisioner: 'kubernetes.io/no-provisioner'
   });
   const [showStoragePreview, setShowStoragePreview] = useState(false);
+  const [creatingDirectory, setCreatingDirectory] = useState({});
+  const [directoryMessage, setDirectoryMessage] = useState({});
 
   // Load existing configuration when component mounts
   useEffect(() => {
     const loadStorageConfig = async () => {
       if (!config?.name || !config?.version) {
-        console.log('No deployment name or version provided');
+        logger.info('No deployment name or version provided');
         return;
       }
 
       try {
         setLoading(true);
-        console.log('Loading storage configuration for:', config.name, config.version);
+        logger.info('Loading storage configuration for:', config.name, config.version);
         
         const response = await podDeploymentService.getStorageConfig(config.name, config.version);
-        console.log('Loaded storage configuration:', response);
+        logger.info('Loaded storage configuration:', response);
 
         // Set storage class visibility if it exists
         if (response.storageClassYaml) {
@@ -129,61 +135,50 @@ const VolumeConfig = ({ config, onChange, errors = {} }) => {
     saveStorageConfig();
   }, [showStorageClass, persistentVolumes, config?.name, config?.version]);
 
-  // 獲取節點列表
+  // 修改節點數據的獲取
   useEffect(() => {
     const fetchNodes = async () => {
       try {
         setLoading(true);
-        const response = await axios.get('/api/k8s/nodes', {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
-        if (response.data && Array.isArray(response.data)) {
-          setNodes(response.data);
+        // 使用 podDeploymentService 獲取節點列表
+        const response = await podDeploymentService.getNodes();
+        logger.info('Fetched nodes:', response); // 用於調試
+
+        if (response && Array.isArray(response)) {
+          const formattedNodes = response.map(node => ({
+            name: node.name,
+            role: node.role || '',
+            status: node.status || ''
+          }));
+          logger.info('Formatted nodes:', formattedNodes); // 用於調試
+          setNodes(formattedNodes);
         }
-        setError(null);
-      } catch (err) {
-        console.error('Failed to fetch nodes:', err);
+      } catch (error) {
+        console.error('Failed to fetch nodes:', error);
         setError(t('podDeployment:errors.failedToFetchNodes'));
       } finally {
         setLoading(false);
       }
     };
+
     fetchNodes();
-  }, [t]);
+  }, []);
 
-  // 添加 PV - 修改命名邏輯
+  // 初始化持久卷的默認結構
   const handleAddPersistentVolume = () => {
-    // 確保有部署名稱
-    if (!config?.name) {
-      console.error('Deployment name is required');
-      return;
-    }
-
-    // 生成新的 PV 序號
-    const pvIndex = persistentVolumes.length;
-    // 格式化序號為兩位數，例如：01, 02, 03...
-    const sequenceNumber = String(pvIndex).padStart(2, '0');
-    const newPvName = `${config.name}-pv${sequenceNumber}`;
-
-    console.log('Creating new PV:', newPvName); // 添加日誌
-
-    setPersistentVolumes(prev => [
-      ...prev,
+    setPersistentVolumes([
+      ...persistentVolumes,
       {
-        name: newPvName,
-        labels: {
-          type: 'local'
+        name: `${config.name}-pv-${persistentVolumes.length + 1}`,
+        local: {
+          path: ''
         },
         capacity: {
-          storage: '1Gi'
+          storage: ''
         },
         volumeMode: 'Filesystem',
         accessModes: ['ReadWriteOnce'],
         persistentVolumeReclaimPolicy: 'Retain',
-        storageClassName: config?.name ? `${config.name}-storageclass` : '',
-        local: {
-          path: '/data'
-        },
         nodeAffinity: {
           required: {
             nodeSelectorTerms: [{
@@ -199,54 +194,29 @@ const VolumeConfig = ({ config, onChange, errors = {} }) => {
     ]);
   };
 
-  // 移除 PV - 更新後續 PV 的命名
-  const handleRemovePV = (indexToRemove) => {
-    setPersistentVolumes(prev => {
-      const updatedPVs = prev.filter((_, index) => index !== indexToRemove);
-      
-      // 重新命名剩餘的 PV
-      return updatedPVs.map((pv, index) => {
-        const sequenceNumber = String(index).padStart(2, '0');
-        return {
-          ...pv,
-          name: `${config.name}-pv${sequenceNumber}`
-        };
-      });
-    });
-  };
-
-  // 處理 PV 變更
+  // 處理持久卷字段變更
   const handlePVChange = (index, field, value) => {
-    console.log('Updating PV:', { index, field, value });
-
-    setPersistentVolumes(prev => prev.map((pv, i) => {
-      if (i === index) {
-        if (field.includes('.')) {
-          const parts = field.split('.');
-          let newPv = { ...pv };
-          let current = newPv;
-          
-          // 遍歷路徑直到倒數第二個部分
-          for (let i = 0; i < parts.length - 1; i++) {
-            if (!current[parts[i]]) {
-              current[parts[i]] = {};
-            }
-            current = current[parts[i]];
-          }
-          
-          // 設置最後一個屬性的值
-          current[parts[parts.length - 1]] = value;
-          
-          console.log('Updated PV:', newPv);
-          return newPv;
-        }
-        return { ...pv, [field]: value };
-      }
-      return pv;
-    }));
+    const newPVs = [...persistentVolumes];
+    
+    // 根據字段路徑更新值
+    switch (field) {
+      case 'path':
+        newPVs[index].local.path = value;
+        break;
+      case 'capacity':
+        newPVs[index].capacity.storage = value;
+        break;
+      case 'nodeSelector':
+        newPVs[index].nodeAffinity.required.nodeSelectorTerms[0].matchExpressions[0].values = [value];
+        break;
+      default:
+        newPVs[index][field] = value;
+    }
+    
+    setPersistentVolumes(newPVs);
   };
 
-  // 驗證容量格式的函數
+  // 驗證容量式的函數
   const validateStorageCapacity = (value) => {
     const regex = /^[1-9][0-9]*[KMGT]i$/;
     if (!regex.test(value)) {
@@ -339,35 +309,59 @@ spec:
         - key: kubernetes.io/hostname
           operator: In
           values:
-          - ${pv.nodeAffinity?.required?.nodeSelectorTerms?.[0]?.matchExpressions?.[0]?.values?.[0] || ''}`).join('\n---\n');
+          - ${pv.nodeAffinity.required.nodeSelectorTerms[0].matchExpressions[0].values[0]}`).join('\n---\n');
   };
 
   // 生成完整的預覽 YAML
   const generatePreview = () => {
     if (!showStorageClass) return '';
 
-    const storageClassYaml = generateStorageClassYaml();
+    let yamlContent = '';
 
-    const persistentVolumeYaml = persistentVolumes.map(pv => {
-      const selectedNode = pv?.nodeAffinity?.required?.nodeSelectorTerms?.[0]?.matchExpressions?.[0]?.values?.[0] || '';
-      
-      return `
-apiVersion: v1
+    // 添加 StorageClass YAML
+    if (showStorageClass) {
+      yamlContent += `apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: ${config?.name || 'default'}-storageclass
+provisioner: kubernetes.io/no-provisioner
+reclaimPolicy: Retain
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: false`;
+    }
+
+    // 添加 PersistentVolume YAML
+    if (persistentVolumes && persistentVolumes.length > 0) {
+      persistentVolumes.forEach((pv, index) => {
+        if (index > 0 || yamlContent) {
+          yamlContent += '\n---\n';
+        }
+
+        // 確保所有必要的屬性都存在
+        const pvName = pv?.name || `${config?.name || 'default'}-pv-${index + 1}`;
+        const pvPath = pv?.local?.path || '/data';
+        const pvCapacity = pv?.capacity?.storage || '1Gi';
+        const pvVolumeMode = pv?.volumeMode || 'Filesystem';
+        const pvAccessMode = pv?.accessModes?.[0] || 'ReadWriteOnce';
+        const pvReclaimPolicy = pv?.persistentVolumeReclaimPolicy || 'Retain';
+        const selectedNode = pv?.nodeAffinity?.required?.nodeSelectorTerms?.[0]?.matchExpressions?.[0]?.values?.[0] || '';
+
+        yamlContent += `apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: ${pv.name}
+  name: ${pvName}
   labels:
-    type: ${pv.labels.type}
+    type: local
 spec:
   capacity:
-    storage: ${pv.capacity.storage}
-  volumeMode: ${pv.volumeMode}
+    storage: ${pvCapacity}
+  volumeMode: ${pvVolumeMode}
   accessModes:
-    - ${pv.accessModes[0]}
-  persistentVolumeReclaimPolicy: ${pv.persistentVolumeReclaimPolicy}
-  storageClassName: ${config?.name}-storageclass
+    - ${pvAccessMode}
+  persistentVolumeReclaimPolicy: ${pvReclaimPolicy}
+  storageClassName: ${config?.name || 'default'}-storageclass
   local:
-    path: ${pv.local.path}
+    path: ${pvPath}
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -376,16 +370,10 @@ spec:
           operator: In
           values:
           - ${selectedNode}`;
-    }).join('\n---\n');
-
-    if (storageClassYaml && persistentVolumeYaml) {
-      return `${storageClassYaml}\n---\n${persistentVolumeYaml}`;
-    } else if (storageClassYaml) {
-      return storageClassYaml;
-    } else if (persistentVolumeYaml) {
-      return persistentVolumeYaml;
+      });
     }
-    return '';
+
+    return yamlContent;
   };
 
   const handleCreateStorageClass = async () => {
@@ -459,6 +447,237 @@ spec:
     }
   };
 
+  // 從模板中獲取預設
+  const defaultValues = config.yamlTemplate?.defaultValues || {};
+  const placeholders = config.yamlTemplate?.placeholders || {};
+
+  // 處理存儲類配置變更
+  const handleStorageConfigChange = (field, value) => {
+    const updatedConfig = {
+      ...config,
+      yamlTemplate: {
+        ...config.yamlTemplate,
+        placeholders: {
+          ...config.yamlTemplate?.placeholders,
+          [field]: value
+        }
+      }
+    };
+    onChange(updatedConfig);
+  };
+
+  // 修改 handleCreateDirectory 函數
+  const handleCreateDirectory = async (index, nodeName, path) => {
+    if (!nodeName || !path) {
+      setDirectoryMessage({
+        ...directoryMessage,
+        [index]: {
+          type: 'error',
+          message: t('podDeployment:podDeployment.volume.selectNodeAndPath')
+        }
+      });
+      return;
+    }
+
+    try {
+      setCreatingDirectory({ ...creatingDirectory, [index]: true });
+      
+      await podDeploymentService.createHostDirectory(nodeName, path, {
+        recursive: true,
+        mode: '0755'
+      });
+
+      setDirectoryMessage({
+        ...directoryMessage,
+        [index]: {
+          type: 'success',
+          message: t('podDeployment:podDeployment.volume.directoryCreated')
+        }
+      });
+    } catch (error) {
+      console.error('Failed to create directory:', error);
+      
+      // 處理離線環境的錯誤
+      const message = error.message.includes('離線環境')
+        ? t('podDeployment:podDeployment.volume.offlineEnvironmentError')
+        : error.message || t('podDeployment:podDeployment.volume.createDirectoryError');
+
+      setDirectoryMessage({
+        ...directoryMessage,
+        [index]: {
+          type: 'warning', // 使用警告而不是錯誤，因為這可能是預期的情況
+          message
+        }
+      });
+    } finally {
+      setCreatingDirectory({ ...creatingDirectory, [index]: false });
+    }
+  };
+
+  // 在 UI 中渲染持久卷字段
+  const renderPersistentVolumeFields = (pv, index) => {
+    const pvId = `pv-${index}`;
+    
+    return (
+      <Paper 
+        key={index} 
+        elevation={0} 
+        sx={{ 
+          p: 2, 
+          mb: 2, 
+          border: '1px solid',
+          borderColor: 'divider'
+        }}
+      >
+        <Grid container spacing={2}>
+          <Grid item xs={12} display="flex" justifyContent="space-between" alignItems="center">
+            <Typography variant="subtitle2">
+              {t('podDeployment:podDeployment.volume.persistentVolume')} #{index + 1}
+            </Typography>
+            <IconButton 
+              onClick={() => handleDeletePersistentVolume(index)}
+              color="error"
+              size="small"
+              aria-label={t('common:common.delete')}
+            >
+              <DeleteIcon />
+            </IconButton>
+          </Grid>
+          
+          <Grid item xs={12} sm={6}>
+            <TextField
+              id={`${pvId}-name`}
+              name={`${pvId}-name`}
+              fullWidth
+              label={t('podDeployment:podDeployment.volume.pvName')}
+              value={pv.name}
+              onChange={(e) => handlePVChange(index, 'name', e.target.value)}
+            />
+          </Grid>
+          
+          <Grid item xs={12} sm={6}>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+              <TextField
+                id={`${pvId}-path`}
+                name={`${pvId}-path`}
+                fullWidth
+                label={t('podDeployment:podDeployment.volume.hostPath')}
+                value={pv.local.path}
+                onChange={(e) => handlePVChange(index, 'path', e.target.value)}
+                placeholder="/data/path"
+                error={!!directoryMessage[index]?.type === 'error'}
+                helperText={directoryMessage[index]?.message}
+              />
+              <LoadingButton
+                variant="contained"
+                size="medium"
+                startIcon={<CreateNewFolderIcon />}
+                loading={creatingDirectory[index]}
+                onClick={() => handleCreateDirectory(
+                  index,
+                  pv.nodeAffinity?.required?.nodeSelectorTerms?.[0]?.matchExpressions?.[0]?.values?.[0],
+                  pv.local.path
+                )}
+                sx={{ mt: 1 }}
+              >
+                {t('podDeployment:podDeployment.volume.createDir')}
+              </LoadingButton>
+            </Box>
+          </Grid>
+          
+          <Grid item xs={12} sm={6}>
+            <TextField
+              id={`${pvId}-capacity`}
+              name={`${pvId}-capacity`}
+              fullWidth
+              label={t('podDeployment:podDeployment.volume.capacity')}
+              value={pv.capacity.storage}
+              onChange={(e) => handlePVChange(index, 'capacity', e.target.value)}
+              placeholder="10Gi"
+              helperText={t('podDeployment:podDeployment.volume.capacityHelp')}
+            />
+          </Grid>
+          
+          <Grid item xs={12} sm={6}>
+            <FormControl fullWidth>
+              <InputLabel id={`${pvId}-node-label`}>
+                {t('podDeployment:podDeployment.volume.nodeSelector')}
+              </InputLabel>
+              <Select
+                id={`${pvId}-node`}
+                name={`${pvId}-node`}
+                labelId={`${pvId}-node-label`}
+                value={pv.nodeAffinity?.required?.nodeSelectorTerms?.[0]?.matchExpressions?.[0]?.values?.[0] || ''}
+                onChange={(e) => handlePVChange(index, 'nodeSelector', e.target.value)}
+                label={t('podDeployment:podDeployment.volume.nodeSelector')}
+              >
+                {nodes.length > 0 ? (
+                  nodes.map((node) => (
+                    <MenuItem 
+                      key={node.name} 
+                      value={node.name}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Typography>
+                          {node.name}
+                        </Typography>
+                        {node.role && (
+                          <Typography 
+                            variant="caption" 
+                            sx={{ 
+                              ml: 1, 
+                              color: 'text.secondary',
+                              backgroundColor: 'action.hover',
+                              px: 1,
+                              py: 0.5,
+                              borderRadius: 1
+                            }}
+                          >
+                            {node.role}
+                          </Typography>
+                        )}
+                        {node.status && (
+                          <Typography 
+                            variant="caption" 
+                            sx={{ 
+                              ml: 1,
+                              color: node.status === 'Ready' ? 'success.main' : 'error.main'
+                            }}
+                          >
+                            {node.status}
+                          </Typography>
+                        )}
+                      </Box>
+                    </MenuItem>
+                  ))
+                ) : (
+                  <MenuItem disabled>
+                    {t('podDeployment:podDeployment.volume.noNodesAvailable')}
+                  </MenuItem>
+                )}
+              </Select>
+              <FormHelperText>
+                {t('podDeployment:podDeployment.volume.nodeSelectorHelp')}
+              </FormHelperText>
+            </FormControl>
+          </Grid>
+        </Grid>
+      </Paper>
+    );
+  };
+
+  // 添加刪除持久卷的處理函數
+  const handleDeletePersistentVolume = (index) => {
+    const newPVs = persistentVolumes.filter((_, i) => i !== index);
+    setPersistentVolumes(newPVs);
+
+    // 如果刪除後沒有持久卷，可能需要更新相關狀態
+    if (newPVs.length === 0) {
+      // 可選：在沒有 PV 時自動刪除存儲類
+      // setShowStorageClass(false);
+    }
+  };
+
   return (
     <Box>
       {loading && (
@@ -473,248 +692,236 @@ spec:
         </Alert>
       )}
 
-      {/* Storage Preview Toggle Button */}
-      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
-        <Button
-          variant="outlined"
-          startIcon={showStoragePreview ? <VisibilityOffIcon /> : <VisibilityIcon />}
-          onClick={() => setShowStoragePreview(!showStoragePreview)}
-        >
-          {showStoragePreview 
-            ? t('podDeployment:podDeployment.yamlTemplate.hidePreview')
-            : t('podDeployment:podDeployment.yamlTemplate.showPreview')
-          }
-        </Button>
-      </Box>
-
-      {/* StorageClass Configuration */}
-      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="h6">
-          {t('podDeployment:podDeployment.volume.storageClassConfiguration')}
+      {/* Volume Configuration Section */}
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h6" gutterBottom>
+          {t('podDeployment:podDeployment.volume.basicConfiguration')}
         </Typography>
-        {showStorageClass && (
-          <Button
-            variant="outlined"
-            color="error"
-            onClick={handleDeleteStorageClass}
-          >
-            {t('common:common.delete')}
-          </Button>
-        )}
+        <Paper sx={{ p: 3 }}>
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <Autocomplete
+                freeSolo
+                options={config.yamlTemplate?.defaultValues?.storage_class || []}
+                value={config.yamlTemplate?.placeholders?.storage_class || ''}
+                onChange={(_, newValue) => handleStorageConfigChange('storage_class', newValue)}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    fullWidth
+                    label={t('podDeployment:podDeployment.volume.storageClass')}
+                    error={!!errors?.storage_class}
+                    helperText={errors?.storage_class}
+                  />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Autocomplete
+                freeSolo
+                options={config.yamlTemplate?.defaultValues?.storage_access_mode || []}
+                value={config.yamlTemplate?.placeholders?.storage_access_mode || ''}
+                onChange={(_, newValue) => handleStorageConfigChange('storage_access_mode', newValue)}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    fullWidth
+                    label={t('podDeployment:podDeployment.volume.accessMode')}
+                    error={!!errors?.storage_access_mode}
+                    helperText={errors?.storage_access_mode}
+                  />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Autocomplete
+                freeSolo
+                options={config.yamlTemplate?.defaultValues?.persistence_size || []}
+                value={config.yamlTemplate?.placeholders?.persistence_size || ''}
+                onChange={(_, newValue) => handleStorageConfigChange('persistence_size', newValue)}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    fullWidth
+                    label={t('podDeployment:podDeployment.volume.persistenceSize')}
+                    error={!!errors?.persistence_size}
+                    helperText={errors?.persistence_size}
+                  />
+                )}
+              />
+            </Grid>
+          </Grid>
+        </Paper>
       </Box>
 
-      {/* Storage Preview */}
-      {showStoragePreview && (showStorageClass || persistentVolumes.length > 0) && (
-        <Paper sx={{ p: 2, mb: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            {t('podDeployment:podDeployment.volume.preview')}
-          </Typography>
-          <pre style={{ 
-            margin: 0, 
-            whiteSpace: 'pre-wrap',
-            backgroundColor: '#f5f5f5',
-            padding: '16px',
-            borderRadius: '4px',
-            fontSize: '14px'
+      {/* Storage Implementation Section */}
+      <Box>
+        <Typography variant="h6" gutterBottom>
+          {t('podDeployment:podDeployment.volume.storageImplementation')}
+        </Typography>
+        <Paper sx={{ p: 3 }}>
+          {/* Top Action Buttons Row */}
+          <Box sx={{ 
+            mb: 3, 
+            display: 'flex', 
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 2  // 添加按鈕之間的間距
           }}>
-            {generatePreview()}
-          </pre>
-        </Paper>
-      )}
-
-      {/* StorageClass Content */}
-      {showStorageClass && (
-        <Paper sx={{ p: 2, mb: 3 }}>
-          <Typography variant="subtitle1" gutterBottom>
-            {t('podDeployment:podDeployment.volume.storageClassConfiguration')}
-          </Typography>
-          <pre style={{ 
-            margin: 0, 
-            whiteSpace: 'pre-wrap',
-            backgroundColor: '#f5f5f5',
-            padding: '16px',
-            borderRadius: '4px',
-            fontSize: '14px'
-          }}>
-            {generateStorageClassYaml()}
-          </pre>
-        </Paper>
-      )}
-
-      {/* PersistentVolume Configuration */}
-      {showStorageClass && (
-        <Box sx={{ mt: 3 }}>
-          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography variant="h6">
-              {t('podDeployment:podDeployment.volume.persistentVolumes')}
-            </Typography>
+            {/* Left side - Create Storage Button */}
+            {!showStorageClass && (
+              <Button
+                variant="contained"
+                onClick={() => setCreateStorageClassDialog(true)}
+                startIcon={<AddIcon />}
+              >
+                {t('podDeployment:podDeployment.volume.createStorageClass')}
+              </Button>
+            )}
+            {/* If storage class exists, show delete button on the left */}
+            {showStorageClass && (
+              <Button
+                variant="outlined"
+                color="error"
+                onClick={handleDeleteStorageClass}
+                startIcon={<DeleteIcon />}
+              >
+                {t('common:common.delete')}
+              </Button>
+            )}
+            
+            {/* Right side - Preview Button */}
             <Button
-              startIcon={<AddIcon />}
-              onClick={handleAddPersistentVolume}
-              variant="contained"
+              variant="outlined"
+              startIcon={showStoragePreview ? <VisibilityOffIcon /> : <VisibilityIcon />}
+              onClick={() => setShowStoragePreview(!showStoragePreview)}
             >
-              {t('podDeployment:podDeployment.volume.add')}
+              {showStoragePreview 
+                ? t('podDeployment:podDeployment.yamlTemplate.hidePreview')
+                : t('podDeployment:podDeployment.yamlTemplate.showPreview')
+              }
             </Button>
           </Box>
 
-          {persistentVolumes.map((pv, index) => (
-            <Paper key={index} sx={{ p: 2, mb: 2 }}>
+          {/* YAML Preview */}
+          {showStoragePreview && (
+            <Box sx={{ mb: 3 }}>
+              <Paper 
+                variant="outlined" 
+                sx={{ 
+                  p: 2,
+                  backgroundColor: 'grey.50',
+                  '& pre': {
+                    margin: 0,
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word'
+                  }
+                }}
+              >
+                <pre>
+                  <code>{generatePreview()}</code>
+                </pre>
+              </Paper>
+            </Box>
+          )}
+
+          {/* Storage Class Configuration */}
+          {showStorageClass && (
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="subtitle1" sx={{ mb: 2 }}>
+                {t('podDeployment:podDeployment.volume.storageClass')}
+              </Typography>
+              {/* ... StorageClass 配置內容 ... */}
+            </Box>
+          )}
+
+          {/* Persistent Volume Configuration */}
+          {showStorageClass && (
+            <Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="subtitle1">
-                  Persistent Volume #{index + 1} ({pv.name})
+                  {t('podDeployment:podDeployment.volume.persistentVolumes')}
                 </Typography>
-                <IconButton
-                  onClick={() => handleRemovePV(index)}
-                  color="error"
-                  size="small"
+                <Button
+                  variant="contained"
+                  onClick={handleAddPersistentVolume}
+                  startIcon={<AddIcon />}
                 >
-                  <DeleteIcon />
-                </IconButton>
+                  {t('podDeployment:podDeployment.volumes.add')}
+                </Button>
               </Box>
-              
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Name"
-                    value={pv.name}
-                    disabled
-                    helperText="Automatically generated name"
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Storage Capacity"
-                    value={pv.capacity.storage}
-                    onChange={(e) => handleCapacityChange(index, e.target.value)}
-                    onBlur={(e) => handleCapacityBlur(index, e.target.value)}
-                    error={!!localErrors[`pv${index}Capacity`]}
-                    helperText={localErrors[`pv${index}Capacity`] || "e.g., 1Gi, 500Mi"}
-                    required
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <FormControl fullWidth>
-                    <InputLabel>Volume Mode</InputLabel>
-                    <Select
-                      value={pv.volumeMode}
-                      onChange={(e) => handlePVChange(index, 'volumeMode', e.target.value)}
-                    >
-                      <MenuItem value="Filesystem">Filesystem</MenuItem>
-                      <MenuItem value="Block">Block</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <FormControl fullWidth>
-                    <InputLabel>Access Mode</InputLabel>
-                    <Select
-                      value={pv.accessModes[0]}
-                      onChange={(e) => handlePVChange(index, 'accessModes', [e.target.value])}
-                    >
-                      <MenuItem value="ReadWriteOnce">ReadWriteOnce</MenuItem>
-                      <MenuItem value="ReadOnlyMany">ReadOnlyMany</MenuItem>
-                      <MenuItem value="ReadWriteMany">ReadWriteMany</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="Local Path"
-                    value={pv.local.path}
-                    onChange={(e) => handlePVChange(index, 'local.path', e.target.value)}
-                    required
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <FormControl fullWidth>
-                    <InputLabel>Node Hostname</InputLabel>
-                    <Select
-                      value={pv.nodeAffinity?.required?.nodeSelectorTerms?.[0]?.matchExpressions?.[0]?.values?.[0] || ''}
-                      onChange={(e) => {
-                        console.log('Node selection changed:', e.target.value);
-                        handlePVChange(
-                          index,
-                          'nodeAffinity.required.nodeSelectorTerms.0.matchExpressions.0.values.0',
-                          e.target.value
-                        );
-                      }}
-                      required
-                    >
-                      {nodes.map(node => (
-                        <MenuItem key={node.name} value={node.name}>
-                          {node.name}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-              </Grid>
-            </Paper>
-          ))}
-        </Box>
-      )}
 
-      {/* Create Storage Class Dialog */}
-      {!showStorageClass && (
-        <Box sx={{ mt: 2 }}>
-          <Button
-            variant="contained"
-            onClick={() => setCreateStorageClassDialog(true)}
-            startIcon={<AddIcon />}
-          >
-            {t('podDeployment:podDeployment.volume.createStorageClass')}
-          </Button>
-        </Box>
-      )}
+              {/* Render PV Fields */}
+              {persistentVolumes.map((pv, index) => renderPersistentVolumeFields(pv, index))}
+            </Box>
+          )}
+        </Paper>
+      </Box>
 
+      {/* Storage Class Creation Dialog */}
       <Dialog 
-        open={createStorageClassDialog} 
+        open={createStorageClassDialog}
         onClose={() => setCreateStorageClassDialog(false)}
+        maxWidth="md"
+        fullWidth
       >
         <DialogTitle>
-          {t('podDeployment:podDeployment.volume.createStorageClass')}
+          {t('podDeployment:podDeployment.volume.createStorageClassTitle')}
         </DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
-            {/* Display storage class name */}
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                disabled
-                value={`${config.name}-storageclass`}
-                label={t('podDeployment:podDeployment.volume.storageClassName')}
-              />
+                label={t('podDeployment:podDeployment.volume.reclaimPolicy')}
+                select
+                value={newStorageClass.reclaimPolicy}
+                onChange={(e) => setNewStorageClass({
+                  ...newStorageClass,
+                  reclaimPolicy: e.target.value
+                })}
+              >
+                <MenuItem value="Retain">Retain</MenuItem>
+                <MenuItem value="Delete">Delete</MenuItem>
+                <MenuItem value="Recycle">Recycle</MenuItem>
+              </TextField>
             </Grid>
-            {/* Reclaim Policy selection */}
             <Grid item xs={12}>
-              <FormControl fullWidth>
-                <InputLabel>
-                  {t('podDeployment:podDeployment.volume.reclaimPolicy')}
-                </InputLabel>
-                <Select
-                  value={newStorageClass.reclaimPolicy}
-                  onChange={(e) => setNewStorageClass(prev => ({
-                    ...prev,
-                    reclaimPolicy: e.target.value
-                  }))}
-                >
-                  <MenuItem value="Retain">Retain</MenuItem>
-                  <MenuItem value="Delete">Delete</MenuItem>
-                  <MenuItem value="Recycle">Recycle</MenuItem>
-                </Select>
-              </FormControl>
+              <TextField
+                fullWidth
+                label={t('podDeployment:podDeployment.volume.volumeBindingMode')}
+                select
+                value={newStorageClass.volumeBindingMode}
+                onChange={(e) => setNewStorageClass({
+                  ...newStorageClass,
+                  volumeBindingMode: e.target.value
+                })}
+              >
+                <MenuItem value="Immediate">Immediate</MenuItem>
+                <MenuItem value="WaitForFirstConsumer">WaitForFirstConsumer</MenuItem>
+              </TextField>
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label={t('podDeployment:podDeployment.volume.provisioner')}
+                value={newStorageClass.provisioner}
+                onChange={(e) => setNewStorageClass({
+                  ...newStorageClass,
+                  provisioner: e.target.value
+                })}
+              />
             </Grid>
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setCreateStorageClassDialog(false)}>
+          <Button 
+            onClick={() => setCreateStorageClassDialog(false)}
+          >
             {t('common:common.cancel')}
           </Button>
           <Button 
-            variant="contained"
+            variant="contained" 
             onClick={handleCreateStorageClass}
             disabled={loading}
           >
@@ -722,6 +929,8 @@ spec:
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* ... 其他對話框和組件 ... */}
     </Box>
   );
 };

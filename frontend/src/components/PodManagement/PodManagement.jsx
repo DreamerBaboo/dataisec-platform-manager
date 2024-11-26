@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { logger } from '../../utils/logger.ts';  // 導入 logger
 import {
   Box,
   Paper,
@@ -14,7 +15,8 @@ import {
   CircularProgress
 } from '@mui/material';
 import { useAppTranslation } from '../../hooks/useAppTranslation';
-import { getApiUrl } from '../../config/api';
+import { getApiUrl } from '../../utils/api';
+import { useVisibilityPolling } from '../../hooks/useVisibilityPolling';
 
 const PodManagement = () => {
   const { t } = useAppTranslation();
@@ -22,30 +24,28 @@ const PodManagement = () => {
   const [selectedPods, setSelectedPods] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchPods = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch(getApiUrl('api/pods'), {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
-        if (response.ok) {
-          const data = await response.json();
-          // Filter out any invalid pod data
-          const validPods = data.filter(pod => pod && pod.name && pod.namespace);
-          setPods(validPods);
-        }
-      } catch (error) {
-        console.error('Error fetching pods:', error);
-      } finally {
-        setLoading(false);
+  const fetchPods = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(getApiUrl('api/pods'), {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const validPods = data.filter(pod => pod && pod.name && pod.namespace);
+        setPods(validPods);
       }
-    };
-
-    fetchPods();
-    const interval = setInterval(fetchPods, 30000);
-    return () => clearInterval(interval);
+    } catch (error) {
+      console.error('Error fetching pods:', error);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useVisibilityPolling(fetchPods, {
+    onHidden: () => logger.info('Pod management polling paused'),
+    onVisible: () => logger.info('Pod management polling resumed')
+  });
 
   const handleSelectAllClick = (event) => {
     if (event.target.checked) {
@@ -130,7 +130,7 @@ const PodManagement = () => {
           variant="contained"
           color="primary"
           sx={{ mt: 2 }}
-          onClick={() => console.log('Selected Pods:', selectedPods)}
+          onClick={() => logger.info('Selected Pods:', selectedPods)}
         >
           {t('podManagement:actions.performAction')} ({selectedPods.length})
         </Button>

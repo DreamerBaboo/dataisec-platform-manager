@@ -1,4 +1,5 @@
 const { client } = require('../utils/opensearchClient');
+const k8sService = require('../services/k8sService');
 
 // 獲取集群級別的系統指標
 const getClusterMetrics = async (req, res) => {
@@ -156,114 +157,139 @@ const getNodeMetrics = async (req, res) => {
     const nodeName = req.params.nodeName;
 
     if (!nodeName) {
+      console.warn('[getNodeMetrics] Missing node name in request');
       return res.status(400).json({ message: 'Node name is required' });
     }
 
-    const response = await client.search({
-      index: process.env.OPENSEARCH_SYSTEM_METRICS_INDEX,
-      body: {
-        size: 0,
-        query: {
-          bool: {
-            must: [
-              {
-                range: {
-                  '@timestamp': {
-                    gte: `now-${timeRange}`,
-                    lte: 'now'
-                  }
-                }
-              },
-              {
-                term: {
-                  'kubernetes.node.name': nodeName
+    console.log(`[getNodeMetrics] Starting metrics retrieval for node: ${nodeName}, timeRange: ${timeRange}`);
+    console.log(`[getNodeMetrics] OpenSearch index: ${process.env.OPENSEARCH_SYSTEM_METRICS_INDEX}`);
+
+    // 構建查詢體，使用與 cluster metrics 相似的結構
+    const searchBody = {
+      size: 0,
+      query: {
+        bool: {
+          must: [
+            {
+              range: {
+                '@timestamp': {
+                  gte: `now-${timeRange}`,
+                  lte: 'now'
                 }
               }
-            ]
-          }
-        },
-        aggs: {
-          time_buckets: {
-            date_histogram: {
-              field: '@timestamp',
-              fixed_interval: '30s',
-              time_zone: 'Asia/Taipei'
             },
-            aggs: {
-              // CPU 指標 - 只使用 usage.nanocores
-              cpu_usage: {
-                avg: {
-                  field: 'kubernetes.node.cpu.usage.nanocores'
-                }
-              },
-              // 內存指標
-              memory_total: {
-                max: {
-                  field: 'kubernetes.node.memory.capacity.bytes'
-                }
-              },
-              memory_used: {
-                avg: {
-                  field: 'kubernetes.node.memory.usage.bytes'
-                }
-              },
-              memory_free: {
-                avg: {
-                  field: 'kubernetes.node.memory.available.bytes'
-                }
-              },
-              // 網絡指標
-              network_in: {
-                avg: {
-                  field: 'kubernetes.node.network.rx.bytes'
-                }
-              },
-              network_out: {
-                avg: {
-                  field: 'kubernetes.node.network.tx.bytes'
-                }
-              },
-              // 存儲指標
-              fs_total: {
-                max: {
-                  field: 'kubernetes.node.fs.capacity.bytes'
-                }
-              },
-              fs_used: {
-                avg: {
-                  field: 'kubernetes.node.fs.used.bytes'
-                }
-              },
-              fs_free: {
-                avg: {
-                  field: 'kubernetes.node.fs.available.bytes'
-                }
+            {
+              term: {
+                'kubernetes.node.name': nodeName
+              }
+            }
+          ]
+        }
+      },
+      aggs: {
+        time_buckets: {
+          date_histogram: {
+            field: '@timestamp',
+            fixed_interval: '30s',
+            time_zone: 'Asia/Taipei'
+          },
+          aggs: {
+            // CPU 指標 - 使用與 cluster metrics 相同的字段
+            total_cpu_usage: {
+              avg: {
+                field: 'kubernetes.node.cpu.usage.nanocores'
+              }
+            },
+            total_cpu_cores: {
+              max: {
+                field: 'kubernetes.node.cpu.capacity.cores'
+              }
+            },
+            // 記憶體指標
+            memory_total: {
+              max: {
+                field: 'kubernetes.node.memory.capacity.bytes'
+              }
+            },
+            memory_used: {
+              avg: {
+                field: 'kubernetes.node.memory.usage.bytes'
+              }
+            },
+            // 網絡指標
+            network_in: {
+              avg: {
+                field: 'kubernetes.node.network.rx.bytes'
+              }
+            },
+            network_out: {
+              avg: {
+                field: 'kubernetes.node.network.tx.bytes'
+              }
+            },
+            // 存儲指標
+            fs_total: {
+              max: {
+                field: 'kubernetes.node.fs.capacity.bytes'
+              }
+            },
+            fs_used: {
+              avg: {
+                field: 'kubernetes.node.fs.used.bytes'
               }
             }
           }
         }
       }
+    };
+
+    console.log('[getNodeMetrics] OpenSearch query:', JSON.stringify(searchBody, null, 2));
+
+    const searchResponse = await client.search({
+      index: process.env.OPENSEARCH_SYSTEM_METRICS_INDEX,
+      body: searchBody
     });
 
-    const buckets = response.body.aggregations.time_buckets.buckets;
-    console.log('buckets: ', buckets);
+    console.log('[getNodeMetrics] OpenSearch response status:', searchResponse.statusCode);
+
+    if (!searchResponse?.body?.aggregations?.time_buckets?.buckets) {
+      console.error('[getNodeMetrics] Invalid response structure');
+      return res.status(500).json({ 
+        message: 'Invalid response format from metrics store',
+        details: {
+          hasBody: !!searchResponse?.body,
+          hasAggregations: !!searchResponse?.body?.aggregations,
+          hasTimeBuckets: !!searchResponse?.body?.aggregations?.time_buckets,
+          hasBuckets: !!searchResponse?.body?.aggregations?.time_buckets?.buckets
+        }
+      });
+    }
+
+    const buckets = searchResponse.body.aggregations.time_buckets.buckets;
+    console.log(`[getNodeMetrics] Found ${buckets.length} time buckets`);
+
+    // 使用與 cluster metrics 相同的數據處理邏輯
     const metrics = {
       [nodeName]: {
-        cpu: buckets.map(bucket => ({
-          timestamp: bucket.key_as_string,
-          value: (bucket.cpu_usage.value || 0) / 1000000000, // 將 nanocores 轉換為 cores
-          display: `${((bucket.cpu_usage.value || 0) / 1000000000).toFixed(2)} cores`,
-          valueType: 'cores'
-        })),
+        cpu: buckets.map(bucket => {
+          const usedCores = (bucket.total_cpu_usage.value || 0) / 1000000000; // 將 nanocores 轉換為 cores
+          const totalCores = bucket.total_cpu_cores.value || 1;
+          return {
+            timestamp: bucket.key_as_string,
+            value: usedCores,
+            display: `${usedCores.toFixed(2)} cores`,
+            total: totalCores,
+            valueType: 'cores'
+          };
+        }),
         memory: buckets.map(bucket => {
-          const total = bucket.memory_free.value + bucket.memory_used.value || 1;
+          const total = bucket.memory_total.value || 1;
           const used = bucket.memory_used.value || 0;
-          const free = bucket.memory_free.value || 0;
           const percentage = (used / total) * 100;
           return {
             timestamp: bucket.key_as_string,
             value: used,
-            display: `${percentage.toFixed(2)}`,
+            display: `${percentage.toFixed(2)}%`,
             used: formatBytes(used),
             total: formatBytes(total),
             valueType: 'gigabytes'
@@ -286,67 +312,43 @@ const getNodeMetrics = async (req, res) => {
         storage: {
           total: buckets[0]?.fs_total.value || 0,
           used: buckets[0]?.fs_used.value || 0,
-          free: buckets[0]?.fs_free.value || 0,
+          free: (buckets[0]?.fs_total.value || 0) - (buckets[0]?.fs_used.value || 0),
           displayTotal: formatBytes(buckets[0]?.fs_total.value || 0),
           displayUsed: formatBytes(buckets[0]?.fs_used.value || 0),
-          displayFree: formatBytes(buckets[0]?.fs_free.value || 0)
+          displayFree: formatBytes((buckets[0]?.fs_total.value || 0) - (buckets[0]?.fs_used.value || 0))
         }
       }
     };
 
+    console.log(`[getNodeMetrics] Successfully processed metrics for node ${nodeName}`);
     res.json(metrics);
+
   } catch (error) {
-    console.error('Error fetching node metrics:', error);
-    res.status(500).json({ message: 'Failed to fetch node metrics', error: error.message });
+    console.error('[getNodeMetrics] Error occurred:', error);
+    console.error('[getNodeMetrics] Error details:', {
+      message: error.message,
+      stack: error.stack,
+      opensearchResponse: error.meta?.body || 'No OpenSearch response available'
+    });
+
+    res.status(500).json({ 
+      message: 'Failed to fetch node metrics', 
+      error: error.message,
+      details: error.stack,
+      opensearchError: error.meta?.body || null
+    });
   }
 };
 
 // 獲取節點列表
 const getNodes = async (req, res) => {
   try {
-    const response = await client.search({
-      index: process.env.OPENSEARCH_SYSTEM_METRICS_INDEX,
-      body: {
-        size: 0,
-        query: {
-          range: {
-            '@timestamp': {
-              gte: 'now-1m'
-            }
-          }
-        },
-        aggs: {
-          unique_nodes: {
-            terms: {
-              field: 'kubernetes.node.name',
-              size: 100
-            }
-          }
-        }
-      }
-    });
-
-    // 不再在這裡添加 cluster 選項，讓前端處理
-    const nodes = response.body.aggregations.unique_nodes.buckets.map(bucket => ({
-      name: bucket.key,
-      count: bucket.doc_count
-    }));
-
-    console.log('Found nodes:', nodes);
-    res.json(nodes);
+    const nodes = await k8sService.getNodes();
+    res.json(nodes.items);
   } catch (error) {
     console.error('Error fetching nodes:', error);
-    res.status(500).json({ message: 'Failed to fetch nodes', error: error.message });
+    res.status(500).json({ error: 'Failed to fetch nodes' });
   }
-};
-
-// 格式化字節大小的輔助函數
-const formatBytes = (bytes) => {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
 // 獲取 Pod 指標
@@ -453,6 +455,15 @@ const processPodMetrics = (aggregations) => {
       }))
     }
   };
+};
+
+// 格式化字節大小的輔助函數
+const formatBytes = (bytes) => {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
 // 導出所有函數

@@ -6,7 +6,8 @@ import RGL, { WidthProvider } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import { useAppTranslation } from '../../hooks/useAppTranslation';
-import { getApiUrl } from '../../config/api';
+import { getApiUrl } from '../../utils/api';
+import { logger } from '../../utils/logger.ts';  // 導入 logger
 
 const ReactGridLayout = WidthProvider(RGL);
 
@@ -50,7 +51,7 @@ const Dashboard = () => {
   const fetchMetrics = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('http://localhost:3001/metrics', {
+      const response = await axios.get(getApiUrl('api//metrics'), {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       setSystemMetrics(response.data.system);

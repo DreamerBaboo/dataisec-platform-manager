@@ -20,7 +20,8 @@
     "lastUpdate": "Last Update",
     "next": "Next",
     "back": "Back",
-    "deploy": "Deploy"
+    "deploy": "Deploy",
+    "create": "Create"
   },
   "errors": {
     "generalError": "An error occurred",

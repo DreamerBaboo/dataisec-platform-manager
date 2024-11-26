@@ -2,6 +2,46 @@
   "podDeployment": {
     "title": "Pod Deployment Management",
     "createNew": "Create New Deployment",
+    "resourceConfig": {
+      "title": "Resource Configuration",
+      "containerResources": "Container Resources",
+      "javaHeapSettings": "Java Heap Memory Settings (-Xms/-Xmx)"
+    },
+    "ymlTemplate": {
+      "title": "YAML Template",
+      "reload": "Reload",
+      "editTemplate": "Edit Template",
+      "searchPlaceholders": "Search placeholders...",
+      "categories": {
+        "basic": "Basic",
+        "resource": "Resource",
+        "affinity": "Affinity",
+        "storage": "Storage",
+        "config": "Config"
+      },
+      "parseError": "Failed to parse YAML template",
+      "uploadError": "Failed to upload template",
+      "save": "Save",
+      "saveSuccess": "YAML template saved successfully",
+      "saveError": "Failed to save YAML template",
+      "uploadTemplate": "Upload Template",
+      "uploadTemplateFile": "Please upload template file",
+      "uploadTemplateSuccess": "Template uploaded successfully",
+      "preview": "Preview",
+      "edit": "Edit",
+      "content": "Template Content",
+      "close": "Close",
+      "hidePreview": "Hide Preview",
+      "showPreview": "Show Preview",
+      "placeholders": "Placeholders"
+    },
+    "affinityConfig": {
+      "title": "Affinity Configuration",
+      "nodeSelector": "Node Selector",
+      "nodeSelectorPlaceholder": "e.g., kubernetes.io/hostname=node1",
+      "siteNode": "Site Node",
+      "siteNodePlaceholder": "e.g., site1-node1"
+    },
     "steps": {
       "basicSetup": "Basic Setup",
       "resourceAllocation": "Resource Allocation",
@@ -35,7 +75,14 @@
       "tag": "Tag",
       "repositoryConfig": "Repository Configuration",
       "port": "Port"  
-    },      
+    },  
+    "errors": {
+      "failedToSaveStorage": "Failed to save storage configuration",
+      "failedToFetchNodes": "Failed to fetch nodes",
+      "failedToCreateStorageClass": "Failed to create storage class",
+      "failedToDeleteStorage": "Failed to delete storage configuration",
+      "failedToSaveDeployScript": "Failed to save deploy script"
+    },
     "filter": {
       "namespace": "Namespace",
       "allNamespaces": "All Namespaces",
@@ -51,6 +98,9 @@
       "yamlTemplate": "YAML Template"
     },
     "basic": {
+      "hidequotapreview": "Hide Quota Preview",
+      "useHelmChart": "Use Helm Chart",
+      "workload": "Workload",
       "name": "Deployment Name",
       "namespace": "Namespace",
       "type": "Deployment Type",
@@ -76,7 +126,15 @@
       "statefulsets": "Maximum StatefulSets",
       "jobs": "Maximum Jobs",
       "cronjobs": "Maximum CronJobs",
-      "resourceQuotaPreview": "Resource Quota Preview"
+      "resourceQuotaPreview": "Resource Quota Preview",
+      "types": "Secret Types",
+      "javaHeap": "Java Heap Memory Settings (-Xms/-Xmx)",
+      "resourceCounts": "Resource Counts",
+      "workloadCounts": "Workload Counts",
+      "showQuotaPreview": "Show Quota Preview",
+      "javaHeapHelp": "e.g., -Xms512m -Xmx1024m",
+      "requestCpu": "CPU Requests",
+      "requestMemory": "Memory Requests"
     },
     "table": {
       "name": "Name",
@@ -158,7 +216,13 @@
       "cephfs": "CephFS",
       "csi": "CSI",
       "secretName": "Secret Name",
-      "configMapName": "ConfigMap Name"
+      "configMapName": "ConfigMap Name",
+      "createDirectory": "Create Directory",
+      "hostPathHelp": "Enter the host path and click the button to create the directory",
+      "directoryCreated": "Directory created successfully"
+    },
+    "messages": {
+      "directoryCreated": "Directory created successfully"
     },
     "configMaps": {
       "title": "Configuration Maps",
@@ -171,33 +235,165 @@
       "data": "Data",
       "addItem": "Add Item"
     },
-    "secrets": {
+    "secret": {
       "title": "Secrets",
       "add": "Add Secret",
+      "edit": "Edit Secret",
+      "create": "Create Secret",  
+      "type": "Secret Type",
       "preview": "Preview",
       "field": "Field",
       "value": "Value",
       "key": "Key",
       "addData": "Add Data",
-      "addItem": "Add Item"
+      "addItem": "Add Item",
+      "showPreview": "Show Preview",
+      "addSecret": "Add Secret",
+      "secretName": "Secret Name",
+      "data": "Data",
+      "hidePreview": "Hide Preview",
+      "nameHelp": "The name of the secret. It must be unique within the namespace.",
+      "fields": {
+        "name": "Secret Name",  
+        "key": "Key",
+        "value": "Value",
+        "registry": "Registry",
+        "username": "Username",
+        "password": "Password",
+        "email": "Email", 
+        "server": "Server",
+        "certificate": "Certificate",
+        "privateKey": "Private Key",
+        "serviceAccountToken": "Service Account Token",
+        "sshPrivateKey": "SSH Private Key", 
+        "basicAuthPassword": "Basic Auth Password",
+        "dockerConfigJson": "Docker Config JSON",
+        "caCert": "CA Certificate",
+        "tlsKey": "TLS Key",
+        "tlsCert": "TLS Certificate",
+        "token": "Token",
+        "tokenId": "Token ID",
+        "tokenSecret": "Token Secret",
+        "caCertData": "CA Certificate Data",
+        "tlsCertData": "TLS Certificate Data",
+        "tlsKeyData": "TLS Key Data"
+      },
+      "actions": {
+        "addEntry": "Add Entry"
+      },
+      "errors": {
+        "duplicateName": "Secret name already exists",
+        "saveFailed": "Failed to save secret",
+        "deleteFailed": "Failed to delete secret",
+        "nodeAndPathRequired": "Please select a node and enter the path",
+      "failedToCreateDirectory": "Failed to create directory"
+      },
+      "validation": {
+        "keyRequired": "Key is required",
+        "valueRequired": "Value is required",
+        "invalidCertificate": "Invalid certificate",
+        "invalidPrivateKey": "Invalid private key",
+        "invalidSSHKey": "Invalid SSH key",
+        "usernameRequired": "Username is required",
+        "passwordRequired": "Password is required"
+      },
+      "types":{
+        "generic": "Generic",
+        "dockerConfig": "Docker Config",
+        "tls": "TLS",
+        "opaque": "Opaque",
+        "config_legacy": "Config (Legacy)",
+        "basic_auth": "Basic Auth",
+        "ssh_auth": "SSH Auth",
+        "bootstrap_token": "Bootstrap Token"
+      }
     },
     "preview": {
+      "showYaml": "Show YAML",
+      "basicConfig": "Basic Configuration",   
+      "resourceConfig": "Resource Configuration",
+      "storageConfig": "Storage Configuration",
+      "configMapConfig": "ConfigMap Configuration",
+      "secretConfig": "Secret Configuration",
+      "affinityConfig": "Affinity Configuration",
+      "placeholdersTab": "Placeholders",  
       "title": "Deployment Preview",
-      "info": "Please review your deployment configuration before proceeding.",
+      "info": "Please check your deployment configuration before proceeding.",
       "basicInfo": "Basic Information",
       "resources": "Resource Configuration",
-      "volumes": "Volume Configuration",
-      "configurations": "Additional Configurations",
+      "volumes": "Storage Configuration",
+      "configurations": "Other Configuration",
       "saveSuccess": "Configuration saved successfully",
       "saveError": "Failed to save configuration",
+      "summaryTab": "Summary",
+      "yamlTab": "YAML",
+      "finalYamlTitle": "Deployment Configuration",
+      "storageClassTitle": "Storage Class",
+      "persistentVolumeTitle": "Persistent Volume",
+      "configMapTitle": "ConfigMap",
+      "secretTitle": "Secret",
       "categories": {
+        "affinity": "Affinity",
         "basic": "Basic Information",
-        "image": "Image Configuration",
-        "service": "Service Configuration",
-        "resources": "Resource Configuration",
-        "deployment": "Deployment Configuration",
-        "node": "Node Configuration",
-        "misc": "Other Configuration"
+        "image": "Image Settings",
+        "service": "Service Settings",
+        "resources": "Resource Settings",
+        "deployment": "Deployment Settings",
+        "node": "Node Settings",
+        "misc": "Other Settings",
+        "summaryTab": "Summary",
+        "yamlTab": "YAML",
+        "basicConfigTab": "Basic Configuration",
+        "resourceConfigTab": "Resource Configuration",
+        "storageConfigTab": "Storage Configuration",
+        "configMapConfigTab": "ConfigMap Configuration",
+        "secretConfigTab": "Secret Configuration",
+        "affinityConfigTab": "Affinity Configuration",
+        "finalTab": "Final Configuration",
+        "placeholdersTab": "Placeholders",
+        "replicas": "Replicas",
+        "port": "Port",
+        "requestsCpu": "CPU Requests",
+        "requestsMemory": "Memory Requests",
+        "limitsCpu": "CPU Limits",
+        "limitsMemory": "Memory Limits"
+      },
+      "fields": { 
+        "name": "Name",
+        "namespace": "Namespace",
+        "type": "Type",
+        "replicas": "Replicas",
+        "image": "Image",
+        "tag": "Tag",
+        "pullPolicy": "Pull Policy",
+        "port": "Port",
+        "requestsCpu": "CPU Requests",
+        "requestsMemory": "Memory Requests",
+        "limitsCpu": "CPU Limits",
+        "limitsMemory": "Memory Limits",
+        "pods": "Pods",
+        "configmaps": "ConfigMaps",
+        "pvcs": "PVCs",
+        "services": "Services",
+        "secrets": "Secrets",
+        "nodeSelector": "Node Selector",
+        "nodeSelectorKey": "Node Selector Key",
+        "nodeSelectorValue": "Node Selector Value",
+        "topologySpreadKey": "Topology Spread Key",
+        "topologySpreadMaxSkew": "Topology Spread Max Skew",
+        "topologySpreadWhenUnsatisfiable": "Topology Spread When Unsatisfiable",
+        "cpu_request": "CPU Requests",
+        "memory_request": "Memory Requests",
+        "cpu_limit": "CPU Limits",
+        "memory_limit": "Memory Limits",
+        "replica_count": "Replicas",
+        "node_selector": "Node Selector",
+        "node_selector_key": "Node Selector Key",
+        "node_selector_value": "Node Selector Value",
+        "topology_spread_key": "Topology Spread Key",
+        "topology_spread_max_skew": "Topology Spread Max Skew",
+        "topology_spread_when_unsatisfiable": "Topology Spread When Unsatisfiable",
+        "affinity_type": "Affinity Type"
       }
     },
     "logs": {
@@ -312,6 +508,8 @@
       "newValue": "New Value"
     },
     "yamlTemplate": {
+      "editTemplate": "Edit Template",
+      "reload": "Reload",
       "upload": "Upload YAML Template",
       "placeholders": "Template Placeholders",
       "noTemplate": "No template uploaded",
@@ -331,7 +529,11 @@
         "image": "Image Settings",
         "service": "Service Settings",
         "deployment": "Deployment Settings",
-        "misc": "Other Settings"
+        "misc": "Other Settings",
+        "resource": "Resource Settings",
+        "affinity": "Affinity Settings",
+        "storage": "Storage Settings",
+        "config": "Other Settings"
       }
     },
     "basicSetup": {
@@ -353,6 +555,8 @@
       "title": "Repository Configuration",
       "search": "Search repositories...",
       "repository": "Repository",
+      "selectRepository": "Select repository",
+      "selectTag": "Select tag",
       "tag": "Tag",
       "errors": {
         "fetchFailed": "Failed to fetch repositories",
@@ -368,16 +572,53 @@
       "nodeHostname": "Node Hostname",
       "preview": "Configuration Preview",
       "storageClassConfiguration": "Storage Class Configuration",
-      "persistentVolumes": "Persistent Volumes"
+      "persistentVolumes": "Persistent Volumes",
+      "pvName": "Persistent Volume Name",
+      "pvSize": "Persistent Volume Size",
+      "pvAccessModes": "Persistent Volume Access Modes",
+      "pvStorageClassName": "Persistent Volume Storage Class Name",
+      "pvMountOptions": "Persistent Volume Mount Options",
+      "pvSelector": "Persistent Volume Selector",
+      "pvNodeAffinity": "Persistent Volume Node Affinity",
+      "pvAnnotations": "Persistent Volume Annotations",
+      "pvFinalizers": "Persistent Volume Finalizers",
+      "pvCapacity": "Persistent Volume Capacity",
+      "pvVolumeMode": "Persistent Volume Volume Mode",
+      "storageClass": "Storage Class",
+      "hostPath": "Host Path",
+      "capacity": "Capacity",
+      "capacityHelp": "For example: 10Gi, 10GB",
+      "nodeSelector": "Node Selector",
+      "noNodeSelector": "No Node Selector",
+      "noStorageClass": "No Storage Class",
+      "noAccessModes": "No Access Modes",
+      "noCapacity": "No Capacity",
+      "noMountOptions": "No Mount Options",
+      "noSelector": "No Selector",
+      "noAnnotations": "No Annotations",
+      "noFinalizers": "No Finalizers",
+      "noNodeAvailable": "No Node Available",
+      "nodeSelectorHelp": "Select a suitable node",
+      "storageClassHelp": "Select a suitable storage class",
+      "basicConfiguration": "Basic Configuration",
+      "accessMode": "Access Mode",
+      "volumeMode": "Volume Mode",
+      "persistenceSize": "Persistence Size",
+      "storageImplementation": "Storage Implementation",
+      "createStorageClassTitle": "Create Storage Class",
+      "provisioner": "Provisioner"
     },
     "configMap": {
-      "title": "ConfigMap Configuration",
+      "showPreview": "Show Preview",
+      "hidePreview": "Hide Preview",
       "add": "Add ConfigMap",
+      "addEntry": "Add Entry",
+      "title": "ConfigMap Configuration",
       "edit": "Edit ConfigMap",
       "create": "Create ConfigMap",
       "type": "ConfigMap Type",
-      "addEntry": "Add Entry",
       "removeEntry": "Remove Entry",
+      "nameHelp": "ConfigMap Name",
       "types": {
         "basic": "Basic Key-Value",
         "file": "From File",
@@ -392,7 +633,10 @@
         "filePath": "File Path",
         "mountPath": "Mount Path",
         "directoryPath": "Directory Path",
-        "literals": "Literal Values"
+        "literals": "Literal Values",
+        "yamlContent": "YAML Content",
+        "fileContent": "File Content",
+        "certificateContent": "Certificate Content"
       },
       "validation": {
         "required": "This field is required",
@@ -419,15 +663,7 @@
       }
       
     },
-    "secret": {
-      "title": "Secret Configuration",
-      "addSecret": "Add Secret",
-      "secretName": "Secret Name",
-      "data": "Data",
-      "addData": "Add Data",
-      "key": "Key",
-      "value": "Value"
-    },
+    
     "namespaceQuota": {
       "title": "Namespace Resource Quota",
       "requestsCpu": "CPU Requests",

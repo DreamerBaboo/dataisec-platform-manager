@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { TextField, Button, Paper, Typography, Box, Alert, Select, MenuItem, useTheme } from '@mui/material';
 import { useAuth } from '../utils/auth.jsx';
 import { useAppTranslation } from '../hooks/useAppTranslation';
-import { ColorModeContext } from '../App';
+import ColorModeContext from '../contexts/ColorModeContext.jsx';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 
@@ -37,14 +37,17 @@ function LoginPage() {
         alignItems: 'center',
         justifyContent: 'center',
         minHeight: '100vh',
-        bgcolor: 'background.default'
+        minWidth: '100vh',
+        bgcolor: 'background.default',
+        margin: '0 auto',
+        padding: '0 16px'
       }}
     >
       <Paper
         elevation={3}
         sx={{
           p: 4,
-          width: '100%',
+          width: '100vh',
           maxWidth: 400,
           bgcolor: 'background.paper'
         }}

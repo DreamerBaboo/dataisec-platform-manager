@@ -1,36 +1,31 @@
 import React, { createContext, useContext, useState } from 'react';
-import { api } from './api';
+import api from './api';
 
 const AuthContext = createContext(null);
 
-export const AuthProvider = ({ children }) => {
+export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
 
   const login = async (username, password) => {
     try {
-      console.log('Attempting login with:', { username });
-      const response = await fetch('http://localhost:3001/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
+      console.info('Attempting login to:', api.getBaseUrl()); // Debug log
+      const response = await api.post('api/auth/login', {
+        username,
+        password
       });
-
-      if (!response.ok) {
-        console.log('Login failed:', response.status, response.statusText);
-        throw new Error('Login failed');
-      }
-
-      const data = await response.json();
-      console.log('Login successful:', data);
       
-      localStorage.setItem('token', data.token);
-      setUser(data.user);
-      return data;
+      if (response.token) {
+        localStorage.setItem('token', response.token);
+        setUser(response.user);
+        return response;
+      }
+      throw new Error('Login failed');
     } catch (error) {
-      console.log('Login error:', error);
-      throw error;
+      console.error('Login error details:', {
+        message: error.message,
+        status: error.status,
+        stack: error.stack
+      });
     }
   };
 
@@ -46,12 +41,12 @@ export const AuthProvider = ({ children }) => {
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
+}
 
-export const useAuth = () => {
+export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-};
+}

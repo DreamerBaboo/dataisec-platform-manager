@@ -190,7 +190,7 @@ class TemplateService {
     }
   }
 
-  // 導出模板
+  // 導出模��
   async exportTemplate(templateId) {
     try {
       const template = await this.getTemplateById(templateId);
@@ -257,6 +257,48 @@ class TemplateService {
       return body.hits.hits[0]._source;
     } catch (error) {
       console.error('❌ Failed to get template by ID:', error);
+      throw error;
+    }
+  }
+
+  async saveTemplateContent(deploymentName, content) {
+    try {
+      console.log('正在保存模板內容:', {
+        deploymentName,
+        contentLength: content.length,
+        contentPreview: content.substring(0, 100)
+      });
+
+      // 確保內容是字符串
+      if (typeof content !== 'string') {
+        throw new Error('內容必須是字符串');
+      }
+
+      // 驗證 YAML 格式
+      try {
+        YAML.parse(content);
+      } catch (yamlError) {
+        throw new Error(`YAML 格式無效: ${yamlError.message}`);
+      }
+
+      const response = await axios.post(
+        `${API_URL}/api/pod-deployments/templates/${deploymentName}/template`,
+        { content },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      console.log('保存響應:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('保存模板內容失敗:', error);
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
       throw error;
     }
   }

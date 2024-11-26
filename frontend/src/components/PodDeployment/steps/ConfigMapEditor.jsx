@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+
+import { logger } from '../../../utils/logger.ts'; // 導入 logger
 import {
   Box,
   Typography,
@@ -148,7 +150,7 @@ const ConfigMapEditor = ({ config, onChange, errors = {} }) => {
     } catch (error) {
       console.error('Failed to save ConfigMaps:', error);
       setLocalErrors({
-        submit: t('podDeployment:configMap.errors.saveFailed')
+        submit: t('podDeployment:podDeployment.configMap.errors.saveFailed')
       });
     }
   };
@@ -163,7 +165,7 @@ const ConfigMapEditor = ({ config, onChange, errors = {} }) => {
         config.version,
         `${config.name}-${config.version}-configmap.yaml`
       );
-      console.log('✅ ConfigMap YAML deleted successfully');
+      logger.info('✅ ConfigMap YAML deleted successfully');
     } catch (error) {
       // Ignore 404 errors (file doesn't exist)
       if (error.response?.status !== 404) {
@@ -210,7 +212,7 @@ const ConfigMapEditor = ({ config, onChange, errors = {} }) => {
     } catch (error) {
       console.error('Failed to delete ConfigMap:', error);
       setLocalErrors({
-        submit: t('podDeployment:configMap.errors.deleteFailed')
+        submit: t('podDeployment:podDeployment.configMap.errors.deleteFailed')
       });
     }
   };
@@ -249,7 +251,7 @@ const ConfigMapEditor = ({ config, onChange, errors = {} }) => {
                 <Grid item xs={5}>
                   <TextField
                     fullWidth
-                    label={t('podDeployment:configMap.fields.key')}
+                    label={t('podDeployment:podDeployment.configMap.fields.key')}
                     value={entry.key || ''}
                     onChange={(e) => handleEntryChange(index, 'key', e.target.value)}
                     error={!!localErrors[`entry-${index}-key`]}
@@ -259,7 +261,7 @@ const ConfigMapEditor = ({ config, onChange, errors = {} }) => {
                 <Grid item xs={6}>
                   <TextField
                     fullWidth
-                    label={t('podDeployment:configMap.fields.value')}
+                    label={t('podDeployment:podDeployment.configMap.fields.value')}
                     value={entry.value || ''}
                     onChange={(e) => handleEntryChange(index, 'value', e.target.value)}
                     error={!!localErrors[`entry-${index}-value`]}
@@ -279,7 +281,7 @@ const ConfigMapEditor = ({ config, onChange, errors = {} }) => {
               variant="outlined"
               size="small"
             >
-              {t('podDeployment:configMap.addEntry')}
+              {t('podDeployment:podDeployment.configMap.addEntry')}
             </Button>
           </Box>
         );
@@ -290,7 +292,7 @@ const ConfigMapEditor = ({ config, onChange, errors = {} }) => {
             {/* File Name Field */}
             <TextField
               fullWidth
-              label={t('podDeployment:configMap.fields.fileName')}
+              label={t('podDeployment:podDeployment.configMap.fields.fileName')}
               value={newConfigMap.data.fileName || 'config.yaml'}
               onChange={(e) => handleContentChange('fileName', e.target.value)}
               sx={{ mb: 2 }}
@@ -298,7 +300,7 @@ const ConfigMapEditor = ({ config, onChange, errors = {} }) => {
             {/* YAML Content Editor */}
             <Box sx={{ width: '100%' }}>
               <Typography variant="subtitle2" color="textSecondary" sx={{ mb: 1 }}>
-                {t('podDeployment:configMap.fields.yamlContent')}
+                {t('podDeployment:podDeployment.configMap.fields.yamlContent')}
               </Typography>
               <Paper 
                 variant="outlined" 
@@ -356,7 +358,7 @@ const ConfigMapEditor = ({ config, onChange, errors = {} }) => {
                   <Grid item xs={12}>
                     <TextField
                       fullWidth
-                      label={t('podDeployment:configMap.fields.key')}
+                      label={t('podDeployment:podDeployment.configMap.fields.key')}
                       value={entry.key || ''}
                       onChange={(e) => handleEntryChange(index, 'key', e.target.value)}
                       error={!!localErrors[`entry-${index}-key`]}
@@ -366,7 +368,7 @@ const ConfigMapEditor = ({ config, onChange, errors = {} }) => {
                   </Grid>
                   <Grid item xs={12}>
                     <Typography variant="subtitle2" color="textSecondary" sx={{ mb: 1 }}>
-                      {t('podDeployment:configMap.fields.certificateContent')}
+                      {t('podDeployment:podDeployment.configMap.fields.certificateContent')}
                     </Typography>
                     <MonacoEditor
                       value={entry.value || ''}
@@ -406,7 +408,7 @@ const ConfigMapEditor = ({ config, onChange, errors = {} }) => {
               variant="outlined"
               size="small"
             >
-              {t('podDeployment:configMap.addEntry')}
+              {t('podDeployment:podDeployment.configMap.addEntry')}
             </Button>
           </Box>
         );
@@ -466,13 +468,13 @@ const ConfigMapEditor = ({ config, onChange, errors = {} }) => {
       case CONFIGMAP_TYPES.CERTIFICATE:
         newConfigMap.data.entries?.forEach((entry, index) => {
           if (!entry.key) {
-            errors[`entry-${index}-key`] = t('podDeployment:configMap.validation.keyRequired');
+            errors[`entry-${index}-key`] = t('podDeployment:podDeployment.configMap.validation.keyRequired');
           }
           if (!entry.value) {
-            errors[`entry-${index}-value`] = t('podDeployment:configMap.validation.valueRequired');
+            errors[`entry-${index}-value`] = t('podDeployment:podDeployment.configMap.validation.valueRequired');
           }
           if (selectedType === CONFIGMAP_TYPES.CERTIFICATE && !validateCertificate(entry.value)) {
-            errors[`entry-${index}-value`] = t('podDeployment:configMap.validation.invalidCertificate');
+            errors[`entry-${index}-value`] = t('podDeployment:podDeployment.configMap.validation.invalidCertificate');
           }
         });
         break;
@@ -481,7 +483,7 @@ const ConfigMapEditor = ({ config, onChange, errors = {} }) => {
         try {
           YAML.parse(newConfigMap.data.content || '');
         } catch (error) {
-          errors.content = t('podDeployment:configMap.validation.invalidYaml');
+          errors.content = t('podDeployment:podDeployment.configMap.validation.invalidYaml');
         }
         break;
     }
@@ -500,7 +502,7 @@ const ConfigMapEditor = ({ config, onChange, errors = {} }) => {
       } else {
         if (updatedConfigMaps.some(cm => cm.name === newConfigMap.name)) {
           setLocalErrors({
-            submit: t('podDeployment:configMap.errors.duplicateName')
+            submit: t('podDeployment:podDeployment.configMap.errors.duplicateName')
           });
           return;
         }
@@ -519,7 +521,7 @@ const ConfigMapEditor = ({ config, onChange, errors = {} }) => {
     } catch (error) {
       console.error('Failed to save ConfigMap:', error);
       setLocalErrors({
-        submit: t('podDeployment:configMap.errors.saveFailed')
+        submit: t('podDeployment:podDeployment.configMap.errors.saveFailed')
       });
     }
   };
@@ -594,7 +596,7 @@ const ConfigMapEditor = ({ config, onChange, errors = {} }) => {
                   <Grid item xs={5}>
                     <TextField
                       fullWidth
-                      label={t('podDeployment:configMap.fields.key')}
+                      label={t('podDeployment:podDeployment.configMap.fields.key')}
                       value={entry.key}
                       disabled
                     />
@@ -602,7 +604,7 @@ const ConfigMapEditor = ({ config, onChange, errors = {} }) => {
                   <Grid item xs={7}>
                     <TextField
                       fullWidth
-                      label={t('podDeployment:configMap.fields.value')}
+                      label={t('podDeployment:podDeployment.configMap.fields.value')}
                       value={entry.value}
                       disabled
                       multiline
@@ -640,7 +642,7 @@ const ConfigMapEditor = ({ config, onChange, errors = {} }) => {
                   <Grid item xs={5}>
                     <TextField
                       fullWidth
-                      label={t('podDeployment:configMap.fields.key')}
+                      label={t('podDeployment:podDeployment.configMap.fields.key')}
                       value={entry.key}
                       disabled
                     />
@@ -648,7 +650,7 @@ const ConfigMapEditor = ({ config, onChange, errors = {} }) => {
                   <Grid item xs={7}>
                     <TextField
                       fullWidth
-                      label={t('podDeployment:configMap.fields.value')}
+                      label={t('podDeployment:podDeployment.configMap.fields.value')}
                       value={entry.value}
                       disabled
                       multiline
@@ -699,7 +701,7 @@ const ConfigMapEditor = ({ config, onChange, errors = {} }) => {
       {/* Header with Create and Preview buttons */}
       <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="h6">
-          {t('podDeployment:configMap.title')}
+          {t('podDeployment:podDeployment.configMap.title')}
         </Typography>
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Button
@@ -708,8 +710,8 @@ const ConfigMapEditor = ({ config, onChange, errors = {} }) => {
             onClick={() => setShowYaml(!showYaml)}
           >
             {showYaml 
-              ? t('podDeployment:configMap.hidePreview')
-              : t('podDeployment:configMap.showPreview')
+              ? t('podDeployment:podDeployment.configMap.hidePreview')
+              : t('podDeployment:podDeployment.configMap.showPreview')
             }
           </Button>
           <Button
@@ -717,7 +719,7 @@ const ConfigMapEditor = ({ config, onChange, errors = {} }) => {
             startIcon={<AddIcon />}
             onClick={handleCreateConfigMap}
           >
-            {t('podDeployment:configMap.add')}
+            {t('podDeployment:podDeployment.configMap.add')}
           </Button>
         </Box>
       </Box>
@@ -726,7 +728,7 @@ const ConfigMapEditor = ({ config, onChange, errors = {} }) => {
       {showYaml && configMaps.length > 0 && (
         <Paper sx={{ p: 2, mb: 3 }}>
           <Typography variant="h6" gutterBottom>
-            {t('podDeployment:configMap.preview')}
+            {t('podDeployment:podDeployment.configMap.preview')}
           </Typography>
           <pre style={{ 
             margin: 0, 
@@ -765,8 +767,8 @@ const ConfigMapEditor = ({ config, onChange, errors = {} }) => {
       >
         <DialogTitle>
           {editIndex !== null 
-            ? t('podDeployment:configMap.edit')
-            : t('podDeployment:configMap.create')
+            ? t('podDeployment:podDeployment.configMap.edit')
+            : t('podDeployment:podDeployment.configMap.create')
           }
         </DialogTitle>
         <DialogContent sx={{ width: '100%', p: 3 }}>
@@ -775,12 +777,12 @@ const ConfigMapEditor = ({ config, onChange, errors = {} }) => {
             <Grid item xs={12}>
               <FormControl fullWidth>
                 <InputLabel>
-                  {t('podDeployment:configMap.type')}
+                  {t('podDeployment:podDeployment.configMap.type')}
                 </InputLabel>
                 <Select
                   value={selectedType}
                   onChange={(e) => handleTypeSelect(e.target.value)}
-                  label={t('podDeployment:configMap.type')}
+                  label={t('podDeployment:podDeployment.configMap.type')}
                 >
                   {Object.entries(CONFIGMAP_TYPES).map(([key, value]) => (
                     <MenuItem key={key} value={value}>
@@ -795,13 +797,13 @@ const ConfigMapEditor = ({ config, onChange, errors = {} }) => {
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                label={t('podDeployment:configMap.fields.name')}
+                label={t('podDeployment:podDeployment.configMap.fields.name')}
                 value={newConfigMap.name}
                 onChange={(e) => setNewConfigMap(prev => ({
                   ...prev,
                   name: e.target.value
                 }))}
-                helperText={t('podDeployment:configMap.nameHelp')}
+                helperText={t('podDeployment:podDeployment.configMap.nameHelp')}
               />
             </Grid>
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { logger } from '../../../utils/logger.ts';
 import {
   Box,
   Typography,
@@ -9,7 +10,6 @@ import {
   MenuItem,
   TextField,
   Paper,
-  Autocomplete,
   CircularProgress,
   Alert
 } from '@mui/material';
@@ -23,10 +23,10 @@ const RepositoryConfig = ({ config, onChange, errors }) => {
   const [tags, setTags] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
 
   const fetchRepositories = async () => {
     try {
+      setLoading(true);
       const token = localStorage.getItem('token');
       if (!token) {
         console.error('No token found');
@@ -39,14 +39,22 @@ const RepositoryConfig = ({ config, onChange, errors }) => {
         }
       });
       
-      console.log('Repositories response:', response.data);
-      setRepositories(response.data);
+      logger.info('Repositories response:', response.data);
+      if (Array.isArray(response.data)) {
+        const filteredRepos = Array.from(new Set(response.data
+          .filter(repo => repo && repo.name && !repo.name.includes('sha256:'))
+          .map(repo => repo.name)))
+          .sort((a, b) => a.localeCompare(b));
+        setRepositories(filteredRepos);
+      }
     } catch (error) {
       console.error('Failed to fetch repositories:', error);
       if (error.response?.status === 401) {
         console.error('Unauthorized: Token may be invalid or expired');
         localStorage.removeItem('token');
       }
+    } finally {
+      setLoading(false);
     }
   }; 
 
@@ -57,7 +65,7 @@ const RepositoryConfig = ({ config, onChange, errors }) => {
       const token = localStorage.getItem('token');
       if (!token) {
         console.error('No token found');
-        setError(t('podDeployment:repository.errors.unauthorized'));
+        setError(t('podDeployment:podDeployment.repository.errors.unauthorized'));
         return;
       }
 
@@ -71,9 +79,9 @@ const RepositoryConfig = ({ config, onChange, errors }) => {
     } catch (err) {
       console.error('Failed to fetch tags:', err);
       if (err.response?.status === 401) {
-        setError(t('podDeployment:repository.errors.unauthorized'));
+        setError(t('podDeployment:podDeployment.repository.errors.unauthorized'));
       } else {
-        setError(t('podDeployment:repository.errors.tagsFetchFailed'));
+        setError(t('podDeployment:podDeployment.repository.errors.tagsFetchFailed'));
       }
     } finally {
       setLoading(false);
@@ -90,134 +98,107 @@ const RepositoryConfig = ({ config, onChange, errors }) => {
     }
   }, [config.repository]);
 
-  const handleRepositoryChange = async (event, newValue) => {
+  const saveRepositoryconfig = async (field, value) => {
     try {
+      // Create a new config object with updated values
       const updatedConfig = {
         ...config,
-        repository: newValue,
-        tag: '',
+        [field]: value, // Update the top-level field
         yamlTemplate: {
           ...config.yamlTemplate,
           placeholders: {
             ...config.yamlTemplate?.placeholders,
-            repository: newValue,
-            tag: ''
+            [field]: value // Update the placeholder
           }
         }
       };
 
+      // Update parent state
       onChange(updatedConfig);
 
+      // Save to config.json
       await podDeploymentService.saveDeploymentConfig(
         config.name,
         config.version,
         updatedConfig
       );
 
-      console.log('✅ Repository saved to config.json:', newValue);
+      logger.info(`✅ Repository field ${field} saved to config.json:`, value);
     } catch (error) {
-      console.error('Failed to save repository to config.json:', error);
+      console.error(`❌ Failed to save repository field ${field}:`, error);
+      setLocalErrors(prev => ({
+        ...prev,
+        [field]: 'Failed to save value'
+      }));
     }
   };
-
-  const handleTagChange = async (event) => {
-    try {
-      const newTag = event.target.value;
-
-      const updatedConfig = {
-        ...config,
-        tag: newTag,
-        yamlTemplate: {
-          ...config.yamlTemplate,
-          placeholders: {
-            ...config.yamlTemplate?.placeholders,
-            tag: newTag
-          }
-        }
-      };
-
-      onChange(updatedConfig);
-
-      await podDeploymentService.saveDeploymentConfig(
-        config.name,
-        config.version,
-        updatedConfig
-      );
-
-      console.log('✅ Tag saved to config.json:', newTag);
-    } catch (error) {
-      console.error('Failed to save tag to config.json:', error);
-    }
-  };
-
-  const handleSearchChange = (event) => {
-    const term = event.target.value;
-    setSearchTerm(term);
-    if (term) {
-      searchImages(term);
-    } else {
-      fetchRepositories();
-    }
-  };
+ 
 
   return (
     <Box>
-      <Typography variant="h6" gutterBottom>
-        {t('podDeployment:repository.title')}
-      </Typography>
-      <Paper sx={{ p: 3 }}>
-        <Grid container spacing={3}>
-          <Grid item xs={12}>
-            <TextField
-              fullWidth
-              label={t('podDeployment:repository.search')}
-              value={searchTerm}
-              onChange={handleSearchChange}
-              variant="outlined"
-            />
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Autocomplete
-              fullWidth
-              options={repositories}
-              value={config.repository || null}
-              onChange={handleRepositoryChange}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label={t('podDeployment:repository.repository')}
-                  error={!!errors?.repository}
-                  helperText={errors?.repository}
-                />
-              )}
-              loading={loading}
-            />
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <FormControl fullWidth>
-              <InputLabel>{t('podDeployment:repository.tag')}</InputLabel>
-              <Select
-                value={config.tag || ''}
-                onChange={handleTagChange}
-                label={t('podDeployment:repository.tag')}
-                error={!!errors?.tag}
-                disabled={!config.repository}
-              >
-                {tags.map((tag) => (
-                  <MenuItem key={tag} value={tag}>{tag}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
+      <Grid container spacing={2}>
+        <Grid item xs={12}>
+          <Paper elevation={0} sx={{ p: 2 }}>
+            {loading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <>
+                <FormControl fullWidth error={!!errors?.repository}>
+                  <InputLabel>{t('podDeployment:podDeployment.repository.selectRepository')}</InputLabel>
+                  <Select
+                    value={config.repository || ''}
+                    onChange={(event) => saveRepositoryconfig('repository', event.target.value)}
+                    label={t('podDeployment:podDeployment.repository.selectRepository')}
+                  >
+                    {repositories.map((repo, index) => (
+                      <MenuItem key={`${repo}-${index}`} value={repo}>
+                        {repo}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {errors?.repository && (
+                    <Typography color="error" variant="caption">
+                      {errors.repository}
+                    </Typography>
+                  )}
+                </FormControl>
+
+                {config.repository && (
+                  <FormControl fullWidth sx={{ mt: 2 }} error={!!errors?.tag}>
+                    <InputLabel>{t('podDeployment:podDeployment.repository.selectTag')}</InputLabel>
+                    <Select
+                      value={config.tag || ''}
+                      onChange={(event) => saveRepositoryconfig('tag', event.target.value)}
+                      label={t('podDeployment:podDeployment.repository.selectTag')}
+                    >
+                      {tags.map((tag, index) => (
+                        <MenuItem key={`${tag}-${index}`} value={tag}>
+                          {tag}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                    {errors?.tag && (
+                      <Typography color="error" variant="caption">
+                        {errors.tag}
+                      </Typography>
+                    )}
+                  </FormControl>
+                )}
+
+                {error && (
+                  <Alert severity="error" sx={{ mt: 2 }}>
+                    {error}
+                  </Alert>
+                )}
+              </>
+            )}
+          </Paper>
         </Grid>
-      </Paper>
-      {error && (
-        <Alert severity="error" sx={{ mt: 2 }}>
-          {error}
-        </Alert>
-      )}
+      </Grid>
     </Box>
   );
 };
 
-export default RepositoryConfig; 
+export default RepositoryConfig;

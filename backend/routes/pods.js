@@ -2,25 +2,26 @@ const express = require('express');
 const router = express.Router();
 const podService = require('../services/podService');
 const { authenticateToken } = require('../middleware/auth');
+const logger = require('../utils/logger'); 
 
 // 獲取所有命名空間
 router.get('/namespaces', authenticateToken, async (req, res) => {
   try {
-    console.log('Getting namespaces...');
+    logger.info('Getting namespaces...');
     const result = await podService.getNamespaces();
     
     if (!result || !result.namespaces) {
-      console.error('Invalid result from podService:', result);
+      logger.info('Invalid result from podService:', result);
       return res.status(500).json({ 
         error: 'Failed to get namespaces',
         details: 'Invalid response structure'
       });
     }
 
-    console.log('Successfully retrieved namespaces:', result);
+    logger.info('Successfully retrieved namespaces:', result);
     res.json(result);
   } catch (error) {
-    console.error('Error getting namespaces:', error);
+    logger.info('Error getting namespaces:', error);
     res.status(500).json({ 
       error: 'Failed to get namespaces',
       message: error.message,
@@ -32,11 +33,18 @@ router.get('/namespaces', authenticateToken, async (req, res) => {
 // 獲取 Pod 列表
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const { namespace } = req.query;
-    const pods = await podService.getPods(namespace);
+    const { namespace, search } = req.query;
+    logger.info('Getting pods with filters:', { namespace, search });
+    
+    const pods = await podService.getPods(namespace, search);
     res.json(pods);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    logger.error('Error getting pods:', error);
+    res.status(500).json({ 
+      error: 'Failed to get pods',
+      message: error.message,
+      details: error.response?.body || error.stack
+    });
   }
 });
 
@@ -58,7 +66,7 @@ router.post('/calculate-resources', authenticateToken, async (req, res) => {
     const { podName, namespace } = req.body;
     
     if (!podName || !namespace) {
-      console.log('Missing required parameters:', { podName, namespace });
+      logger.info('Missing required parameters:', { podName, namespace });
       return res.status(400).json({ 
         error: 'Pod name and namespace are required',
         received: { podName, namespace }
@@ -71,7 +79,7 @@ router.post('/calculate-resources', authenticateToken, async (req, res) => {
     console.log('Resources calculated:', resources);
     res.json(resources);
   } catch (error) {
-    console.error('Failed to calculate pod resources:', error);
+    logger.info('Failed to calculate pod resources:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -91,7 +99,7 @@ router.get('/:name/metrics', authenticateToken, async (req, res) => {
     const metrics = await podService.getPodMetrics(name, namespace);
     res.json(metrics);
   } catch (error) {
-    console.error('Failed to get pod metrics:', error);
+    logger.info('Failed to get pod metrics:', error);
     res.status(500).json({ error: error.message });
   }
 });

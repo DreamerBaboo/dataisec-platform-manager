@@ -1,5 +1,6 @@
 const k8s = require('@kubernetes/client-node');
 const yaml = require('js-yaml');
+const k8sConfig = require('../config/k8s.config');
 const { exec } = require('child_process');
 const util = require('util');
 const execAsync = util.promisify(exec);
@@ -10,10 +11,89 @@ const YAML = require('yaml');
 class K8sService {
   constructor() {
     this.kc = new k8s.KubeConfig();
-    this.kc.loadFromDefault();
+       
+    // 如果在 Kubernetes 集群內運行，使用 ServiceAccount 憑證
+    if (process.env.KUBERNETES_SERVICE_HOST) {
+      this.kc.loadFromCluster();
+    } else {
+      // 如果在集群外運行，嘗試加載默認配置
+      this.kc.loadFromDefault();
+    }
     this.k8sApi = this.kc.makeApiClient(k8s.CoreV1Api);
     this.k8sAppsApi = this.kc.makeApiClient(k8s.AppsV1Api);
     this.storageApi = this.kc.makeApiClient(k8s.StorageV1Api);
+  }
+
+  // Pod 相關操作
+  async listPods(namespace, labelSelector) {
+    try {
+      const response = await this.k8sApi.listNamespacedPod(namespace, undefined, undefined, undefined, undefined, labelSelector);
+      return response.body;
+    } catch (error) {
+      console.error('Failed to list pods:', error);
+      throw error;
+    }
+  }
+
+  async createPod(namespace, podManifest) {
+    try {
+      const response = await this.k8sApi.createNamespacedPod(namespace, podManifest);
+      return response.body;
+    } catch (error) {
+      console.error('Failed to create pod:', error);
+      throw error;
+    }
+  }
+
+  async deletePod(namespace, name) {
+    try {
+      const response = await this.k8sApi.deleteNamespacedPod(name, namespace);
+      return response.body;
+    } catch (error) {
+      console.error('Failed to delete pod:', error);
+      throw error;
+    }
+  }
+
+  async getPod(namespace, name) {
+    try {
+      const response = await this.k8sApi.readNamespacedPod(name, namespace);
+      return response.body;
+    } catch (error) {
+      console.error('Failed to get pod:', error);
+      throw error;
+    }
+  }
+
+  async execInPod(namespace, podName, containerName, command) {
+    try {
+      const exec = new k8s.Exec(this.kc);
+      return new Promise((resolve, reject) => {
+        let stdout = '';
+        let stderr = '';
+
+        exec.exec(
+          namespace,
+          podName,
+          containerName,
+          command,
+          process.stdout,
+          process.stderr,
+          process.stdin,
+          true,
+          (status) => {
+            if (status.status === 'Success') {
+              resolve({ stdout, stderr });
+            } else {
+              reject(new Error(`Command failed with status: ${status.status}`));
+            }
+          }
+        );
+      });
+    } catch (error) {
+      console.error('Failed to exec in pod:', error);
+      throw error;
+    }
   }
 
   // 生成部署預覽
@@ -426,7 +506,7 @@ class K8sService {
     }
   }
 
-  // Persistent Volume 相關方法
+  // Persistent Volume 相關法
   async createPersistentVolume(name, spec) {
     try {
       const persistentVolume = {
@@ -681,14 +761,144 @@ class K8sService {
 
   async executeCommand(command) {
     try {
-      console.log('🎮 Executing kubectl command:', command);
-      const { stdout, stderr } = await exec(`kubectl ${command}`);
-      return { stdout, stderr };
+      const { stdout, stderr } = await execAsync(`kubectl ${command}`);
+      if (stderr) {
+        console.warn('Command stderr:', stderr);
+      }
+      return stdout;
     } catch (error) {
-      console.error('❌ kubectl command failed:', error);
-      throw new Error(`kubectl command execution failed: ${error.message}`);
+      throw new Error(`Command execution failed: ${error.message}`);
+    }
+  }
+
+  // 在節點上創建目錄
+  async createDirectoryOnNode(nodeName, directoryPath) {
+    try {
+      // 驗證路徑
+      if (!directoryPath.startsWith('/')) {
+        throw new Error('Directory path must be absolute (start with /)');
+      }
+
+      const localRegistryImage = process.env.LOCAL_REGISTRY_BUSYBOX_IMAGE || 'busybox:latest';
+      const debugPodName = `node-debugger-${Math.random().toString(36).substr(2, 9)}`;
+      
+      try {
+        console.log(`Creating directory ${directoryPath} on node ${nodeName} using image ${localRegistryImage}`);
+        
+        // 簡化 Pod 配置
+        const podManifest = {
+          apiVersion: 'v1',
+          kind: 'Pod',
+          metadata: {
+            name: debugPodName,
+            namespace: 'dataisec'
+          },
+          spec: {
+            nodeName: nodeName,
+            containers: [{
+              name: 'directory-creator',
+              image: localRegistryImage,
+              imagePullPolicy: 'IfNotPresent',
+              command: ['sh', '-c'],
+              args: [`set -x; mkdir -p ${directoryPath} && chmod 777 ${directoryPath} && ls -ld ${directoryPath}`],
+              securityContext: {
+                privileged: true,
+                runAsUser: 0
+              },
+              volumeMounts: [{
+                name: 'host-root',
+                mountPath: directoryPath,
+                subPath: directoryPath.substring(1) // 移除開頭的 '/'
+              }]
+            }],
+            volumes: [{
+              name: 'host-root',
+              hostPath: {
+                path: '/',
+                type: 'Directory'
+              }
+            }],
+            restartPolicy: 'Never',
+            serviceAccountName: 'dataisec-platform-sa'
+          }
+        };
+
+        // 創建 Pod
+        console.log('Creating pod with manifest:', JSON.stringify(podManifest, null, 2));
+        const createdPod = await this.k8sApi.createNamespacedPod('dataisec', podManifest);
+        console.log('Pod created:', createdPod.body.metadata.name);
+
+        // 等待 Pod 完成
+        let podStatus = '';
+        let retries = 30;
+        let lastLogs = '';
+
+        while (retries > 0) {
+          const pod = await this.k8sApi.readNamespacedPod(debugPodName, 'dataisec');
+          podStatus = pod.body.status.phase;
+          console.log(`Pod status: ${podStatus}`);
+
+          try {
+            const logs = await this.k8sApi.readNamespacedPodLog(debugPodName, 'dataisec');
+            lastLogs = logs.body;
+            console.log('Current logs:', lastLogs);
+          } catch (logError) {
+            console.warn('Warning: Could not get logs yet');
+          }
+
+          if (podStatus === 'Succeeded' || podStatus === 'Failed') {
+            break;
+          }
+
+          // 檢查容器狀態
+          const containerStatuses = pod.body.status.containerStatuses;
+          if (containerStatuses && containerStatuses[0]) {
+            const state = containerStatuses[0].state;
+            if (state.terminated) {
+              if (state.terminated.exitCode !== 0) {
+                throw new Error(`Container failed with exit code ${state.terminated.exitCode}: ${lastLogs}`);
+              }
+              break;
+            }
+          }
+
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          retries--;
+        }
+
+        if (retries === 0) {
+          throw new Error('Timeout waiting for pod completion');
+        }
+
+        if (podStatus === 'Failed') {
+          throw new Error(`Pod failed: ${lastLogs}`);
+        }
+
+        return {
+          success: true,
+          message: `Directory ${directoryPath} created on node ${nodeName}`,
+          logs: lastLogs
+        };
+
+      } catch (innerError) {
+        console.error('Error during pod execution:', innerError);
+        throw new Error(`Failed to execute pod: ${innerError.message}`);
+      } finally {
+        // 清理 Pod
+        try {
+          console.log(`Cleaning up pod ${debugPodName}`);
+          await this.k8sApi.deleteNamespacedPod(debugPodName, 'dataisec', {
+            gracePeriodSeconds: 0
+          });
+        } catch (cleanupError) {
+          console.warn('Warning: Failed to cleanup pod:', cleanupError);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to create directory on node:', error);
+      throw new Error(`Failed to create directory: ${error.message}`);
     }
   }
 }
 
-module.exports = new K8sService(); 
+module.exports = new K8sService();

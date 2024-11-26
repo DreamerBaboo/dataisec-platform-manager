@@ -187,6 +187,27 @@ router.get('/nodes/:name', authenticateToken, async (req, res) => {
   }
 });
 
+// 在節點上創建目錄
+router.post('/nodes/:nodeName/directories', authenticateToken, async (req, res) => {
+  try {
+    const { nodeName } = req.params;
+    const { path } = req.body;
+
+    if (!path) {
+      return res.status(400).json({ error: 'Path is required' });
+    }
+
+    const result = await k8sService.createDirectoryOnNode(nodeName, path);
+    res.json(result);
+  } catch (error) {
+    console.error('Failed to create directory on node:', error);
+    res.status(500).json({
+      error: 'Failed to create directory on node',
+      details: error.message
+    });
+  }
+});
+
 router.post('/execute', executeKubectlCommand);
 
 module.exports = router; 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { logger } from '../../utils/logger.ts'; // 導入 logger
 import { 
   Box, 
   Paper, 
@@ -15,6 +16,7 @@ import {
   CircularProgress
 } from '@mui/material';
 import { useAppTranslation } from '../../hooks/useAppTranslation';
+import { api } from '../../utils/api';
 
 const EditPod = () => {
   const { t } = useAppTranslation();
@@ -59,15 +61,7 @@ const EditPod = () => {
 
   const fetchPodData = async () => {
     try {
-      const response = await fetch(`http://localhost:3001/api/pods/${id}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      if (!response.ok) {
-        throw new Error('Failed to fetch pod data');
-      }
-      const pod = await response.json();
+      const pod = await api.get(`pods/${id}`);
       setFormData({
         name: pod.metadata.name,
         namespace: pod.metadata.namespace,
@@ -98,19 +92,7 @@ const EditPod = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch(`http://localhost:3001/api/pods/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify(formData)
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update pod');
-      }
-
+      await api.put(`pods/${id}`, formData);
       navigate('/pods');
     } catch (error) {
       setError(error.message);

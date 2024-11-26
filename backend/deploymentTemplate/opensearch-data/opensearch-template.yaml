@@ -1,6 +1,6 @@
 ---
 clusterName: "opensearch-cluster"
-nodeGroup: "master"
+nodeGroup: "data"
 
 # The service that non master groups will try to connect to when joining the cluster
 # This should be set to clusterName + "-" + nodeGroup for your master group
@@ -9,12 +9,12 @@ masterService: "opensearch-cluster-master"
 # OpenSearch roles that will be applied to this nodeGroup
 # These will be set as environment variable "node.roles". E.g. node.roles=master,ingest,data,remote_cluster_client
 roles:
-  - master
-#  - ingest
-#  - data
-#  - remote_cluster_client
+#  - master
+  - data
+  - ingest
+  - remote_cluster_client
 
-replicas: {REPLICA_COUNT}
+replicas: ${REPLICA_COUNT} #[1,2,3,4,5,6]
 
 # if not set, falls back to parsing .Values.imageTag, then .Chart.appVersion.
 majorVersion: ""
@@ -44,13 +44,13 @@ config:
     cluster.name: opensearch-cluster
 
     compatibility.override_main_response_version: true
-      #added for matricbeat compatability
+    #added for matricbeat compatability
     # Bind to all interfaces because we don't know what IP address Docker will assign to us.
     network.host: 0.0.0.0
-    #transport.host: localhost
+    #transport.host: 0.0.0.0
     transport.tcp.port: 9300
     discovery.seed_hosts: ["opensearch-cluster-master-0"]
-    cluster.initial_master_nodes: ["opensearch-cluster-master-0"]
+    cluster.initial_master_nodes: ["opensearch-cluster-master-0,opensearch-cluster-master-0,opensearch-cluster-master-2"]
     # Setting network.host to a non-loopback address enables the annoying bootstrap checks. "Single-node" mode disables them again.
     # discovery.type: single-node
 
@@ -102,7 +102,7 @@ config:
 # syntax here
 extraEnvs:
   - name: OPENSEARCH_INITIAL_ADMIN_PASSWORD
-    value: "Cobr@8029@@123D"
+    value: ${ADMIN_PASSWORD} #["Cobr@8029@@123D"]
 #  - name: MY_ENVIRONMENT_VAR
 #    value: the_value_goes_here
 
@@ -125,8 +125,8 @@ hostAliases: []
 #   - "bar.local"
 
 image:
-  repository:  {REPOSITORY}:{REPOSITORY_PORT}/opensearch
-  tag: "2.12.0"
+  repository:  "${REPOSITORY}"
+  tag: "${TAG}" #["2.12.0"]
   pullPolicy: IfNotPresent
   insecureRegistry: true
 
@@ -136,63 +136,33 @@ podAnnotations: {}
 # additionals labels
 labels: {}
 
-opensearchJavaOpts: {JAVA_HEAP}
+opensearchJavaOpts: "${JAVA_HEAP}" #[-Xmx2G -Xms2G, -Xmx4G -Xms4G, -Xmx6G -Xms6G, -Xmx8G -Xms8G, -Xmx16G -Xms16G, -Xmx32G -Xms32G]
 
 resources:
   requests:
-    cpu: {CPU_REQUEST}
-    memory: {MEMORY_REQUEST}
+    cpu: "${CPU_REQUEST}" #[200m, 300m, 400m, 500m, 600m, 700m, 800m, 900m, 1000m, ]
+    memory: "${MEMORY_REQUEST}"" #[2Gi, 4Gi, 8Gi]
   limits:
-    cpu: {CPU_LIMIT}
-    memory: {MEMORY_LIMIT}
+    cpu: "${CPU_LIMIT}" #[2000m, 3000m, 4000m, 5000m, 6000m, 7000m, 8000m]
+    memory: "${MEMORY_LIMIT}" #[2Gi, 4Gi, 8Gi, 10Gi, 12Gi, 16Gi, 18Gi, 20Gi, 24Gi, 32Gi]
 initResources:
   limits:
-    cpu: "25m"
+    cpu: "100m"
     memory: "128Mi"
   requests:
-    cpu: "25m"
+    cpu: "250m"
     memory: "128Mi"
 
 sidecarResources: {}
   # limits:
-  #   cpu: "2"
-  #   # memory: "8Gi"
+  #   cpu: "4"
+  #   # memory: "16Gi"
   # requests:
-  #   cpu: "2"
-  #   memory: "8Gi"
+  #   cpu: "4"
+  #   memory: "16Gi"
 
 networkHost: "0.0.0.0"
-#added by scott for setting up health check policy
-#startupProbe:
-#  enabled: true
-#  tcpSocket:
-#    port: 9200 #通過 TCP 檢查端口是否開放。這裡都設定檢查 5601 端口
-#  initialDelaySeconds: 240  # #容器啟動後多久開始運行探針（秒）从默认的10秒增加到60秒
-#  periodSeconds: 10 #探針檢查的頻率（秒）
-#  timeoutSeconds: 5 #探針等待響應的超時時間（秒）
-#  failureThreshold: 20 #探針失敗多少次後視為失敗
-#  successThreshold: 1 #探針成功多少次後視為成功
 
-#livenessProbe:
-#  enabled: true
-#  tcpSocket:
-#    port: 9200
-#  initialDelaySeconds: 60  # 从默认的10秒增加到60秒
-#  periodSeconds: 20
-#  timeoutSeconds: 5
-#  failureThreshold: 10
-#  successThreshold: 1
-
-#readinessProbe:
-#  enabled: true
-#  tcpSocket:
-#    port: 9200
-#  periodSeconds: 20
-#  initialDelaySeconds: 60  # 从默认的10秒增加到60秒
-#  timeoutSeconds: 5
-#  failureThreshold: 10
-#  successThreshold: 1
-#end modification
 rbac:
   create: false
   serviceAccountAnnotations: {}
@@ -220,7 +190,7 @@ podSecurityPolicy:
 persistence:
   enabled: true
   # Set to false to disable the `fsgroup-volume` initContainer that will update permissions on the persistent disk.
-  enableInitChown: false #modified by scott defautl is true
+  enableInitChown: true
   # override image, which is busybox by default
   # image: busybox
   # override image tag, which is latest by default
@@ -235,10 +205,10 @@ persistence:
   #   set, choosing the default provisioner.  (gp2 on AWS, standard on
   #   GKE, AWS & OpenStack)
   #
-  storageClass: "{STORAGE_CLASS}"
+  storageClass: "${STORAGE_CLASS}" #[local-storage]
   accessModes:
-    - ReadWriteOnce
-  size: {PERSISTENCE_SIZE}
+    - ${STORAGE_ACCESS_MODE} #[ReadWriteOnce, ReadWriteMany, ReadOnlyMany]
+  size: ${PERSISTENCE_SIZE} #[1Ti, 2Ti, 3Ti, 4Ti, 5Ti, 6Ti, 7Ti, 8Ti, 9T, 10Ti, 20Ti, 30Ti]
   annotations: {}
 
 extraVolumes: []
@@ -305,8 +275,8 @@ service:
   labelsHeadless: {}
   headless:
     annotations: {}
-  type: ClusterIP #change to nodeport for external access default ClusterIP
-  nodePort: 9200
+  type: ClusterIP
+  nodePort: ""
   annotations: {}
   httpPortName: http
   transportPortName: transport
@@ -374,7 +344,7 @@ sysctlVmMaxMapCount: 262144
 schedulerName: ""
 
 imagePullSecrets: []
-nodeSelector: {node-role.opensearch: master}
+nodeSelector: ${NODE_SELECTOR} #[{node-role.opensearch: master},{node-role.opensearch: data}]
 tolerations: []
 
 # Enabling this will publically expose your OpenSearch instance.

@@ -59,5 +59,11 @@
     },
     "status": {
         "uploading": "上傳中"
+    },
+    "dialog": {
+        "deleteTitle": "確認刪除",
+        "deleteConfirmation": "確定要刪除 {{count}} 個已選擇的映像嗎？",
+        "deleteConfirmation_one": "確定要刪除已選擇的映像嗎？",
+        "deleteConfirmation_other": "確定要刪除 {{count}} 個已選擇的映像嗎？"
     }
 }

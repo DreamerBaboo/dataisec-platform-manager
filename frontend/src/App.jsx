@@ -10,16 +10,8 @@ import { i18n } from './i18n';
 import { SnackbarProvider } from 'notistack';
 import { useAppTranslation } from './hooks/useAppTranslation';
 import PodDeploymentManagement from './components/PodDeployment/PodDeploymentManagement';
-
-export const ColorModeContext = React.createContext({ 
-  toggleColorMode: () => {},
-  currentMode: 'light'
-});
-
-export const LanguageContext = React.createContext({
-  currentLanguage: 'zh-TW',
-  changeLanguage: () => {}
-});
+import ColorModeContext from './contexts/ColorModeContext.jsx';
+import LanguageContext from './contexts/LanguageContext.jsx';
 
 function AppContent() {
   const [mode, setMode] = useState(() => {

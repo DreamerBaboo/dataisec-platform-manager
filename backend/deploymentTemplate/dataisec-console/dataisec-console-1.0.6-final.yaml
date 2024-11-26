@@ -3,7 +3,7 @@ name: dataisec-console
 replicaCount: 1 #[1, 2, 3, 4, 5, 6]
 
 image:
-  repository: 192.168.170.135:5000/dataisec-console #[localhost] #[5000, 5001]
+  repository: localhost:5001/dataisec-console #[localhost] #[5000, 5001]
   tag: 0.1.0 #[latest]
   pullPolicy: IfNotPresent
   insecureRegistry: true
@@ -32,7 +32,7 @@ ingress:
 
 resources:
   limits:
-    cpu: 1000m #[1000m, 2000m, 3000m, 4000m, 5000m]
+    cpu: 2000m #[1000m, 2000m, 3000m, 4000m, 5000m]
     memory: 2Gi #[2Gi]
   requests:
     cpu: 500m #[100m, 200m, 300m, 400m, 500m]
@@ -88,8 +88,7 @@ readinessProbe:
   successThreshold: 1
 
 
-nodeSelector:
-  kubernetes.io/hostname: {node-role.opensearch: master} #[{node-role.opensearch: master}]
+nodeSelector: {node-role.opensearch: master} #[{node-role.opensearch: master}]
 
 tolerations: []
 
@@ -98,7 +97,7 @@ affinity: {}
 # Custom environment variables for your application
 env:
   - name: SITE_NODE
-    value: localhost #[localhost]
+    value: kind-control-plane #[localhost]
   - name: WEB_PORT
     value: 3000 #[3000]
   - name: DB_NODE

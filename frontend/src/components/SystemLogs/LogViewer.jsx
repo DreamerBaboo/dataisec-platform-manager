@@ -3,6 +3,8 @@ import { DataGrid } from '@mui/x-data-grid';
 import { Typography, Box, Paper, TextField } from '@mui/material';
 import axios from 'axios';
 import { useAppTranslation } from '../../hooks/useAppTranslation';
+import { getApiUrl } from '../../utils/api';
+import { logger } from '../../utils/logger'; // 導入 logger
 
 const LogViewer = () => {
   const { t } = useAppTranslation(['monitoring', 'common']);
@@ -16,7 +18,7 @@ const LogViewer = () => {
 
   const fetchLogs = async () => {
     try {
-      const response = await axios.get('http://localhost:3001/logs', {
+      const response = await axios.get(getApiUrl('logs'), {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       const formattedLogs = response.data.map((log, index) => ({

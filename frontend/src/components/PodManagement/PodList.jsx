@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { logger } from '../../utils/logger.ts';  // 導入 loggers
 import {
   Box,
   Paper,
@@ -33,7 +34,7 @@ import {
   FilterList as FilterListIcon
 } from '@mui/icons-material';
 import { useAppTranslation } from '../../hooks/useAppTranslation';
-import { podService } from '../../services/podService';
+import { api } from '../../utils/api';
 
 // 命名空間行組件
 const NamespaceRow = ({ namespace, pods, onToggle, isOpen }) => {
@@ -156,10 +157,7 @@ const PodRow = ({ pod }) => {
   const loadPodMetrics = async () => {
     try {
       setLoading(true);
-      const resources = await podService.calculatePodResources(
-        pod.name,
-        pod.namespace
-      );
+      const resources = await api.get(`pods/${pod.namespace}/${pod.name}/metrics`);
       setMetrics(resources);
     } catch (error) {
       console.error('Error fetching pod metrics:', error);
@@ -260,15 +258,7 @@ const PodList = () => {
   // 獲取可用的命名空間
   const fetchNamespaces = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/pods/namespaces', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch namespaces');
-      }
-
-      const data = await response.json();
+      const data = await api.get('pods/namespaces');
       setAvailableNamespaces(data.namespaces);
     } catch (error) {
       console.error('Error fetching namespaces:', error);
@@ -287,15 +277,7 @@ const PodList = () => {
         if (filters.namespace !== 'all') queryParams.append('namespace', filters.namespace);
         if (filters.search) queryParams.append('search', filters.search);
 
-        const response = await fetch(`http://localhost:3001/api/pods?${queryParams}`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch pods');
-        }
-
-        const data = await response.json();
+        const data = await api.get(`pods?${queryParams}`);
         
         // 按命名空間組織 pods
         const groupedPods = data.reduce((acc, pod) => {

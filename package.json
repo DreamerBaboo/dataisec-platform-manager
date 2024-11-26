@@ -4,14 +4,26 @@
   "private": true,
   "scripts": {
     "start": "cd backend && npm start",
-    "dev": "concurrently \"cd frontend && npm run dev\" \"cd backend && npm run dev\"",
-    "build": "npm run build:clean && npm run build:frontend && npm run build:copy",
-    "build:clean": "cd backend && rm -rf public && mkdir public",
+    "dev": "cross-env NODE_ENV=development concurrently \"cd frontend && npm run dev\" \"cd backend && npm run dev\"",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && npm run dev",
+    "build": "npm run build:clean && npm run build:frontend && npm run build:backend",
+    "build:dev": "cross-env NODE_ENV=development npm run build:clean && npm run build:frontend:dev && npm run build:backend",
+    "build:prod": "cross-env NODE_ENV=production npm run build:clean && npm run build:frontend && npm run build:backend",
+    "build:clean": "rm -rf backend/public/*",
     "build:frontend": "cd frontend && npm run build",
-    "build:copy": "cp -r frontend/dist/* backend/public/",
+    "build:frontend:dev": "cd frontend && npm run build:dev",
+    "build:backend": "cp -r frontend/dist/* backend/public/",
     "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install"
   },
   "devDependencies": {
-    "concurrently": "^8.2.0"
+    "concurrently": "^8.2.0",
+    "cross-env": "^7.0.3",
+    "rimraf": "^6.0.1"
+  },
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "js-yaml": "^4.1.0",
+    "node-fetch": "^3.3.2"
   }
 }

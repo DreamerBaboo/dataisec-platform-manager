@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { logger } from '../../../utils/logger.ts'; // 導入 logger
 import {
   Box,
   Typography,
@@ -6,7 +7,8 @@ import {
   TextField,
   Paper,
   Alert,
-  Autocomplete
+  Autocomplete,
+  Divider
 } from '@mui/material';
 import { useAppTranslation } from '../../../hooks/useAppTranslation';
 import { podDeploymentService } from '../../../services/podDeploymentService';
@@ -38,7 +40,7 @@ const ResourceConfig = ({ config, onChange, errors = {} }) => {
         updatedConfig
       );
 
-      console.log(`✅ Resource field ${field} saved to config.json:`, value);
+      logger.info(`✅ Resource field ${field} saved to config.json:`, value);
     } catch (error) {
       console.error(`❌ Failed to save resource field ${field}:`, error);
       setLocalErrors(prev => ({
@@ -49,38 +51,25 @@ const ResourceConfig = ({ config, onChange, errors = {} }) => {
   };
 
   const renderResourceField = (field, label, placeholder) => {
-    const hasDefaultValues = config.yamlTemplate?.defaultValues?.[field];
-
-    if (hasDefaultValues) {
-      return (
-        <Autocomplete
-          freeSolo
-          options={config.yamlTemplate.defaultValues[field]}
-          value={config.yamlTemplate?.placeholders?.[field] || ''}
-          onChange={(_, newValue) => handleResourceChange(field, newValue)}
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              fullWidth
-              label={label}
-              placeholder={placeholder}
-              error={!!errors?.[field] || !!localErrors?.[field]}
-              helperText={errors?.[field] || localErrors?.[field]}
-            />
-          )}
-        />
-      );
-    }
+    const defaultValues = config.yamlTemplate?.defaultValues?.[field] || [];
+    const currentValue = config.yamlTemplate?.placeholders?.[field] || '';
 
     return (
-      <TextField
-        fullWidth
-        label={label}
-        value={config.yamlTemplate?.placeholders?.[field] || ''}
-        onChange={(e) => handleResourceChange(field, e.target.value)}
-        placeholder={placeholder}
-        error={!!errors?.[field] || !!localErrors?.[field]}
-        helperText={errors?.[field] || localErrors?.[field]}
+      <Autocomplete
+        freeSolo
+        options={defaultValues}
+        value={currentValue}
+        onChange={(_, newValue) => handleResourceChange(field, newValue)}
+        renderInput={(params) => (
+          <TextField
+            {...params}
+            fullWidth
+            label={label}
+            placeholder={placeholder}
+            error={!!errors?.[field] || !!localErrors?.[field]}
+            helperText={errors?.[field] || localErrors?.[field]}
+          />
+        )}
       />
     );
   };
@@ -92,6 +81,10 @@ const ResourceConfig = ({ config, onChange, errors = {} }) => {
       </Typography>
 
       <Paper sx={{ p: 3 }}>
+        <Typography variant="subtitle2" gutterBottom>
+          {t('podDeployment:podDeployment.resourceConfig.containerResources')}
+        </Typography>
+        
         <Grid container spacing={3}>
           {/* CPU Requests */}
           <Grid item xs={12} md={6}>
@@ -126,6 +119,23 @@ const ResourceConfig = ({ config, onChange, errors = {} }) => {
               'memory_limit',
               t('podDeployment:podDeployment.basic.limitsMemory'),
               'e.g., 256Mi'
+            )}
+          </Grid>
+        </Grid>
+
+        <Divider sx={{ my: 3 }} />
+
+        <Typography variant="subtitle2" gutterBottom>
+          {t('podDeployment:podDeployment.resourceConfig.javaHeapSettings')}
+        </Typography>
+
+        <Grid container spacing={3}>
+          {/* Java Heap Size */}
+          <Grid item xs={12}>
+            {renderResourceField(
+              'java_heap',
+              t('podDeployment:podDeployment.basic.javaHeap'),
+              'e.g., -Xms512m -Xmx1024m'
             )}
           </Grid>
         </Grid>

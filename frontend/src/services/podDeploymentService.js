@@ -1,11 +1,13 @@
 import axios from 'axios';
+import { logger } from '../utils/logger.ts';
+
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
 // 改進 API 請求配置
 const getAuthHeaders = () => {
   const token = localStorage.getItem('token');
-  console.log('🔐 Getting auth token:', token ? '有效' : '未找到');
+  logger.info('🔐 Getting auth token:', token ? '有效' : '未找到');
   return {
     headers: {
       'Authorization': token ? `Bearer ${token}` : '',
@@ -18,7 +20,7 @@ export const podDeploymentService = {
   // Get deployment versions
   async getDeploymentVersions(name) {
     try {
-      console.log('📥 Getting versions for deployment:', name);
+      logger.info('📥 Getting versions for deployment:', name);
       const config = getAuthHeaders();
       
       const response = await axios.get(
@@ -32,7 +34,7 @@ export const podDeploymentService = {
         latestVersion: response.data.latestVersion || null
       };
       
-      console.log('✅ Versions retrieved:', data);
+      logger.info('✅ Versions retrieved:', data);
       return data;
     } catch (error) {
       console.error('❌ Failed to get deployment versions:', error);
@@ -43,7 +45,7 @@ export const podDeploymentService = {
   // Get specific version configuration
   async getVersionConfig(name, version) {
     try {
-      console.log('📥 Getting version config:', { name, version });
+      logger.info('📥 Getting version config:', { name, version });
       const config = getAuthHeaders();
       
       const response = await axios.get(
@@ -51,7 +53,7 @@ export const podDeploymentService = {
         config
       );
       
-      console.log('✅ Version config retrieved:', response.data);
+      logger.info('✅ Version config retrieved:', response.data);
       return response.data;
     } catch (error) {
       console.error('❌ Failed to get version config:', error);
@@ -62,7 +64,7 @@ export const podDeploymentService = {
   // Save deployment configuration with version
   async saveDeploymentConfig(name, version, config) {
     try {
-      console.log('💾 Saving deployment config:', { name, version, config });
+      logger.info('💾 Saving deployment config:', { name, version, config });
       const headers = getAuthHeaders();
       
       // 檢查版本是否存在
@@ -70,7 +72,7 @@ export const podDeploymentService = {
       const isNewVersion = !existingVersions.versions.includes(version);
       
       if (isNewVersion) {
-        console.log('📝 Creating new version first...');
+        logger.info('📝 Creating new version first...');
         try {
           await this.createVersion(name, version);
         } catch (error) {
@@ -88,7 +90,7 @@ export const podDeploymentService = {
         headers
       );
       
-      console.log('✅ Configuration saved successfully:', response.data);
+      logger.info('✅ Configuration saved successfully:', response.data);
       return response.data;
     } catch (error) {
       console.error('❌ Failed to save deployment config:', error);
@@ -99,7 +101,7 @@ export const podDeploymentService = {
   // Create new version
   async createVersion(name, version) {
     try {
-      console.log('📝 Creating new version:', { name, version });
+      logger.info('📝 Creating new version:', { name, version });
       const config = getAuthHeaders();
       
       const response = await axios.post(
@@ -108,7 +110,7 @@ export const podDeploymentService = {
         config
       );
       
-      console.log('✅ Version created:', response.data);
+      logger.info('✅ Version created:', response.data);
       return response.data;
     } catch (error) {
       console.error('❌ Failed to create version:', error);
@@ -119,7 +121,7 @@ export const podDeploymentService = {
   // Handle namespace change
   async handleNamespaceChange(deploymentName, namespace) {
     try {
-      console.log('📝 Handling namespace change:', { deploymentName, namespace });
+      logger.info('📝 Handling namespace change:', { deploymentName, namespace });
       const response = await axios.post(
         `${API_URL}/api/pod-deployments/namespace`,
         { deploymentName, namespace },
@@ -127,9 +129,9 @@ export const podDeploymentService = {
       );
       
       if (response.data.isNew) {
-        console.log('✨ Created new namespace configuration');
+        logger.info('✨ Created new namespace configuration');
       } else {
-        console.log('ℹ️ Using existing namespace');
+        logger.info('ℹ️ Using existing namespace');
       }
       
       return response.data;
@@ -156,7 +158,7 @@ export const podDeploymentService = {
   // Get storage configuration
   async getStorageConfig(name, version) {
     try {
-      console.log('📥 Getting storage config:', { name, version });
+      logger.info('📥 Getting storage config:', { name, version });
       const config = getAuthHeaders();
       
       const response = await axios.get(
@@ -164,7 +166,7 @@ export const podDeploymentService = {
         config
       );
       
-      console.log('✅ Storage config retrieved:', response.data);
+      logger.info('✅ Storage config retrieved:', response.data);
       return response.data;
     } catch (error) {
       console.error('❌ Failed to get storage config:', error);
@@ -175,7 +177,7 @@ export const podDeploymentService = {
   // Save storage configuration
   async saveStorageConfig(name, version, storageConfig) {
     try {
-      console.log('💾 Saving storage config:', { name, version, storageConfig });
+      logger.info('💾 Saving storage config:', { name, version, storageConfig });
       const headers = getAuthHeaders();
       
       const response = await axios.post(
@@ -184,7 +186,7 @@ export const podDeploymentService = {
         headers
       );
       
-      console.log('✅ Storage configuration saved successfully:', response.data);
+      logger.info('✅ Storage configuration saved successfully:', response.data);
       return response.data;
     } catch (error) {
       console.error('❌ Failed to save storage config:', error);
@@ -195,7 +197,7 @@ export const podDeploymentService = {
   // Create storage class
   async createStorageClass(name, version, storageClassConfig) {
     try {
-      console.log('📝 Creating storage class:', { name, version, storageClassConfig });
+      logger.info('📝 Creating storage class:', { name, version, storageClassConfig });
       const headers = getAuthHeaders();
       
       const response = await axios.post(
@@ -204,7 +206,7 @@ export const podDeploymentService = {
         headers
       );
       
-      console.log('✅ Storage class created:', response.data);
+      logger.info('✅ Storage class created:', response.data);
       return response.data;
     } catch (error) {
       console.error('❌ Failed to create storage class:', error);
@@ -229,16 +231,16 @@ export const podDeploymentService = {
   // Create new namespace
   async createNamespace(namespace) {
     try {
-      console.log('📝 Creating new namespace:', namespace);
+      logger.info('📝 Creating new namespace:', namespace);
       const headers = getAuthHeaders();
       
       const response = await axios.post(
-        `${API_URL}/api/k8s/namespaces`,
+        `${API_URL}/api/namespaces`,
         { namespace },
         headers
       );
       
-      console.log('✅ Namespace created successfully:', response.data);
+      logger.info('✅ Namespace created successfully:', response.data);
       return { success: true, data: response.data };
     } catch (error) {
       console.error('❌ Failed to create namespace:', error);
@@ -249,12 +251,12 @@ export const podDeploymentService = {
   // Get nodes
   async getNodes() {
     try {
-      console.log('📥 Fetching nodes');
+      logger.info('📥 Fetching nodes');
       const response = await axios.get(
         `${API_URL}/api/k8s/nodes`,
         getAuthHeaders()
       );
-      console.log('✅ Nodes fetched:', response.data);
+      logger.info('✅ Nodes fetched:', response.data);
       return response.data;
     } catch (error) {
       console.error('❌ Failed to fetch nodes:', error);
@@ -265,12 +267,12 @@ export const podDeploymentService = {
   // Get node details
   async getNodeDetails(nodeName) {
     try {
-      console.log('📥 Fetching node details:', nodeName);
+      logger.info('📥 Fetching node details:', nodeName);
       const response = await axios.get(
         `${API_URL}/api/k8s/nodes/${nodeName}`,
         getAuthHeaders()
       );
-      console.log('✅ Node details fetched:', response.data);
+      logger.info('✅ Node details fetched:', response.data);
       return response.data;
     } catch (error) {
       console.error('❌ Failed to fetch node details:', error);
@@ -281,12 +283,12 @@ export const podDeploymentService = {
   // Delete storage configuration
   async deleteStorageConfig(name, version, type) {
     try {
-      console.log('🗑️ Deleting storage config:', { name, version, type });
+      logger.info('🗑️ Deleting storage config:', { name, version, type });
       const response = await axios.delete(
         `${API_URL}/api/pod-deployments/${name}/versions/${version}/storage/${type}`,
         getAuthHeaders()
       );
-      console.log('✅ Storage configuration deleted:', response.data);
+      logger.info('✅ Storage configuration deleted:', response.data);
       return response.data;
     } catch (error) {
       console.error('❌ Failed to delete storage config:', error);
@@ -297,13 +299,13 @@ export const podDeploymentService = {
   // Save deploy script
   async saveDeployScript(name, version, filename, content) {
     try {
-      console.log('💾 Saving deploy script:', { name, version, filename });
+      logger.info('💾 Saving deploy script:', { name, version, filename });
       const response = await axios.post(
         `${API_URL}/api/pod-deployments/${name}/versions/${version}/deploy-scripts`,
         { filename, content },
         getAuthHeaders()
       );
-      console.log('✅ Deploy script saved:', response.data);
+      logger.info('✅ Deploy script saved:', response.data);
       return response.data;
     } catch (error) {
       console.error('❌ Failed to save deploy script:', error);
@@ -314,12 +316,12 @@ export const podDeploymentService = {
   // Get ConfigMap configuration
   async getConfigMapConfig(name, version) {
     try {
-      console.log('📥 Getting ConfigMap config:', { name, version });
+      logger.info('📥 Getting ConfigMap config:', { name, version });
       const response = await axios.get(
         `${API_URL}/api/pod-deployments/${name}/configmaps?version=${version}`,
         getAuthHeaders()
       );
-      console.log('✅ ConfigMap config retrieved:', response.data);
+      logger.info('✅ ConfigMap config retrieved:', response.data);
       return response.data;
     } catch (error) {
       console.error('❌ Failed to get ConfigMap config:', error);
@@ -330,13 +332,13 @@ export const podDeploymentService = {
   // Save ConfigMap configuration
   async saveConfigMapConfig(name, version, configMapConfig) {
     try {
-      console.log('💾 Saving ConfigMap config:', { name, version, configMapConfig });
+      logger.info('💾 Saving ConfigMap config:', { name, version, configMapConfig });
       const response = await axios.post(
         `${API_URL}/api/pod-deployments/${name}/versions/${version}/configmaps`,
         configMapConfig,
         getAuthHeaders()
       );
-      console.log('✅ ConfigMap config saved:', response.data);
+      logger.info('✅ ConfigMap config saved:', response.data);
       return response.data;
     } catch (error) {
       console.error('❌ Failed to save ConfigMap config:', error);
@@ -347,12 +349,12 @@ export const podDeploymentService = {
   // Delete deploy script
   async deleteDeployScript(name, version, filename) {
     try {
-      console.log('🗑️ Deleting deploy script:', { name, version, filename });
+      logger.info('🗑️ Deleting deploy script:', { name, version, filename });
       const response = await axios.delete(
         `${API_URL}/api/pod-deployments/${name}/versions/${version}/deploy-scripts/${filename}`,
         getAuthHeaders()
       );
-      console.log('✅ Deploy script deleted:', response.data);
+      logger.info('✅ Deploy script deleted:', response.data);
       return response.data;
     } catch (error) {
       console.error('❌ Failed to delete deploy script:', error);
@@ -363,12 +365,12 @@ export const podDeploymentService = {
   // Get deploy script
   async getDeployScript(name, version, filename) {
     try {
-      console.log('📥 Getting deploy script:', { name, version, filename });
+      logger.info('📥 Getting deploy script:', { name, version, filename });
       const response = await axios.get(
         `${API_URL}/api/pod-deployments/${name}/versions/${version}/deploy-scripts/${filename}`,
         getAuthHeaders()
       );
-      console.log('✅ Deploy script retrieved:', response.data);
+      logger.info('✅ Deploy script retrieved:', response.data);
       return response.data;
     } catch (error) {
       console.error('❌ Failed to get deploy script:', error);
@@ -388,6 +390,127 @@ export const podDeploymentService = {
       throw error;
     }
   },
+
+  // Create host directory for persistent volume
+  async createHostDirectory(nodeName, path, options = {}) {
+    try {
+      if (!nodeName?.trim()) {
+        throw new Error('Node name is required');
+      }
+      if (!path?.trim()) {
+        throw new Error('Directory path is required');
+      }
+
+      const sanitizedPath = this.sanitizePath(path);
+
+      logger.info('📁 Creating host directory:', { 
+        nodeName, 
+        path: sanitizedPath,
+        options 
+      });
+
+      const response = await axios.post(
+        `${API_URL}/api/k8s/nodes/${nodeName}/directories`,
+        {
+          path: sanitizedPath,
+          mode: options.mode || '0755',
+          recursive: options.recursive !== false,
+        },
+        getAuthHeaders()
+      );
+
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || 'Failed to create directory');
+      }
+
+      return response.data;
+    } catch (error) {
+      logger.error('❌ Failed to create host directory:', {
+        error,
+        nodeName,
+        path,
+        details: error.response?.data
+      });
+
+      const errorMessage = error.response?.data?.message || error.message;
+      const isRegistryError = errorMessage.includes('local registry');
+
+      if (isRegistryError) {
+        throw new Error('無法從本地倉庫拉取映像。請確保本地倉庫中有所需的 busybox 映像。');
+      }
+
+      throw {
+        success: false,
+        message: this.getDirectoryErrorMessage(error),
+        path,
+        node: nodeName
+      };
+    }
+  },
+
+  // 輔助方法：路徑清理
+  sanitizePath(path) {
+    // 移除多餘的斜線
+    let sanitized = path.replace(/\/+/g, '/');
+    
+    // 確保以斜線開始
+    if (!sanitized.startsWith('/')) {
+      sanitized = '/' + sanitized;
+    }
+    
+    // 移除結尾斜線（除非是根目錄）
+    if (sanitized.length > 1 && sanitized.endsWith('/')) {
+      sanitized = sanitized.slice(0, -1);
+    }
+    
+    // 檢查非法字符
+    const invalidChars = /[<>:"|?*\x00-\x1F]/g;
+    if (invalidChars.test(sanitized)) {
+      throw new Error('Path contains invalid characters');
+    }
+    
+    // 防止目錄遍歷
+    if (sanitized.includes('..')) {
+      throw new Error('Directory traversal is not allowed');
+    }
+    
+    return sanitized;
+  },
+
+  // 輔助方法：錯誤信息處理
+  getDirectoryErrorMessage(error) {
+    if (error.response) {
+      const status = error.response.status;
+      const message = error.response.data?.message;
+
+      switch (status) {
+        case 400:
+          return `Invalid request: ${message || 'Bad parameters'}`;
+        case 403:
+          return `Permission denied: ${message || 'Insufficient privileges'}`;
+        case 404:
+          return `Not found: ${message || 'Node or path not found'}`;
+        case 409:
+          return `Conflict: ${message || 'Directory already exists'}`;
+        case 500:
+          return `Server error: ${message || 'Internal server error'}`;
+        default:
+          return message || `HTTP error ${status}`;
+      }
+    }
+
+    if (error.request) {
+      return 'Network error: Unable to reach the server';
+    }
+
+    return error.message || 'Unknown error occurred';
+  },
+
+  // // 添加創建目錄的方法
+  // async createDirectory(directoryData) {
+  //   const response = await axios.post('/api/pod-deployment/create-directory', directoryData);
+  //   return response.data;
+  // }
 };
 
 export default podDeploymentService;

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { logger } from '../../utils/logger.ts';    // 導入 logger
 import { 
   Box, 
   Paper, 
@@ -17,6 +18,7 @@ import {
 } from '@mui/material';
 import { useAppTranslation } from '../../hooks/useAppTranslation';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import { api, getApiUrl } from '../../utils/api';
 
 const CreatePod = () => {
   const { t } = useAppTranslation();
@@ -84,7 +86,7 @@ const CreatePod = () => {
     formData.append('image', file);
 
     try {
-      const response = await fetch('http://localhost:3001/api/pods/upload-image', {
+      const response = await fetch(getApiUrl('pods/upload-image'), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -110,22 +112,10 @@ const CreatePod = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://localhost:3001/api/pods', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify(formData)
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create pod');
-      }
-
+      await api.post('pods', formData);
       navigate('/pods');
     } catch (error) {
-      setError(error.message);
+      setError(error.message || '創建 Pod 失敗');
     }
   };
 

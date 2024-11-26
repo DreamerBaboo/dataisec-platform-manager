@@ -17,6 +17,9 @@ import { i18n } from '../../../i18n';
 import { CheckCircle, Error, HourglassEmpty, PlayArrow, Close } from '@mui/icons-material';
 import axios from 'axios';
 import { useAppTranslation } from '../../../hooks/useAppTranslation';
+import { getApiUrl } from '../../../utils/api';
+import { getDeploymentTemplatePath } from '../../../utils/paths';
+import { logger } from '../../../utils/logger'; // 導入 logger
 
 const CommandExecutor = ({ name, version, open, onClose }) => {
   const { t } = useAppTranslation('commandExecutor');
@@ -29,22 +32,22 @@ const CommandExecutor = ({ name, version, open, onClose }) => {
     const fetchCommands = async () => {
       try {
         setIsLoading(true);
-        console.log('🚀 開始獲取命令列表:', { name, version });
+        logger.info('🚀 開始獲取命令列表:', { name, version });
         
-        const response = await axios.get('http://localhost:3001/api/commands', {
+        const response = await axios.get(getApiUrl('api/commands'), {
           params: { name, version }
         });
         
-        console.log('📥 收到命令列表:', response.data);
+        logger.info('📥 收到命令列表:', response.data);
         response.data.forEach((cmd, index) => {
-          console.log(`命令 ${index + 1}:`, {
+          logger.info(`命令 ${index + 1}:`, {
             title: cmd.titleKey,
             description: cmd.descriptionKey,
             type: cmd.type,
             command: cmd.command
           });
         });
-        console.log('🚀 設置命令列表:', response.data);
+        logger.info('🚀 設置命令列表:', response.data);
         setCommands(response.data);
         setResults(response.data.map(() => ({ status: 'pending', output: '' })));
         setError('');
@@ -62,16 +65,23 @@ const CommandExecutor = ({ name, version, open, onClose }) => {
   }, [name, version, open]);
 
   const executeCommands = async () => {
-    console.log('▶️ 開始執行命令序列');
+    logger.info('▶️ 開始執行命令序列');
     let hasError = false;
     
     for (let i = 0; i < commands.length; i++) {
       const { command, title, description } = commands[i];
       
-      console.log(`⚡ 執行第 ${i + 1}/${commands.length} 個命令:`, {
+      // Transform the command to use the correct deployment template path
+      const transformedCommand = command.replace(
+        /\.\/backend\/deploymentTemplate/g,
+        getDeploymentTemplatePath()
+      );
+      
+      logger.info(`⚡ 執行第 ${i + 1}/${commands.length} 個命令:`, {
         title,
         description,
-        command
+        originalCommand: command,
+        transformedCommand
       });
       
       setResults(prev => {
@@ -85,7 +95,7 @@ const CommandExecutor = ({ name, version, open, onClose }) => {
       });
 
       try {
-        const response = await axios.post('http://localhost:3001/api/execute', { command });
+        const response = await axios.post(getApiUrl('api/execute'), { command: transformedCommand });
         
         setResults(prev => {
           const newResults = [...prev];
@@ -111,12 +121,12 @@ const CommandExecutor = ({ name, version, open, onClose }) => {
       }
     }
     
-    console.log('🏁 命令序列執行完成', hasError ? '(有錯誤發生)' : '(全部成功)');
+    logger.info('🏁 命令序列執行完成', hasError ? '(有錯誤發生)' : '(全部成功)');
   };
 
-  console.log('Current commands:', commands);
-  console.log('Translation function:', t);
-  console.log('Current language:', i18n.language);
+  logger.info('Current commands:', commands);
+  logger.info('Translation function:', t);
+  logger.info('Current language:', i18n.language);
 
   return (
     <Dialog 

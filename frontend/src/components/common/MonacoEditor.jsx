@@ -1,5 +1,6 @@
 import React from 'react';
 import Editor from '@monaco-editor/react';
+import { logger } from '../../../utils/logger.ts'; 
 
 export const MonacoEditor = ({ 
   value, 

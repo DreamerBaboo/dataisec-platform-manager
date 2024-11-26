@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { logger } from '../../utils/logger.ts';  // 導入 logger
 import {
   Box,
   Paper,
@@ -252,9 +253,9 @@ const DeploymentForm = ({ deployment, onChange, onPreview }) => {
           }
         });
 
-        console.log('Identified placeholders:', placeholders);
-        console.log('Default values:', defaultValues);
-        console.log('Composite placeholders:', compositePlaceholders);
+        logger.info('Identified placeholders:', placeholders);
+        logger.info('Default values:', defaultValues);
+        logger.info('Composite placeholders:', compositePlaceholders);
 
         // Update config
         setConfig(prev => ({

@@ -4,6 +4,7 @@ const fs = require('fs').promises;
 const path = require('path');
 const semver = require('semver');
 const YAML = require('yaml');
+const logger = require('../utils/logger');
 
 // 生成部署預覽
 const generatePreview = async (req, res) => {
@@ -30,7 +31,7 @@ const generatePreview = async (req, res) => {
     
     res.json({ yaml: fullConfig });
   } catch (error) {
-    console.error('Failed to generate preview:', error);
+    logger.error('Failed to generate preview:', error);
     res.status(500).json({
       error: 'Failed to generate preview',
       details: error.message
@@ -215,7 +216,7 @@ const handleDeploymentProgress = (ws, req) => {
 const getTemplateList = async (req, res) => {
   try {
     const TEMPLATE_DIR = path.join(__dirname, '../deploymentTemplate');
-    console.log('📂 Getting template list from:', TEMPLATE_DIR);
+    logger.info('🔍 Getting template list from:', TEMPLATE_DIR);
     
     // Check if directory exists
     const exists = await fs.access(TEMPLATE_DIR)
@@ -223,13 +224,13 @@ const getTemplateList = async (req, res) => {
       .catch(() => false);
     
     if (!exists) {
-      console.log('❌ Template directory does not exist');
+      logger.error('❌ Template directory does not exist');
       await fs.mkdir(TEMPLATE_DIR, { recursive: true });
-      console.log('✅ Created template directory');
+      logger.info('✅ Created template directory');
     }
     
     const templates = await fs.readdir(TEMPLATE_DIR);
-    console.log('📑 Found templates:', templates);
+    logger.info('📑 Found templates:', templates);
     
     // Filter out non-directory items and hidden files
     const templateDirs = await Promise.all(templates
@@ -241,7 +242,7 @@ const getTemplateList = async (req, res) => {
       }));
 
     const validTemplates = templateDirs.filter(Boolean);
-    console.log('✅ Valid template directories:', validTemplates);
+    logger.info('✅ Valid template directories:', validTemplates);
     
     // Get details for each template
     const templateDetails = await Promise.all(validTemplates.map(async (name) => {
@@ -261,10 +262,10 @@ const getTemplateList = async (req, res) => {
       };
     }));
 
-    console.log('✅ Template details:', templateDetails);
+    logger.info('✅ Template details:', templateDetails);
     res.json(templateDetails);
   } catch (error) {
-    console.error('❌ Error getting template list:', error);
+    logger.error('❌ Error getting template list:', error);
     res.status(500).json({ 
       message: 'Failed to get template list',
       error: error.message 
@@ -315,7 +316,7 @@ const saveDeploymentConfig = async (req, res) => {
       version
     });
   } catch (error) {
-    console.error('Failed to save deployment config:', error);
+    logger.error('Failed to save deployment config:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -365,7 +366,7 @@ const createVersion = async (req, res) => {
     
     res.json({ message: 'Version created successfully', version });
   } catch (error) {
-    console.error('Failed to create version:', error);
+    logger.error('Failed to create version:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -391,7 +392,7 @@ const getDeploymentVersions = async (req, res) => {
       latestVersion: config.latestVersion
     });
   } catch (error) {
-    console.error('Failed to get deployment versions:', error);
+    logger.error('Failed to get deployment versions:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -408,7 +409,7 @@ const getVersionConfig = async (req, res) => {
       });
     }
 
-    console.log('📥 Getting version config:', { name, version });
+    logger.info('📥 Getting version config:', { name, version });
     
     const configPath = path.join(__dirname, '../deploymentTemplate', name, 'config.json');
     
@@ -423,7 +424,7 @@ const getVersionConfig = async (req, res) => {
       });
     }
     
-    console.log('✅ Found version config');
+    logger.info('✅ Found version config');
     
     res.json({
       name,
@@ -432,7 +433,7 @@ const getVersionConfig = async (req, res) => {
     });
     
   } catch (error) {
-    console.error('❌ Failed to get version config:', error);
+    logger.error('❌ Failed to get version config:', error);
     
     // Handle file not found error
     if (error.code === 'ENOENT') {
@@ -454,7 +455,7 @@ const saveTemplateContent = async (req, res) => {
     let content = req.body.content;
 
     if (!content || content.trim() === '') {
-      console.error('❌ 沒有提供有效的內容');
+      logger.error('❌ 沒有提供有效的內容');
       return res.status(400).json({
         message: 'Empty content received',
         receivedBody: req.body
@@ -465,7 +466,7 @@ const saveTemplateContent = async (req, res) => {
     try {
       YAML.parse(content);
     } catch (yamlError) {
-      console.error('❌ YAML 解析錯誤:', yamlError);
+      logger.error('❌ YAML 解析錯誤:', yamlError);
       return res.status(400).json({
         message: 'Invalid YAML content',
         error: yamlError.message
@@ -485,11 +486,11 @@ const saveTemplateContent = async (req, res) => {
       let config = {};
       
       try {
-        console.log('📖 Reading existing config:', configPath);
+        logger.info('📖 Reading existing config:', configPath);
         const existingConfig = await fs.readFile(configPath, 'utf8');
         config = JSON.parse(existingConfig);
       } catch (err) {
-        console.log('ℹ️ No existing config found, creating new one');
+        logger.info('ℹ️ No existing config found, creating new one');
         config = {
           name: deploymentName,
           versions: {},
@@ -512,10 +513,10 @@ const saveTemplateContent = async (req, res) => {
         updatedAt: new Date().toISOString()
       };
 
-      console.log('💾 Writing updated config:', configPath);
+      logger.info('💾 Writing updated config:', configPath);
       await fs.writeFile(configPath, JSON.stringify(config, null, 2), 'utf8');
 
-      console.log('✅ Template saved successfully:', {
+      logger.info('✅ Template saved successfully:', {
         path: templatePath,
         contentLength: savedContent.length
       });
@@ -527,11 +528,11 @@ const saveTemplateContent = async (req, res) => {
         content: savedContent
       });
     } catch (configError) {
-      console.error('❌ Failed to update config:', configError);
+      logger.error('❌ Failed to update config:', configError);
       throw configError;
     }
   } catch (error) {
-    console.error('❌ 保存模板時出錯:', error);
+    logger.error('❌ 保存模板時出錯:', error);
     res.status(500).json({
       message: 'Failed to save template content',
       error: error.message
@@ -619,7 +620,7 @@ const generateDeploymentConfig = async (name, version) => {
     
     return fullConfig;
   } catch (error) {
-    console.error('Failed to generate deployment config:', error);
+    logger.error('Failed to generate deployment config:', error);
     throw error;
   }
 };
@@ -669,7 +670,7 @@ const handleNamespaceChange = async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('Failed to handle namespace change:', error);
+    logger.error('Failed to handle namespace change:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -680,7 +681,7 @@ const getNamespaces = async (req, res) => {
     const namespaces = await k8sService.getNamespaces();
     res.json(namespaces);
   } catch (error) {
-    console.error('Failed to get namespaces:', error);
+    logger.error('Failed to get namespaces:', error);
     res.status(500).json({ 
       error: 'Failed to get namespaces',
       details: error.message 
@@ -694,7 +695,7 @@ const saveVersionConfig = async (req, res) => {
     const { name, version } = req.params;
     const { config: newConfig } = req.body;
     
-    console.log('💾 Saving version config:', { name, version });
+    logger.info('💾 Saving version config:', { name, version });
     
     const configPath = path.join(__dirname, '../deploymentTemplate', name, 'config.json');
     
@@ -738,7 +739,7 @@ const saveVersionConfig = async (req, res) => {
     // Save updated config
     await fs.writeFile(configPath, JSON.stringify(config, null, 2));
     
-    console.log('✅ Version config saved successfully');
+    logger.info('✅ Version config saved successfully');
     
     res.json({
       message: 'Version configuration saved successfully',
@@ -746,7 +747,7 @@ const saveVersionConfig = async (req, res) => {
     });
     
   } catch (error) {
-    console.error('❌ Failed to save version config:', error);
+    logger.error('❌ Failed to save version config:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -763,7 +764,7 @@ const getStorageConfig = async (req, res) => {
       });
     }
 
-    console.log('📥 Getting storage config:', { name, version });
+    logger.info('📥 Getting storage config:', { name, version });
 
     // 構建存儲配置路徑
     const storagePath = path.join(__dirname, '../deploymentTemplate', name, 'deploy-scripts');
@@ -798,7 +799,7 @@ const getStorageConfig = async (req, res) => {
       });
     }
 
-    console.log('✅ Storage config retrieved');
+    logger.info('✅ Storage config retrieved');
 
     res.json({
       storageClassYaml,
@@ -806,7 +807,7 @@ const getStorageConfig = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Failed to get storage config:', error);
+    logger.error('❌ Failed to get storage config:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -817,7 +818,7 @@ const saveStorageConfig = async (req, res) => {
     const { name, version } = req.params;
     const { storageClassYaml, persistentVolumeYaml } = req.body;
 
-    console.log('💾 Saving storage config:', { name, version });
+    logger.info('💾 Saving storage config:', { name, version });
 
     // 確保存儲目錄存在
     const storagePath = path.join(__dirname, '../deploymentTemplate', name, 'deploy-scripts');
@@ -835,14 +836,14 @@ const saveStorageConfig = async (req, res) => {
       await fs.writeFile(persistentVolumePath, persistentVolumeYaml);
     }
 
-    console.log('✅ Storage config saved successfully');
+    logger.info('✅ Storage config saved successfully');
 
     res.json({
       message: 'Storage configuration saved successfully'
     });
 
   } catch (error) {
-    console.error('❌ Failed to save storage config:', error);
+    logger.error('❌ Failed to save storage config:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -853,7 +854,7 @@ const createStorageClass = async (req, res) => {
     const { name, version } = req.params;
     const storageClassConfig = req.body;
 
-    console.log('📝 Creating storage class:', { name, version, storageClassConfig });
+    logger.info('📝 Creating storage class:', { name, version, storageClassConfig });
 
     // 生成 StorageClass YAML
     const storageClassYaml = `apiVersion: storage.k8s.io/v1
@@ -872,7 +873,7 @@ allowVolumeExpansion: false`;
     const storageClassPath = path.join(storagePath, `${name}-${version}-storageClass.yaml`);
     await fs.writeFile(storageClassPath, storageClassYaml);
 
-    console.log('✅ Storage class created successfully');
+    logger.info('✅ Storage class created successfully');
 
     res.json({
       message: 'Storage class created successfully',
@@ -880,7 +881,7 @@ allowVolumeExpansion: false`;
     });
 
   } catch (error) {
-    console.error('❌ Failed to create storage class:', error);
+    logger.error('❌ Failed to create storage class:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -890,7 +891,7 @@ const deleteStorageConfig = async (req, res) => {
   try {
     const { name, version, type } = req.params;
 
-    console.log('🗑️ Deleting storage config:', { name, version, type });
+    logger.info('🗑️ Deleting storage config:', { name, version, type });
 
     // 構建存儲配置路徑
     const storagePath = path.join(__dirname, '../deploymentTemplate', name, 'deploy-scripts');
@@ -916,7 +917,7 @@ const deleteStorageConfig = async (req, res) => {
     for (const file of filesToDelete) {
       try {
         await fs.unlink(file);
-        console.log(`✅ Deleted file: ${file}`);
+        logger.info(`✅ Deleted file: ${file}`);
       } catch (error) {
         if (error.code !== 'ENOENT') {
           throw error;
@@ -924,14 +925,14 @@ const deleteStorageConfig = async (req, res) => {
       }
     }
 
-    console.log('✅ Storage config deleted successfully');
+    logger.info('✅ Storage config deleted successfully');
 
     res.json({
       message: 'Storage configuration deleted successfully'
     });
 
   } catch (error) {
-    console.error('❌ Failed to delete storage config:', error);
+    logger.error('❌ Failed to delete storage config:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -942,7 +943,7 @@ const saveDeployScript = async (req, res) => {
     const { name, version } = req.params;
     const { filename, content } = req.body;
 
-    console.log('💾 Saving deploy script:', { name, version, filename });
+    logger.info('💾 Saving deploy script:', { name, version, filename });
 
     // Build path to deploy-scripts folder
     const deployScriptsPath = path.join(
@@ -959,14 +960,14 @@ const saveDeployScript = async (req, res) => {
     const filePath = path.join(deployScriptsPath, filename);
     await fs.writeFile(filePath, content);
 
-    console.log('✅ Deploy script saved successfully at:', filePath);
+    logger.info('✅ Deploy script saved successfully at:', filePath);
 
     res.json({
       message: 'Deploy script saved successfully',
       path: filePath
     });
   } catch (error) {
-    console.error('❌ Failed to save deploy script:', error);
+    logger.error('❌ Failed to save deploy script:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -977,7 +978,7 @@ const saveHelmDeployScript = async (req, res) => {
     const { name, version, filename } = req.params;
     const { content } = req.body;
     
-    console.log('📥 Saving helm deploy script:', { name, version, filename });
+    logger.info('📥 Saving helm deploy script:', { name, version, filename });
 
     // Build path to helm-scripts folder
     const helmScriptsPath = path.join(
@@ -991,16 +992,16 @@ const saveHelmDeployScript = async (req, res) => {
     try {
       await fs.mkdir(helmScriptsPath, { recursive: true });
     } catch (error) {
-      console.error('Failed to create helm-scripts directory:', error);
+      logger.error('Failed to create helm-scripts directory:', error);
     }
 
     const filePath = path.join(helmScriptsPath, filename);
     await fs.writeFile(filePath, content, 'utf8');
     
-    console.log('✅ Helm deploy script saved successfully');
+    logger.info('✅ Helm deploy script saved successfully');
     res.json({ message: 'Helm deploy script saved successfully' });
   } catch (error) {
-    console.error('❌ Failed to save helm deploy script:', error);
+    logger.error('❌ Failed to save helm deploy script:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -1017,7 +1018,7 @@ const getConfigMapConfig = async (req, res) => {
       });
     }
 
-    console.log('📥 Getting ConfigMap config:', { name, version });
+    logger.info('📥 Getting ConfigMap config:', { name, version });
 
     // Read config.json first
     const configPath = path.join(__dirname, '../deploymentTemplate', name, 'config.json');
@@ -1040,7 +1041,7 @@ const getConfigMapConfig = async (req, res) => {
     // Get ConfigMaps from config.json
     const configMaps = config.versions[version]?.config?.configMaps || [];
 
-    console.log('✅ ConfigMap config retrieved');
+    logger.info('✅ ConfigMap config retrieved');
 
     res.json({
       configMaps,
@@ -1048,7 +1049,7 @@ const getConfigMapConfig = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Failed to get ConfigMap config:', error);
+    logger.error('❌ Failed to get ConfigMap config:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -1059,7 +1060,7 @@ const saveConfigMapConfig = async (req, res) => {
     const { name, version } = req.params;
     const { configMaps, configMapYaml } = req.body;
 
-    console.log('💾 Saving ConfigMap config:', { name, version });
+    logger.info('💾 Saving ConfigMap config:', { name, version });
 
     // Save to config.json
     const configPath = path.join(__dirname, '../deploymentTemplate', name, 'config.json');
@@ -1089,14 +1090,14 @@ const saveConfigMapConfig = async (req, res) => {
       await fs.writeFile(yamlPath, configMapYaml);
     }
 
-    console.log('✅ ConfigMap config saved successfully');
+    logger.info('✅ ConfigMap config saved successfully');
 
     res.json({
       message: 'ConfigMap configuration saved successfully'
     });
 
   } catch (error) {
-    console.error('❌ Failed to save ConfigMap config:', error);
+    logger.error('❌ Failed to save ConfigMap config:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -1106,7 +1107,7 @@ const deleteDeployScript = async (req, res) => {
   try {
     const { name, version, filename } = req.params;
 
-    console.log('🗑️ Deleting deploy script:', { name, version, filename });
+    logger.info('🗑️ Deleting deploy script:', { name, version, filename });
 
     const filePath = path.join(
       __dirname,
@@ -1119,10 +1120,10 @@ const deleteDeployScript = async (req, res) => {
 
     try {
       await fs.unlink(filePath);
-      console.log('✅ Deploy script deleted:', filePath);
+      logger.info('✅ Deploy script deleted:', filePath);
     } catch (error) {
       if (error.code === 'ENOENT') {
-        console.log('⚠️ File does not exist:', filePath);
+        logger.info('⚠️ File does not exist:', filePath);
         return res.json({
           message: 'File does not exist or already deleted',
           path: filePath
@@ -1136,7 +1137,7 @@ const deleteDeployScript = async (req, res) => {
       path: filePath
     });
   } catch (error) {
-    console.error('❌ Failed to delete deploy script:', error);
+    logger.error('❌ Failed to delete deploy script:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -1146,7 +1147,7 @@ const listDeployScripts = async (req, res) => {
   try {
     const { name, version } = req.params;
 
-    console.log('📋 Listing deploy scripts:', { name, version });
+    logger.info('📋 Listing deploy scripts:', { name, version });
 
     const deployScriptsPath = path.join(
       __dirname,
@@ -1163,17 +1164,17 @@ const listDeployScripts = async (req, res) => {
         (file.endsWith('.yaml') || file.endsWith('.yml'))
       );
 
-      console.log('✅ Found deploy scripts:', yamlFiles);
+      logger.info('✅ Found deploy scripts:', yamlFiles);
       res.json(yamlFiles);
     } catch (error) {
       if (error.code === 'ENOENT') {
-        console.log('⚠️ No deploy-scripts directory found');
+        logger.info('⚠️ No deploy-scripts directory found');
         return res.json([]);
       }
       throw error;
     }
   } catch (error) {
-    console.error('❌ Failed to list deploy scripts:', error);
+    logger.error('❌ Failed to list deploy scripts:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -1216,7 +1217,7 @@ const getDeploymentYaml = async (req, res) => {
       throw error;
     }
   } catch (error) {
-    console.error('Failed to get deployment YAML:', error);
+    logger.error('Failed to get deployment YAML:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -1226,7 +1227,7 @@ const getDeployScript = async (req, res) => {
   try {
     const { name, version, filename } = req.params;
     
-    console.log('📥 Getting deploy script:', { name, version, filename });
+    logger.info('📥 Getting deploy script:', { name, version, filename });
 
     // Build path to deploy-scripts folder
     const deployScriptsPath = path.join(
@@ -1241,19 +1242,19 @@ const getDeployScript = async (req, res) => {
     try {
       await fs.mkdir(deployScriptsPath, { recursive: true });
     } catch (error) {
-      console.error('Failed to create deploy-scripts directory:', error);
+      logger.error('Failed to create deploy-scripts directory:', error);
     }
 
     const filePath = path.join(deployScriptsPath, filename);
-    console.log('Looking for file at:', filePath);
+    logger.info('Looking for file at:', filePath);
 
     try {
       const content = await fs.readFile(filePath, 'utf8');
-      console.log('✅ Deploy script found and read successfully');
+      logger.info('✅ Deploy script found and read successfully');
       res.json({ content });
     } catch (error) {
       if (error.code === 'ENOENT') {
-        console.log('⚠️ File not found:', filePath);
+        logger.info('⚠️ File not found:', filePath);
         return res.status(404).json({
           error: 'Deploy script not found',
           path: filePath
@@ -1262,7 +1263,7 @@ const getDeployScript = async (req, res) => {
       throw error;
     }
   } catch (error) {
-    console.error('❌ Failed to get deploy script:', error);
+    logger.error('❌ Failed to get deploy script:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -1271,7 +1272,7 @@ const getHelmDeployScript = async (req, res) => {
   try {
     const { name, version, filename } = req.params;
     
-    console.log('📥 Getting deploy script:', { name, version, filename });
+    logger.info('📥 Getting deploy script:', { name, version, filename });
 
     // Build path to deploy-scripts folder
     const deployScriptsPath = path.join(
@@ -1286,19 +1287,19 @@ const getHelmDeployScript = async (req, res) => {
     try {
       await fs.mkdir(deployScriptsPath, { recursive: true });
     } catch (error) {
-      console.error('Failed to create deploy-scripts directory:', error);
+      logger.error('Failed to create deploy-scripts directory:', error);
     }
 
     const filePath = path.join(deployScriptsPath, filename);
-    console.log('Looking for file at:', filePath);
+    logger.info('Looking for file at:', filePath);
 
     try {
       const content = await fs.readFile(filePath, 'utf8');
-      console.log('✅ Deploy script found and read successfully');
+      logger.info('✅ Deploy script found and read successfully');
       res.json({ content });
     } catch (error) {
       if (error.code === 'ENOENT') {
-        console.log('⚠️ File not found:', filePath);
+        logger.info('⚠️ File not found:', filePath);
         return res.status(404).json({
           error: 'Deploy script not found',
           path: filePath
@@ -1307,7 +1308,7 @@ const getHelmDeployScript = async (req, res) => {
       throw error;
     }
   } catch (error) {
-    console.error('❌ Failed to get deploy script:', error);
+    logger.error('❌ Failed to get deploy script:', error);
     res.status(500).json({ error: error.message });
   }
 };
