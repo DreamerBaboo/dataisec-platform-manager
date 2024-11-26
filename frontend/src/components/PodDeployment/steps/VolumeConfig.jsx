@@ -1,60 +1,34 @@
-import React, { useState, useEffect, useImperativeHandle } from 'react';
+import React, { useState, useEffect } from 'react';
 import { logger } from '../../../utils/logger.ts'; // 導入 logger
 import {
   Box,
+  Button,
+  TextField,
   Typography,
   Grid,
+  IconButton,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
-  TextField,
-  Button,
   Paper,
+  CircularProgress,
+  Alert,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   Autocomplete,
-  FormHelperText,
-  Snackbar,
-  Alert,
-  CircularProgress,
-  IconButton
+  FormHelperText
 } from '@mui/material';
-import { LoadingButton } from '@mui/lab';
-import {
-  Add as AddIcon, Delete as DeleteIcon, Visibility as VisibilityIcon, VisibilityOff as VisibilityOffIcon, CreateNewFolder as CreateNewFolderIcon
-} from '@mui/icons-material';
+import { Add as AddIcon, Delete as DeleteIcon, Visibility as VisibilityIcon, VisibilityOff as VisibilityOffIcon, CreateNewFolder as CreateNewFolderIcon } from '@mui/icons-material';
 import { useAppTranslation } from '../../../hooks/useAppTranslation';
 import axios from 'axios';
 import YAML from 'yaml';
 import PropTypes from 'prop-types';
 import { podDeploymentService } from '../../../services/podDeploymentService';
 import path from 'path';
-
-function validateAndSanitizePath(path) {
-  // 移除多餘的斜線和點
-  const normalized = path.normalize();
-  
-  // 確保路徑以 / 開始
-  if (!normalized.startsWith('/')) {
-    throw new Error('Path must start with /');
-  }
-  
-  // 檢查是否包含不允許的字符
-  const invalidChars = /[<>:"|?*]/;
-  if (invalidChars.test(normalized)) {
-    throw new Error('Path contains invalid characters');
-  }
-  
-  // 檢查是否試圖訪問上層目錄
-  if (normalized.includes('../')) {
-    throw new Error('Directory traversal not allowed');
-  }
-  
-  return normalized;
-}
+import { LoadingButton } from '@mui/lab';
 
 const VolumeConfig = ({ config, onChange, errors = {} }) => {
   const { t } = useAppTranslation();
@@ -71,68 +45,55 @@ const VolumeConfig = ({ config, onChange, errors = {} }) => {
     provisioner: 'kubernetes.io/no-provisioner'
   });
   const [showStoragePreview, setShowStoragePreview] = useState(false);
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [snackbarVariant, setSnackbarVariant] = useState('success');
-  const [isCreatingDirectory, setIsCreatingDirectory] = useState(false);
-  const [storageConfig, setStorageConfig] = useState({
-    storageClassYaml: '',
-    persistentVolumeYaml: ''
-  });
+  const [creatingDirectory, setCreatingDirectory] = useState({});
+  const [directoryMessage, setDirectoryMessage] = useState({});
 
   // Load existing configuration when component mounts
   useEffect(() => {
     const loadStorageConfig = async () => {
+      if (!config?.name || !config?.version) {
+        logger.info('No deployment name or version provided');
+        return;
+      }
+
       try {
-        if (!config?.name || !config?.version) {
-          logger.info('No deployment name or version provided');
-          return;
-        }
-
-        const response = await podDeploymentService.getStorageConfig(
-          config.name,
-          config.version
-        );
-
+        setLoading(true);
+        logger.info('Loading storage configuration for:', config.name, config.version);
+        
+        const response = await podDeploymentService.getStorageConfig(config.name, config.version);
         logger.info('Loaded storage configuration:', response);
 
-        // 解析 YAML 配置
-        if (response?.persistentVolumeYaml) {
-          const pvConfig = YAML.parse(response.persistentVolumeYaml);
-          
-          // 提取節點選擇器信息
-          const nodeName = pvConfig?.spec?.nodeAffinity?.required
-            ?.nodeSelectorTerms?.[0]?.matchExpressions?.[0]?.values?.[0];
-          
-          logger.info('Selected node:', nodeName);
-
-          // 更新 persistentVolumes 狀態
-          if (pvConfig) {
-            const newPVs = [{
-              local: {
-                path: pvConfig.spec?.local?.path || ''
-              },
-              nodeAffinity: pvConfig.spec?.nodeAffinity || {
-                required: {
-                  nodeSelectorTerms: [{
-                    matchExpressions: [{
-                      key: 'kubernetes.io/hostname',
-                      operator: 'In',
-                      values: [nodeName]
-                    }]
-                  }]
-                }
-              }
-            }];
-
-            setPersistentVolumes(newPVs);
-          }
+        // Set storage class visibility if it exists
+        if (response.storageClassYaml) {
+          setShowStorageClass(true);
         }
 
-        setStorageConfig(response);
+        // Parse and set persistent volumes if they exist
+        if (response.persistentVolumeYaml) {
+          const pvDocs = YAML.parseAllDocuments(response.persistentVolumeYaml);
+          const pvConfigs = pvDocs.map(doc => doc.toJSON()).filter(Boolean);
+          
+          const formattedPVs = pvConfigs.map(pv => ({
+            name: pv.metadata.name,
+            labels: pv.metadata.labels || { type: 'local' },
+            capacity: pv.spec.capacity,
+            volumeMode: pv.spec.volumeMode,
+            accessModes: pv.spec.accessModes,
+            persistentVolumeReclaimPolicy: pv.spec.persistentVolumeReclaimPolicy,
+            storageClassName: pv.spec.storageClassName,
+            local: pv.spec.local,
+            nodeAffinity: pv.spec.nodeAffinity
+          }));
+
+          setPersistentVolumes(formattedPVs);
+        }
       } catch (error) {
-        logger.error('Failed to load storage config:', error);
-        setError(error.message);
+        if (error.response?.status !== 404) {
+          console.error('Failed to load storage configuration:', error);
+          setError(t('podDeployment:errors.failedToLoadStorage'));
+        }
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -203,14 +164,63 @@ const VolumeConfig = ({ config, onChange, errors = {} }) => {
     fetchNodes();
   }, []);
 
+  // 初始化持久卷的默認結構
+  const handleAddPersistentVolume = () => {
+    setPersistentVolumes([
+      ...persistentVolumes,
+      {
+        name: `${config.name}-pv-${persistentVolumes.length + 1}`,
+        local: {
+          path: ''
+        },
+        capacity: {
+          storage: ''
+        },
+        volumeMode: 'Filesystem',
+        accessModes: ['ReadWriteOnce'],
+        persistentVolumeReclaimPolicy: 'Retain',
+        nodeAffinity: {
+          required: {
+            nodeSelectorTerms: [{
+              matchExpressions: [{
+                key: 'kubernetes.io/hostname',
+                operator: 'In',
+                values: ['']
+              }]
+            }]
+          }
+        }
+      }
+    ]);
+  };
+
+  // 處理持久卷字段變更
+  const handlePVChange = (index, field, value) => {
+    const newPVs = [...persistentVolumes];
+    
+    // 根據字段路徑更新值
+    switch (field) {
+      case 'path':
+        newPVs[index].local.path = value;
+        break;
+      case 'capacity':
+        newPVs[index].capacity.storage = value;
+        break;
+      case 'nodeSelector':
+        newPVs[index].nodeAffinity.required.nodeSelectorTerms[0].matchExpressions[0].values = [value];
+        break;
+      default:
+        newPVs[index][field] = value;
+    }
+    
+    setPersistentVolumes(newPVs);
+  };
+
   // 驗證容量式的函數
   const validateStorageCapacity = (value) => {
-    if (!value) {
-      return t('podDeployment:errors.storageRequired');
-    }
     const regex = /^[1-9][0-9]*[KMGT]i$/;
     if (!regex.test(value)) {
-      return t('podDeployment:errors.invalidStorageFormat');
+      return 'Invalid format. Must be a number followed by Ki, Mi, Gi, or Ti (e.g., 1Gi, 500Mi)';
     }
 
     const size = parseInt(value.replace(/[KMGT]i$/, ''));
@@ -224,91 +234,10 @@ const VolumeConfig = ({ config, onChange, errors = {} }) => {
     };
 
     if (size > maxSizes[unit]) {
-      return t('podDeployment:errors.storageTooLarge', { max: maxSizes[unit], unit });
+      return `Size too large. Maximum allowed is ${maxSizes[unit]}${unit}`;
     }
 
     return '';
-  };
-
-  // 驗證持久卷名稱的函數
-  const validatePVName = (name) => {
-    const regex = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/;
-    if (!name) {
-      return t('podDeployment:errors.pvNameRequired');
-    }
-    if (!regex.test(name)) {
-      return t('podDeployment:errors.pvNameInvalid');
-    }
-    if (name.length > 253) {
-      return t('podDeployment:errors.pvNameTooLong');
-    }
-    return '';
-  };
-
-  // 驗證路徑的函數
-  const validatePath = (path) => {
-    if (!path) {
-      return t('podDeployment:errors.pathRequired');
-    }
-    if (!path.startsWith('/')) {
-      return t('podDeployment:errors.pathMustStartWithSlash');
-    }
-    return '';
-  };
-
-  // 驗證節點選擇器的函數
-  const validateNodeSelector = (node) => {
-    if (!node) {
-      return t('podDeployment:errors.nodeSelectorRequired');
-    }
-    return '';
-  };
-
-  // 驗證所有持久卷
-  const validatePersistentVolumes = () => {
-    if (persistentVolumes.length === 0) {
-      return true;
-    }
-
-    const errors = {};
-    let isValid = true;
-
-    persistentVolumes.forEach((pv, index) => {
-      // Validate name
-      const nameError = validatePVName(pv.name);
-      if (nameError) {
-        errors[`pv${index}name`] = nameError;
-        isValid = false;
-      }
-
-      // Validate path
-      const pathError = validatePath(pv.local.path);
-      if (pathError) {
-        errors[`pv${index}path`] = pathError;
-        isValid = false;
-      }
-
-      // Validate capacity
-      const capacityError = validateStorageCapacity(pv.capacity.storage);
-      if (capacityError) {
-        errors[`pv${index}Capacity`] = capacityError;
-        isValid = false;
-      }
-
-      // Validate node selector
-      const nodeSelectorValue = pv.nodeAffinity?.required?.nodeSelectorTerms?.[0]?.matchExpressions?.[0]?.values?.[0];
-      const nodeSelectorError = validateNodeSelector(nodeSelectorValue);
-      if (nodeSelectorError) {
-        errors[`pv${index}nodeSelector`] = nodeSelectorError;
-        isValid = false;
-      }
-    });
-
-    setLocalErrors(errors);
-    if (!isValid) {
-      setError(t('podDeployment:errors.invalidPersistentVolumes'));
-    }
-    return isValid;
   };
 
   // 處理容量值變更 - 只在輸入時更新值
@@ -339,111 +268,6 @@ const VolumeConfig = ({ config, onChange, errors = {} }) => {
     }
   };
 
-  // 處理路徑變更
-  const handlePathChange = async (index, path) => {
-    try {
-      // 驗證和清理路徑
-      const sanitizedPath = validateAndSanitizePath(path);
-      
-      // 獲取當前選擇的節點
-      const selectedNode = persistentVolumes[index].nodeAffinity?.required
-        ?.nodeSelectorTerms?.[0]?.matchExpressions?.[0]?.values?.[0];
-      
-      if (selectedNode && sanitizedPath) {
-        // 創建目錄
-        await podDeploymentService.createHostDirectory(selectedNode, sanitizedPath);
-        
-        // 更新 UI
-        setSnackbarMessage(t('podDeployment:messages.hostDirectoryCreated'));
-        setSnackbarVariant('success');
-        setSnackbarOpen(true);
-      }
-    } catch (error) {
-      console.error('Failed to create host directory:', error);
-      setSnackbarMessage(
-        error.message || t('podDeployment:errors.hostDirectoryCreationFailed')
-      );
-      setSnackbarVariant('error');
-      setSnackbarOpen(true);
-    }
-  };
-
-  // 處理持久卷字段變更
-  const handlePVChange = async (index, field, value) => {
-    setPersistentVolumes(prevVolumes => {
-      const newVolumes = [...prevVolumes];
-      const volume = { ...newVolumes[index] };
-      
-      if (field === 'nodeSelector') {
-        // Special handling for node selector
-        volume.nodeAffinity = {
-          required: {
-            nodeSelectorTerms: [{
-              matchExpressions: [{
-                key: 'kubernetes.io/hostname',
-                operator: 'In',
-                values: [value]
-              }]
-            }]
-          }
-        };
-      } else if (field.includes('.')) {
-        const [parent, child] = field.split('.');
-        volume[parent] = volume[parent] || {};
-        volume[parent][child] = value;
-      } else {
-        volume[field] = value;
-      }
-      
-      newVolumes[index] = volume;
-      return newVolumes;
-    });
-
-    // Trigger directory creation if both path and node are available
-    const currentVolume = persistentVolumes[index];
-    const path = currentVolume.local?.path;
-    const nodeName = field === 'nodeSelector' ? value : 
-      currentVolume.nodeAffinity?.required?.nodeSelectorTerms?.[0]?.matchExpressions?.[0]?.values?.[0];
-
-    if (path && nodeName) {
-      try {
-        await handleCreateDirectory(index);
-      } catch (error) {
-        console.error('Failed to create directory:', error);
-      }
-    }
-  };
-
-  // Save to deploy-scripts folder when navigating
-  const handleNext = async () => {
-    try {
-      // Only validate if there are persistent volumes
-      if (persistentVolumes.length > 0) {
-        const isValid = validatePersistentVolumes();
-        if (!isValid) {
-          return false;
-        }
-      }
-
-      const deployScriptsPath = path.join('deploymentTemplate', config.name, 'deploy-scripts');
-      const combinedYaml = generatePreview();
-      
-      if (combinedYaml) {
-        await podDeploymentService.saveDeployScript(
-          config.name,
-          config.version,
-          'storage.yaml',
-          combinedYaml
-        );
-      }
-      return true;
-    } catch (error) {
-      console.error('Failed to save deploy script:', error);
-      setError(t('podDeployment:errors.failedToSaveDeployScript'));
-      return false;
-    }
-  };
-
   // 生成 StorageClass YAML
   const generateStorageClassYaml = () => {
     if (!showStorageClass) return '';
@@ -458,13 +282,11 @@ volumeBindingMode: WaitForFirstConsumer
 allowVolumeExpansion: false`;
   };
 
-  // 生成持久卷的 YAML
+  // 生成 PersistentVolume YAML
   const generatePersistentVolumeYaml = () => {
-    return persistentVolumes.map(pv => {
-      // Ensure capacity object exists
-      const capacity = pv.capacity || { storage: '1Gi' };
-      
-      return `apiVersion: v1
+    if (!persistentVolumes.length) return '';
+    
+    return persistentVolumes.map(pv => `apiVersion: v1
 kind: PersistentVolume
 metadata:
   name: ${pv.name}
@@ -472,7 +294,7 @@ metadata:
     type: local
 spec:
   capacity:
-    storage: ${capacity.storage}
+    storage: ${pv.capacity.storage}
   volumeMode: ${pv.volumeMode}
   accessModes:
     - ${pv.accessModes[0]}
@@ -487,8 +309,7 @@ spec:
         - key: kubernetes.io/hostname
           operator: In
           values:
-          - ${pv.nodeAffinity.required.nodeSelectorTerms[0].matchExpressions[0].values[0]}`;
-    }).join('\n---\n');
+          - ${pv.nodeAffinity.required.nodeSelectorTerms[0].matchExpressions[0].values[0]}`).join('\n---\n');
   };
 
   // 生成完整的預覽 YAML
@@ -555,64 +376,6 @@ spec:
     return yamlContent;
   };
 
-  // 處理存儲類配置變更
-  const handleStorageConfigChange = (field, value) => {
-    const updatedConfig = {
-      ...config,
-      yamlTemplate: {
-        ...config.yamlTemplate,
-        placeholders: {
-          ...config.yamlTemplate?.placeholders,
-          [field]: value
-        }
-      }
-    };
-    onChange(updatedConfig);
-  };
-
-  // 處理添加持久卷
-  const handleAddPersistentVolume = () => {
-    setPersistentVolumes([
-      ...persistentVolumes,
-      {
-        name: `${config.name}-pv-${persistentVolumes.length + 1}`,
-        local: {
-          path: ''
-        },
-        capacity: {
-          storage: '1Gi'  // Set a default value
-        },
-        volumeMode: 'Filesystem',
-        accessModes: ['ReadWriteOnce'],
-        persistentVolumeReclaimPolicy: 'Retain',
-        nodeAffinity: {
-          required: {
-            nodeSelectorTerms: [{
-              matchExpressions: [{
-                key: 'kubernetes.io/hostname',
-                operator: 'In',
-                values: ['']
-              }]
-            }]
-          }
-        }
-      }
-    ]);
-  };
-
-  // 處理刪除持久卷
-  const handleDeletePersistentVolume = (index) => {
-    const newPVs = persistentVolumes.filter((_, i) => i !== index);
-    setPersistentVolumes(newPVs);
-
-    // 如果刪除後沒有持久卷，可能需要更新相關狀態
-    if (newPVs.length === 0) {
-      // 可選：在沒有 PV 時自動刪除存儲類
-      // setShowStorageClass(false);
-    }
-  };
-
-  // 處理創建存儲類
   const handleCreateStorageClass = async () => {
     try {
       setLoading(true);
@@ -645,7 +408,7 @@ spec:
     }
   };
 
-  // 處理刪除存儲類
+  // Delete storage class and PV files
   const handleDeleteStorageClass = async () => {
     try {
       setLoading(true);
@@ -664,17 +427,108 @@ spec:
     }
   };
 
+  // Save to deploy-scripts folder when navigating
+  const handleNext = async () => {
+    try {
+      const deployScriptsPath = path.join('deploymentTemplate', config.name, 'deploy-scripts');
+      const combinedYaml = generatePreview();
+      
+      if (combinedYaml) {
+        await podDeploymentService.saveDeployScript(
+          config.name,
+          config.version,
+          'storage.yaml',
+          combinedYaml
+        );
+      }
+    } catch (error) {
+      console.error('Failed to save deploy script:', error);
+      setError(t('podDeployment:errors.failedToSaveDeployScript'));
+    }
+  };
+
   // 從模板中獲取預設
   const defaultValues = config.yamlTemplate?.defaultValues || {};
   const placeholders = config.yamlTemplate?.placeholders || {};
 
+  // 處理存儲類配置變更
+  const handleStorageConfigChange = (field, value) => {
+    const updatedConfig = {
+      ...config,
+      yamlTemplate: {
+        ...config.yamlTemplate,
+        placeholders: {
+          ...config.yamlTemplate?.placeholders,
+          [field]: value
+        }
+      }
+    };
+    onChange(updatedConfig);
+  };
+
+  // 修改 handleCreateDirectory 函數
+  const handleCreateDirectory = async (index, nodeName, path) => {
+    if (!nodeName || !path) {
+      setDirectoryMessage({
+        ...directoryMessage,
+        [index]: {
+          type: 'error',
+          message: t('podDeployment:podDeployment.volume.selectNodeAndPath')
+        }
+      });
+      return;
+    }
+
+    try {
+      setCreatingDirectory({ ...creatingDirectory, [index]: true });
+      
+      await podDeploymentService.createHostDirectory(nodeName, path, {
+        recursive: true,
+        mode: '0755'
+      });
+
+      setDirectoryMessage({
+        ...directoryMessage,
+        [index]: {
+          type: 'success',
+          message: t('podDeployment:podDeployment.volume.directoryCreated')
+        }
+      });
+    } catch (error) {
+      console.error('Failed to create directory:', error);
+      
+      // 處理離線環境的錯誤
+      const message = error.message.includes('離線環境')
+        ? t('podDeployment:podDeployment.volume.offlineEnvironmentError')
+        : error.message || t('podDeployment:podDeployment.volume.createDirectoryError');
+
+      setDirectoryMessage({
+        ...directoryMessage,
+        [index]: {
+          type: 'warning', // 使用警告而不是錯誤，因為這可能是預期的情況
+          message
+        }
+      });
+    } finally {
+      setCreatingDirectory({ ...creatingDirectory, [index]: false });
+    }
+  };
+
   // 在 UI 中渲染持久卷字段
   const renderPersistentVolumeFields = (pv, index) => {
     const pvId = `pv-${index}`;
-    const nodeName = pv.nodeAffinity?.required?.nodeSelectorTerms?.[0]?.matchExpressions?.[0]?.values?.[0];
     
     return (
-      <Paper sx={{ p: 2, mb: 2 }} key={pvId}>
+      <Paper 
+        key={index} 
+        elevation={0} 
+        sx={{ 
+          p: 2, 
+          mb: 2, 
+          border: '1px solid',
+          borderColor: 'divider'
+        }}
+      >
         <Grid container spacing={2}>
           <Grid item xs={12} display="flex" justifyContent="space-between" alignItems="center">
             <Typography variant="subtitle2">
@@ -702,38 +556,33 @@ spec:
           </Grid>
           
           <Grid item xs={12} sm={6}>
-            <Box sx={{ display: 'flex', gap: 1 }}>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
               <TextField
                 id={`${pvId}-path`}
                 name={`${pvId}-path`}
                 fullWidth
                 label={t('podDeployment:podDeployment.volume.hostPath')}
-                value={pv.local?.path || ''}
-                onChange={(e) => handlePVChange(index, 'local.path', e.target.value)}
+                value={pv.local.path}
+                onChange={(e) => handlePVChange(index, 'path', e.target.value)}
                 placeholder="/data/path"
-                error={!!localErrors[`pv${index}path`]}
-                helperText={localErrors[`pv${index}path`]}
+                error={!!directoryMessage[index]?.type === 'error'}
+                helperText={directoryMessage[index]?.message}
               />
               <LoadingButton
                 variant="contained"
-                color="primary"
-                size="small"
-                onClick={() => handleCreateDirectory(index)}
-                loading={isCreatingDirectory}
-                disabled={!pv.local?.path || !nodeName}
-                sx={{ 
-                  minWidth: 'auto',
-                  height: '56px',
-                  width: '56px'
-                }}
-                title={t('podDeployment:podDeployment.volume.createDirectory')}
+                size="medium"
+                startIcon={<CreateNewFolderIcon />}
+                loading={creatingDirectory[index]}
+                onClick={() => handleCreateDirectory(
+                  index,
+                  pv.nodeAffinity?.required?.nodeSelectorTerms?.[0]?.matchExpressions?.[0]?.values?.[0],
+                  pv.local.path
+                )}
+                sx={{ mt: 1 }}
               >
-                <CreateNewFolderIcon />
+                {t('podDeployment:podDeployment.volume.createDir')}
               </LoadingButton>
             </Box>
-            <FormHelperText>
-              {t('podDeployment:podDeployment.volume.hostPathHelp')}
-            </FormHelperText>
           </Grid>
           
           <Grid item xs={12} sm={6}>
@@ -742,11 +591,10 @@ spec:
               name={`${pvId}-capacity`}
               fullWidth
               label={t('podDeployment:podDeployment.volume.capacity')}
-              value={pv?.capacity?.storage || ''}
-              onChange={(e) => handleCapacityChange(index, e.target.value)}
+              value={pv.capacity.storage}
+              onChange={(e) => handlePVChange(index, 'capacity', e.target.value)}
               placeholder="10Gi"
               helperText={t('podDeployment:podDeployment.volume.capacityHelp')}
-              onBlur={(e) => handleCapacityBlur(index, e.target.value)}
             />
           </Grid>
           
@@ -818,45 +666,15 @@ spec:
     );
   };
 
-  // 添加目錄創建處理函數
-  const handleCreateDirectory = async (index) => {
-    const pv = persistentVolumes[index];
-    const nodeName = pv.nodeAffinity?.required?.nodeSelectorTerms?.[0]?.matchExpressions?.[0]?.values?.[0];
-    const path = pv.local?.path;
+  // 添加刪除持久卷的處理函數
+  const handleDeletePersistentVolume = (index) => {
+    const newPVs = persistentVolumes.filter((_, i) => i !== index);
+    setPersistentVolumes(newPVs);
 
-    if (!nodeName || !path) {
-      setSnackbarMessage(t('podDeployment:errors.nodeAndPathRequired'));
-      setSnackbarVariant('error');
-      setSnackbarOpen(true);
-      return;
-    }
-
-    try {
-      setIsCreatingDirectory(true);
-      logger.info('Creating directory:', { nodeName, path });
-
-      const result = await podDeploymentService.createHostDirectory(nodeName, path, {
-        recursive: true,
-        mode: '0755',
-        owner: '1000:1000'
-      });
-
-      logger.info('Directory created:', result);
-
-      setSnackbarMessage(t('podDeployment:messages.directoryCreated'));
-      setSnackbarVariant('success');
-      setSnackbarOpen(true);
-
-    } catch (error) {
-      logger.error('Failed to create directory:', error);
-      setSnackbarMessage(
-        error.message || t('podDeployment:errors.failedToCreateDirectory')
-      );
-      setSnackbarVariant('error');
-      setSnackbarOpen(true);
-
-    } finally {
-      setIsCreatingDirectory(false);
+    // 如果刪除後沒有持久卷，可能需要更新相關狀態
+    if (newPVs.length === 0) {
+      // 可選：在沒有 PV 時自動刪除存儲類
+      // setShowStorageClass(false);
     }
   };
 
@@ -1112,35 +930,20 @@ spec:
         </DialogActions>
       </Dialog>
 
-      {/* Snackbar 用於顯示操作結果 */}
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={6000}
-        onClose={() => setSnackbarOpen(false)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert 
-          onClose={() => setSnackbarOpen(false)} 
-          severity={snackbarVariant}
-          variant="filled"
-          sx={{ width: '100%' }}
-        >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
+      {/* ... 其他對話框和組件 ... */}
     </Box>
   );
 };
 
-// PropTypes 定義
+// 添加 propTypes
 VolumeConfig.propTypes = {
   config: PropTypes.shape({
     name: PropTypes.string,
-    version: PropTypes.string,
-    persistentVolumes: PropTypes.array
+    version: PropTypes.string
   }),
   onChange: PropTypes.func.isRequired,
-  errors: PropTypes.object
+  errors: PropTypes.object,
+  onNext: PropTypes.func
 };
 
 export default VolumeConfig; 

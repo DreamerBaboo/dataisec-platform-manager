@@ -506,7 +506,7 @@ class K8sService {
     }
   }
 
-  // Persistent Volume 相關方法
+  // Persistent Volume 相關法
   async createPersistentVolume(name, spec) {
     try {
       const persistentVolume = {
@@ -761,12 +761,13 @@ class K8sService {
 
   async executeCommand(command) {
     try {
-      console.log('🎮 Executing kubectl command:', command);
-      const { stdout, stderr } = await exec(`kubectl ${command}`);
-      return { stdout, stderr };
+      const { stdout, stderr } = await execAsync(`kubectl ${command}`);
+      if (stderr) {
+        console.warn('Command stderr:', stderr);
+      }
+      return stdout;
     } catch (error) {
-      console.error('❌ kubectl command failed:', error);
-      throw new Error(`kubectl command execution failed: ${error.message}`);
+      throw new Error(`Command execution failed: ${error.message}`);
     }
   }
 
@@ -778,79 +779,124 @@ class K8sService {
         throw new Error('Directory path must be absolute (start with /)');
       }
 
-      // 創建一個臨時 Pod 來執行 mkdir 命令
-      const podManifest = {
-        apiVersion: 'v1',
-        kind: 'Pod',
-        metadata: {
-          name: `mkdir-${Math.random().toString(36).substring(7)}`,
-          namespace: 'dataisec'
-        },
-        spec: {
-          serviceAccountName: 'dataisec-platform-sa',
-          nodeSelector: {
-            'kubernetes.io/hostname': nodeName
+      const localRegistryImage = process.env.LOCAL_REGISTRY_BUSYBOX_IMAGE || 'busybox:latest';
+      const debugPodName = `node-debugger-${Math.random().toString(36).substr(2, 9)}`;
+      
+      try {
+        console.log(`Creating directory ${directoryPath} on node ${nodeName} using image ${localRegistryImage}`);
+        
+        // 簡化 Pod 配置
+        const podManifest = {
+          apiVersion: 'v1',
+          kind: 'Pod',
+          metadata: {
+            name: debugPodName,
+            namespace: 'dataisec'
           },
-          initContainers: [{
-            name: 'pull-check',
-            image: k8sConfig.images.busyboxImage,
-            command: ['/bin/sh', '-c', 'exit 0'] // 檢查映像是否存在
-          }],
-          containers: [{
-            name: 'mkdir',
-            image: k8sConfig.images.busyboxImage,
-            imagePullPolicy: 'IfNotPresent', // 只在映像不存在時才拉取
-            command: ['/bin/sh', '-c', `mkdir -p ${directoryPath} && chmod 777 ${directoryPath}`],
-            securityContext: {
-              privileged: true
-            },
-            volumeMounts: [{
+          spec: {
+            nodeName: nodeName,
+            containers: [{
+              name: 'directory-creator',
+              image: localRegistryImage,
+              imagePullPolicy: 'IfNotPresent',
+              command: ['sh', '-c'],
+              args: [`set -x; mkdir -p ${directoryPath} && chmod 777 ${directoryPath} && ls -ld ${directoryPath}`],
+              securityContext: {
+                privileged: true,
+                runAsUser: 0
+              },
+              volumeMounts: [{
+                name: 'host-root',
+                mountPath: directoryPath,
+                subPath: directoryPath.substring(1) // 移除開頭的 '/'
+              }]
+            }],
+            volumes: [{
               name: 'host-root',
-              mountPath: '/',
-              subPath: '.'
-            }]
-          }],
-          volumes: [{
-            name: 'host-root',
-            hostPath: {
-              path: '/'
+              hostPath: {
+                path: '/',
+                type: 'Directory'
+              }
+            }],
+            restartPolicy: 'Never',
+            serviceAccountName: 'dataisec-platform-sa'
+          }
+        };
+
+        // 創建 Pod
+        console.log('Creating pod with manifest:', JSON.stringify(podManifest, null, 2));
+        const createdPod = await this.k8sApi.createNamespacedPod('dataisec', podManifest);
+        console.log('Pod created:', createdPod.body.metadata.name);
+
+        // 等待 Pod 完成
+        let podStatus = '';
+        let retries = 30;
+        let lastLogs = '';
+
+        while (retries > 0) {
+          const pod = await this.k8sApi.readNamespacedPod(debugPodName, 'dataisec');
+          podStatus = pod.body.status.phase;
+          console.log(`Pod status: ${podStatus}`);
+
+          try {
+            const logs = await this.k8sApi.readNamespacedPodLog(debugPodName, 'dataisec');
+            lastLogs = logs.body;
+            console.log('Current logs:', lastLogs);
+          } catch (logError) {
+            console.warn('Warning: Could not get logs yet');
+          }
+
+          if (podStatus === 'Succeeded' || podStatus === 'Failed') {
+            break;
+          }
+
+          // 檢查容器狀態
+          const containerStatuses = pod.body.status.containerStatuses;
+          if (containerStatuses && containerStatuses[0]) {
+            const state = containerStatuses[0].state;
+            if (state.terminated) {
+              if (state.terminated.exitCode !== 0) {
+                throw new Error(`Container failed with exit code ${state.terminated.exitCode}: ${lastLogs}`);
+              }
+              break;
             }
-          }],
-          restartPolicy: 'Never'
+          }
+
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          retries--;
         }
-      };
 
-      // 創建 Pod
-      await this.k8sApi.createNamespacedPod('dataisec', podManifest);
-
-      // 等待 Pod 完成
-      let podStatus = '';
-      let retries = 30; // 最多等待 30 秒
-      while (retries > 0) {
-        const pod = await this.k8sApi.readNamespacedPod(podManifest.metadata.name, 'dataisec');
-        podStatus = pod.body.status.phase;
-        if (podStatus === 'Succeeded' || podStatus === 'Failed') {
-          break;
+        if (retries === 0) {
+          throw new Error('Timeout waiting for pod completion');
         }
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        retries--;
+
+        if (podStatus === 'Failed') {
+          throw new Error(`Pod failed: ${lastLogs}`);
+        }
+
+        return {
+          success: true,
+          message: `Directory ${directoryPath} created on node ${nodeName}`,
+          logs: lastLogs
+        };
+
+      } catch (innerError) {
+        console.error('Error during pod execution:', innerError);
+        throw new Error(`Failed to execute pod: ${innerError.message}`);
+      } finally {
+        // 清理 Pod
+        try {
+          console.log(`Cleaning up pod ${debugPodName}`);
+          await this.k8sApi.deleteNamespacedPod(debugPodName, 'dataisec', {
+            gracePeriodSeconds: 0
+          });
+        } catch (cleanupError) {
+          console.warn('Warning: Failed to cleanup pod:', cleanupError);
+        }
       }
-
-      // 檢查結果
-      if (podStatus === 'Failed') {
-        throw new Error('Failed to create directory on node');
-      }
-
-      // 清理 Pod
-      await this.k8sApi.deleteNamespacedPod(podManifest.metadata.name, 'dataisec');
-
-      return {
-        success: true,
-        message: `Directory ${directoryPath} created on node ${nodeName}`
-      };
     } catch (error) {
       console.error('Failed to create directory on node:', error);
-      throw error;
+      throw new Error(`Failed to create directory: ${error.message}`);
     }
   }
 }

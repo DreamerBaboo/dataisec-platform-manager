@@ -394,7 +394,6 @@ export const podDeploymentService = {
   // Create host directory for persistent volume
   async createHostDirectory(nodeName, path, options = {}) {
     try {
-      // 1. 輸入驗證
       if (!nodeName?.trim()) {
         throw new Error('Node name is required');
       }
@@ -402,40 +401,30 @@ export const podDeploymentService = {
         throw new Error('Directory path is required');
       }
 
-      // 2. 路徑驗證和清理
       const sanitizedPath = this.sanitizePath(path);
-
-      // 3. 構建請求數據
-      const requestData = {
-        path: sanitizedPath,
-        mode: options.mode || '0755',
-        recursive: options.recursive !== false,
-        owner: options.owner || '1000:1000' // 默認用戶和組 ID
-      };
 
       logger.info('📁 Creating host directory:', { 
         nodeName, 
         path: sanitizedPath,
-        options: requestData 
+        options 
       });
 
-      // 4. 發送請求
       const response = await axios.post(
         `${API_URL}/api/k8s/nodes/${nodeName}/directories`,
-        requestData,
+        {
+          path: sanitizedPath,
+          mode: options.mode || '0755',
+          recursive: options.recursive !== false,
+        },
         getAuthHeaders()
       );
 
-      // 5. 驗證響應
       if (!response.data?.success) {
         throw new Error(response.data?.message || 'Failed to create directory');
       }
 
-      logger.info('✅ Host directory created:', response.data);
       return response.data;
-
     } catch (error) {
-      // 6. 錯誤處理
       logger.error('❌ Failed to create host directory:', {
         error,
         nodeName,
@@ -443,15 +432,19 @@ export const podDeploymentService = {
         details: error.response?.data
       });
 
-      // 7. 轉換錯誤
-      const errorResponse = {
+      const errorMessage = error.response?.data?.message || error.message;
+      const isRegistryError = errorMessage.includes('local registry');
+
+      if (isRegistryError) {
+        throw new Error('無法從本地倉庫拉取映像。請確保本地倉庫中有所需的 busybox 映像。');
+      }
+
+      throw {
         success: false,
         message: this.getDirectoryErrorMessage(error),
         path,
         node: nodeName
       };
-
-      throw errorResponse;
     }
   },
 
@@ -511,7 +504,13 @@ export const podDeploymentService = {
     }
 
     return error.message || 'Unknown error occurred';
-  }
+  },
+
+  // // 添加創建目錄的方法
+  // async createDirectory(directoryData) {
+  //   const response = await axios.post('/api/pod-deployment/create-directory', directoryData);
+  //   return response.data;
+  // }
 };
 
 export default podDeploymentService;

@@ -6,14 +6,14 @@ metadata:
     type: local
 spec:
   capacity:
-    storage: null
+    storage: 10Gi
   volumeMode: Filesystem
   accessModes:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
   storageClassName: opensearch-master-storageclass
   local:
-    path: /data/dataisec-3
+    path: /data/dataisec1
   nodeAffinity:
     required:
       nodeSelectorTerms:

@@ -266,7 +266,10 @@
       "provisioner": "提供者",
       "createDirectory": "創建目錄",
       "hostPathHelp": "輸入主機路徑並點擊按鈕創建目錄",
-      "directoryCreated": "目錄創建成功"
+      "directoryCreated": "目錄創建成功",
+      "createDir": "創建目錄",
+      "createDirectoryError": "創建目錄失敗",
+      "selectNodeAndPath": "請選擇節點和輸入路徑"
     },
     "configMaps": {
       "title": "配置映射",
@@ -721,7 +724,10 @@
       "preview": "預覽配置",
       "createDirectory": "創建目錄",
       "hostPathHelp": "輸入主機路徑並點擊按鈕創建目錄",
-      "directoryCreated": "目錄創建成功"
+      "directoryCreated": "目錄創建成功",
+      "createDir": "創建目錄",
+      "createDirectoryError": "創建目錄失敗",
+      "selectNodeAndPath": "請選擇節點和輸入路徑"
     },
     "messages": {
       "directoryCreated": "目錄創建成功"

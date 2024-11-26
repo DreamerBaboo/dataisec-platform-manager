@@ -11,17 +11,24 @@ metadata:
   name: dataisec-platform-role
 rules:
   - apiGroups: [""]
-    resources: ["pods", "pods/exec", "pods/log", "services", "configmaps", "secrets", "persistentvolumeclaims", "nodes"]
-    verbs: ["get", "list", "watch", "create", "delete"]
+    resources: ["pods", "pods/exec", "pods/log", "services", "configmaps", "secrets", "persistentvolumeclaims", "nodes", "persistentvolumes"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["storageclasses"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
   - apiGroups: ["apps"]
     resources: ["deployments"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
   - apiGroups: [""]
-    resources: ["pods/exec", "pods/log"]
-    verbs: ["get", "list", "create"]
+    resources: ["pods", "pods/exec", "pods/log", "pods/attach", "pods/portforward"]
+    verbs: ["get", "list", "create", "delete", "patch", "update", "watch"]
   - apiGroups: [""]
-    resources: ["nodes/proxy"]
-    verbs: ["get", "list", "watch"]
+    resources: ["nodes", "nodes/proxy", "nodes/status", "nodes/log"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["security.openshift.io"]
+    resources: ["securitycontextconstraints"]
+    verbs: ["use"]
+    resourceNames: ["privileged"]
   - apiGroups: [""]
     resources: ["namespaces"]
     verbs: ["get", "list", "watch", "create"]
@@ -32,20 +39,14 @@ rules:
     resources: ["jobs", "cronjobs"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
   - apiGroups: [""]
-    resources: ["nodes/proxy", "pods/attach", "pods/exec", "pods/portforward", "pods/proxy"]
-    verbs: ["create", "delete", "deletecollection", "patch", "update", "get", "list", "watch"]
-  - apiGroups: [""]
-    resources: ["nodes/debug"]
-    verbs: ["create", "get", "list", "delete"]
-  - apiGroups: [""]
     resources: ["events"]
     verbs: ["get", "list", "watch"]
   - apiGroups: ["metrics.k8s.io"]
     resources: ["pods", "nodes"]
     verbs: ["get", "list", "watch"]
   - apiGroups: [""]
-    resources: ["pods"]
-    verbs: ["create", "delete", "get", "list", "watch"]
+    resources: ["hostpath"]
+    verbs: ["get", "create", "update", "patch", "delete"]
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -98,3 +99,4 @@ metadata:
     pod-security.kubernetes.io/enforce: privileged
     pod-security.kubernetes.io/audit: privileged
     pod-security.kubernetes.io/warn: privileged
+    security.openshift.io/scc.podSecurityLabelSync: "false"
