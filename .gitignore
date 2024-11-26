@@ -39,3 +39,6 @@ lerna-debug.log*
 .DS_Store
 Thumbs.db
 
+Package-script/dataisec-platform.tar
+*.tar
+deployment-templates.zip

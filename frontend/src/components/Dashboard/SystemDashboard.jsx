@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Box, Tabs, Tab, CircularProgress, IconButton, Tooltip, Paper, Alert } from '@mui/material';
+import { Box, Tabs, Tab, CircularProgress, IconButton, Tooltip, Paper, Alert, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import MetricsDisplay from './MetricsDisplay';
 import { useAppTranslation } from '../../hooks/useAppTranslation';
 import { api } from '../../utils/api';
 import { logger } from '../../utils/logger.ts';  // 使用命名導出
+import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
+import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 
 const REFRESH_INTERVAL = 60000; // 60 seconds
 
@@ -211,6 +213,20 @@ const SystemDashboard = () => {
     return { [selectedNode]: metrics[selectedNode] };  // 返回與原始數據結構一致的格式
   }, [selectedNode, metrics]);
 
+  // 添加 tabsRef 用於滾動控制
+  const tabsRef = useRef(null);
+
+  // 添加滾動控制函數
+  const handleScrollTabs = (direction) => {
+    if (tabsRef.current) {
+      const scrollAmount = 200; // 每次滾動的像素數
+      const container = tabsRef.current.querySelector('.MuiTabs-scroller');
+      if (container) {
+        container.scrollLeft += direction === 'left' ? -scrollAmount : scrollAmount;
+      }
+    }
+  };
+
   return (
     <Box sx={{ width: '94vw', height: '100%' }}>
       <Paper sx={{ width: '100%', height: '100%', p: 0 }}>
@@ -228,22 +244,65 @@ const SystemDashboard = () => {
           borderBottom: 1,
           borderColor: 'divider'
         }}>
-          <Box sx={{ flex: 1 }}>
+          {/* 添加左箭頭 */}
+          <IconButton 
+            onClick={() => handleScrollTabs('left')}
+            sx={{ 
+              display: { xs: 'flex', md: 'none' },
+              mr: 1
+            }}
+          >
+            <ArrowBackIosNewIcon />
+          </IconButton>
+
+          <Box sx={{ 
+            flex: 1,
+            position: 'relative',
+            '& .MuiTabs-root': {
+              minHeight: '48px',
+            }
+          }}>
             <Tabs
+              ref={tabsRef}
               value={selectedNode}
               onChange={(e, newValue) => setSelectedNode(newValue)}
               variant="scrollable"
-              scrollButtons="auto"
+              scrollButtons={false} // 禁用默認的滾動按鈕
+              sx={{
+                '& .MuiTabs-scroller': {
+                  overflow: 'hidden !important',
+                  scrollBehavior: 'smooth',
+                },
+                '& .MuiTabs-flexContainer': {
+                  gap: 1
+                }
+              }}
             >
               {nodes.map((node) => (
                 <Tab
                   key={node}
                   value={node}
                   label={node === 'cluster' ? t('dashboard:common.cluster') : node}
+                  sx={{
+                    minWidth: 'auto',
+                    px: 2,
+                    whiteSpace: 'nowrap'
+                  }}
                 />
               ))}
             </Tabs>
           </Box>
+
+          {/* 添加右箭頭 */}
+          <IconButton 
+            onClick={() => handleScrollTabs('right')}
+            sx={{ 
+              display: { xs: 'flex', md: 'none' },
+              ml: 1
+            }}
+          >
+            <ArrowForwardIosIcon />
+          </IconButton>
           
           <Box sx={{ 
             display: 'flex', 
@@ -283,8 +342,18 @@ const SystemDashboard = () => {
         </Box>
 
         {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-            <CircularProgress />
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: 'column',
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            p: 4,
+            minHeight: '200px'
+          }}>
+            <CircularProgress size={40} />
+            <Typography sx={{ mt: 2, color: 'text.secondary' }}>
+              {t('dashboard:messages.loadingMetrics')}
+            </Typography>
           </Box>
         ) : (
           <Box sx={{ p: 2 }}>

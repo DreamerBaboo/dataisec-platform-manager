@@ -130,8 +130,8 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
         }
         break;
         
-      case 7: // Namespace Quota
-        if (visibleSteps.namespaceQuota && !config.resourceQuota) {
+      case 8: // Namespace Quota
+        if (config.enableResourceQuota && !config.resourceQuota) {
           newErrors.resourceQuota = t('podDeployment:podDeployment.validation.resourceQuota.required');
         }
         break;
@@ -146,6 +146,23 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
       // 驗證當前步驟
       if (!validateStep(activeStep)) {
         return;
+      }
+
+      // 特殊處理 namespace quota 步驟
+      if (activeStep === 8) {
+        if (!deploymentConfig.enableResourceQuota) {
+          // 如果未啟用 quota，直接跳到下一步
+          setActiveStep(prevStep => prevStep + 1);
+          return;
+        }
+        // 如果啟用了 quota 但沒有設置值，不允許進入下一步
+        if (!deploymentConfig.resourceQuota) {
+          setErrors(prev => ({
+            ...prev,
+            resourceQuota: t('podDeployment:podDeployment.validation.resourceQuota.required')
+          }));
+          return;
+        }
       }
 
       // 保存當前配置
@@ -340,7 +357,7 @@ const StepperDeployment = ({ deployment, onSave, onCancel, onDeploy }) => {
     });
   }, [deploymentConfig, activeStep]);
 
-  // ��改版本監聽器
+  // 改版本監聽器
   useEffect(() => {
     const loadVersionConfig = async () => {
       if (!deploymentConfig.name || !deploymentConfig.version) return;

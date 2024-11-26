@@ -411,8 +411,18 @@ const ImageList = () => {
   };
 
   return (
-    <Box sx={{  height: '100%' }}>
-      <Paper sx={{ width: '94vw', height: '80vh', p: 2 }}>
+    <Box sx={{ 
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 2
+    }}>
+      <Paper sx={{ 
+        flex: 1,  // 讓 Paper 填充剩餘空間
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden' // 防止整個 Paper 滾動
+      }}>
         <Toolbar
           sx={{
             pl: { sm: 2 },
@@ -465,7 +475,24 @@ const ImageList = () => {
           </IconButton>
         </Toolbar>
 
-        <TableContainer sx={{ flex: 1, overflow: 'auto' }}>
+        <TableContainer sx={{ 
+          flex: 1,
+          overflow: 'auto', // 使表格容器可滾動
+          '&::-webkit-scrollbar': {
+            width: '0.4em',
+            height: '0.4em',
+          },
+          '&::-webkit-scrollbar-track': {
+            background: '#f1f1f1',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            background: '#888',
+            borderRadius: '4px',
+          },
+          '&::-webkit-scrollbar-thumb:hover': {
+            background: '#555',
+          },
+        }}>
           <Table stickyHeader size="small">
             <TableHead>
               <TableRow>
@@ -553,7 +580,13 @@ const ImageList = () => {
         </TableContainer>
       </Paper>
 
-      <Paper sx={{ p: 2, mt: 'auto' }}>
+      <Paper sx={{ 
+        p: 2,
+        position: 'sticky',
+        bottom: 0,
+        backgroundColor: 'background.paper',
+        zIndex: 1
+      }}>
         <Box sx={{ 
           display: 'flex', 
           justifyContent: 'space-between', 

@@ -8,7 +8,7 @@ fi
 
 # 設置默認映像名稱和標籤
 IMAGE_NAME="dataisec-platform"
-IMAGE_TAG="latest"
+IMAGE_TAG="0.2.0"
 
 # 構建多平台映像
 docker buildx build --platform linux/amd64,linux/arm64 -t dreamerbaboo/$IMAGE_NAME:$IMAGE_TAG --push .

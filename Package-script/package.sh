@@ -2,15 +2,16 @@
 
 # Create config.env
 cat > config.env << EOL
-NAMESPACE=dataisec-platform
-IMAGE_REGISTRY=your-registry
-IMAGE_TAG=latest
+NAMESPACE=dataisec
+IMAGE_REGISTRY=dataisec-platform
+IMAGE_TAG=0.2.0
 EOL
 
 # Create the package
 tar czf package.tar.gz \
-    k8s/* \
+    deploy-scripts/* \
     config.env \
+    dataisec-platform.tar \
     install.sh
 
 echo "Installation package created: package.tar.gz"
