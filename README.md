@@ -11,7 +11,7 @@ This project is a console application for a database activity monitoring system 
 - User profile management
 - Internationalization support (English and Chinese)
 - Dark and light mode
-- Multi-language support
+- Multi-language support (English and Chinese)
 
 ## Prerequisites
 
