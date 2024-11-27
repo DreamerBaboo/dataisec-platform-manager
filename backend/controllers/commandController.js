@@ -125,7 +125,7 @@ const getCommands = async (req, res) => {
           
           const baseFolder = isFinalInRoot ? '' : (isDeployment ? '' : 'deploy-scripts');
           const filePath = path.join(
-            './backend/deploymentTemplate',
+            '/app/deploymentTemplate',
             name,
             baseFolder,
             file
@@ -133,7 +133,7 @@ const getCommands = async (req, res) => {
           
           // 添加命名空間到命令中
           const command = isDeployment
-            ? `helm upgrade --install ${name} ./backend/deploymentTemplate/${name} -f ${filePath} --namespace ${namespace} --create-namespace`
+            ? `helm upgrade --install ${name} /app/deploymentTemplate/${name} -f ${filePath} --namespace ${namespace} --create-namespace`
             : `kubectl apply -f ${filePath} --namespace ${namespace}`;
 
           const descriptions = commandDescriptions[type] || {

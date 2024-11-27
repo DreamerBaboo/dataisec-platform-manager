@@ -11,4 +11,4 @@ IMAGE_NAME="dataisec-platform"
 IMAGE_TAG="0.2.0"
 
 # 構建多平台映像
-docker buildx build --platform linux/amd64,linux -t dreamerbaboo/$IMAGE_NAME:$IMAGE_TAG --push .
+docker buildx build --platform linux/amd64,linux -t $IMAGE_NAME:$IMAGE_TAG --load .
