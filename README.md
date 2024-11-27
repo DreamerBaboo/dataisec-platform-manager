@@ -25,20 +25,29 @@ This project is a console application for a database activity monitoring system 
 
 ```
 .
-├── frontend/               # React frontend application
-├── backend/               # Express backend application
-├── k8s/                   # Kubernetes and Helm configurations
-│   └── dataisec-platform/
-│       ├── templates/     # Helm templates
-│       └── values.yaml    # Helm values
-└── deploy.sh             # Deployment script
+├── frontend/                 # React frontend application
+│   ├── src/                 # Source code
+│   │   ├── components/      # React components
+│   │   ├── pages/          # Page components
+│   │   ├── services/       # API services
+│   │   └── utils/          # Utility functions
+├── backend/                 # Express backend application
+│   ├── controllers/        # Request handlers
+│   ├── routes/            # API routes
+│   ├── services/         # Business logic
+│   ├── models/          # Data models
+│   └── utils/          # Utility functions
+├── Package-script/      # Build and deployment scripts
+├── deployment.yaml     # Kubernetes deployment configuration
+├── docker-compose.yml  # Docker compose configuration
+└── build-*.sh         # Docker build scripts
 ```
 
 ## Development Setup
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/your-username/dataisec-platform-manager.git
+git clone http://192.168.170.12/scott.wang/dataisec-platform-manager/dataisec-platform-manager.git
 cd dataisec-platform-manager
 ```
 
@@ -67,6 +76,115 @@ cd frontend && npm run dev
 # Backend (http://localhost:3001)
 cd backend && npm run dev
 ```
+
+## Deployment Process
+
+### 1. Local Development Deployment
+1. Install dependencies:
+```bash
+npm run install:all
+```
+
+2. Configure environment variables:
+```bash
+cp .env_sample .env
+# Edit .env with your configurations
+```
+
+3. Start development servers:
+```bash
+npm run dev
+```
+
+### 2. Docker Deployment
+1. Build Docker images:
+```bash
+# For AMD64 architecture
+./build-docker-amd64-local.sh
+
+# For multi-platform build
+./build-multiplatform-docker.sh
+```
+
+2. Run with Docker Compose:
+```bash
+docker-compose up -d
+```
+
+### 3. Kubernetes Deployment
+1. Configure Kubernetes settings:
+```bash
+# Generate Kubernetes configurations
+./generate-config.sh
+
+# Review deployment configuration
+vim deployment.yaml
+```
+
+2. Deploy to Kubernetes:
+```bash
+# Using deploy script
+./deploy.sh
+
+# Or manually apply configurations
+kubectl apply -f deployment.yaml
+```
+
+3. Verify deployment:
+```bash
+kubectl get pods -n dataisec
+kubectl get svc -n dataisec
+```
+
+## Environment Variables Configuration
+
+### Required Environment Variables
+
+#### Backend Configuration
+```env
+# Server Configuration
+NODE_ENV=production
+PORT=3001
+API_BASE_URL=http://localhost:3001
+
+# JWT Configuration
+JWT_SECRET=<your-jwt-secret>
+JWT_EXPIRES_IN=24h
+
+# OpenSearch Configuration
+OPENSEARCH_URL=https://your-opensearch-host:9200
+OPENSEARCH_USERNAME=admin
+OPENSEARCH_PASSWORD=your-password
+OPENSEARCH_POD_METRICS_INDEX=metricbeat-*
+OPENSEARCH_LOGS_INDEX=filebeat-*
+
+# Kubernetes Configuration
+KUBECONFIG=/etc/kubernetes/admin.conf
+KUBERNETES_SERVICE_HOST=https://kubernetes.default.svc
+KUBERNETES_SERVICE_PORT=443
+```
+
+#### Frontend Configuration
+```env
+# Development
+VITE_API_BASE_URL=http://localhost:3001
+VITE_WS_PORT=3001
+
+# Production
+NODE_ENV=production
+```
+
+### Environment Setup Instructions
+
+1. Development Environment:
+   - Copy `.env_sample` to `.env`
+   - Update values according to your local setup
+   - Ensure OpenSearch and Kubernetes clusters are accessible
+
+2. Production Environment:
+   - Use Kubernetes secrets for sensitive values
+   - Configure environment variables through deployment.yaml
+   - Use service account tokens for Kubernetes authentication
 
 ## Production Build
 
@@ -147,23 +265,6 @@ kubectl get ingress -n dataisec
 - Production:
   - Single server: http://localhost:3001
   - Kubernetes: http://dataisec.local (configure your hosts file)
-
-## Environment Variables
-
-### Backend
-```env
-NODE_ENV=production
-PORT=3001
-JWT_SECRET=your-jwt-secret
-OPENSEARCH_URL=https://your-opensearch-host:9200
-OPENSEARCH_USERNAME=admin
-OPENSEARCH_PASSWORD=your-password
-```
-
-### Frontend (Development)
-```env
-VITE_API_URL=http://localhost:3001
-```
 
 ## Contributing
 
