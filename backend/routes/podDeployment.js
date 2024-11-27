@@ -707,4 +707,87 @@ router.get('/:name/:version/helm-scripts/:filename', podDeploymentController.get
 // POST route for helm scripts
 router.post('/:name/:version/helm-scripts/:filename', podDeploymentController.saveHelmDeployScript);
 
+// 修改保存配額配置的路由
+router.post('/:name/versions/:version/quota', authenticateToken, async (req, res) => {
+  try {
+    const { name, version } = req.params;
+    const { quotaConfig, namespace } = req.body;
+
+    // 生成 quota YAML 內容
+    const quotaYaml = `apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: ${name}-quota
+  namespace: ${namespace || 'default'}
+spec:
+  hard:
+    requests.cpu: "${quotaConfig.requestsCpu}"
+    requests.memory: "${quotaConfig.requestsMemory}"
+    limits.cpu: "${quotaConfig.limitsCpu}"
+    limits.memory: "${quotaConfig.limitsMemory}"
+    pods: "${quotaConfig.pods}"
+    configmaps: "${quotaConfig.configmaps}"
+    persistentvolumeclaims: "${quotaConfig.pvcs}"
+    services: "${quotaConfig.services}"
+    secrets: "${quotaConfig.secrets}"
+    count/deployments.apps: "${quotaConfig.deployments}"
+    count/replicasets.apps: "${quotaConfig.replicasets}"
+    count/statefulsets.apps: "${quotaConfig.statefulsets}"
+    count/jobs.batch: "${quotaConfig.jobs}"
+    count/cronjobs.batch: "${quotaConfig.cronjobs}"`;
+
+    // 保存到 deploy-scripts 目錄
+    const deploymentDir = path.join(__dirname, '../deploymentTemplate', name, 'deploy-scripts');
+    const quotaPath = path.join(deploymentDir, `${name}-${version}-quota.yaml`);
+    
+    await fs.mkdir(deploymentDir, { recursive: true });
+    await fs.writeFile(quotaPath, quotaYaml);
+
+    logger.info(`✅ Quota YAML saved to ${quotaPath} with namespace: ${namespace}`);
+    res.json({
+      message: 'Quota configuration saved successfully',
+      path: quotaPath,
+      namespace: namespace
+    });
+  } catch (error) {
+    logger.error('Failed to save quota configuration:', error);
+    res.status(500).json({
+      error: 'Failed to save quota configuration',
+      details: error.message
+    });
+  }
+});
+
+// 添加刪除配額配置的路由
+router.delete('/:name/versions/:version/quota', authenticateToken, async (req, res) => {
+  try {
+    const { name, version } = req.params;
+    
+    // 構建配額文件路徑
+    const deploymentDir = path.join(__dirname, '../deploymentTemplate/deploy-scripts/', name);
+    const quotaPath = path.join(deploymentDir, `${name}-${version}-quota.yaml`);
+    
+    // 檢查文件是否存在
+    try {
+      await fs.access(quotaPath);
+      // 文件存在，刪除它
+      await fs.unlink(quotaPath);
+      logger.info(`✅ Quota YAML deleted: ${quotaPath}`);
+    } catch (error) {
+      // 文件不存在，忽略錯誤
+      logger.info(`ℹ️ No quota file to delete: ${quotaPath}`);
+    }
+    
+    res.json({
+      message: 'Quota configuration deleted successfully'
+    });
+  } catch (error) {
+    logger.error('Failed to delete quota configuration:', error);
+    res.status(500).json({
+      error: 'Failed to delete quota configuration',
+      details: error.message
+    });
+  }
+});
+
 module.exports = router; 

@@ -29,18 +29,67 @@ const BasicSetup = ({ config, onChange, errors: propErrors, onStepVisibilityChan
   const [existingNamespaces, setExistingNamespaces] = useState([]);
   const [isLoadingNamespaces, setIsLoadingNamespaces] = useState(true);
 
-  const handleResourceQuotaChange = (event) => {
+  const handleResourceQuotaChange = async (event) => {
     const isChecked = event.target.checked;
     
-    // Update config
-    onChange({
-      ...config,
-      enableResourceQuota: isChecked
-    });
+    try {
+      if (isChecked) {
+        // 創建默認的配額配置
+        const defaultQuota = {
+          requestsCpu: '1',
+          requestsMemory: '1Gi',
+          limitsCpu: '2',
+          limitsMemory: '2Gi',
+          pods: '10',
+          configmaps: '10',
+          pvcs: '5',
+          services: '10',
+          secrets: '10',
+          deployments: '5',
+          replicasets: '10',
+          statefulsets: '5',
+          jobs: '10',
+          cronjobs: '5'
+        };
 
-    // Notify parent about step visibility change
-    if (onStepVisibilityChange) {
-      onStepVisibilityChange('namespaceQuota', isChecked);
+        // 保存配額配置和 YAML
+        await podDeploymentService.saveQuotaConfig(
+          config.name,
+          config.version,
+          defaultQuota
+        );
+
+        // 更新配置
+        onChange({
+          ...config,
+          enableResourceQuota: true,
+          resourceQuota: defaultQuota
+        });
+      } else {
+        // 刪除配額文件
+        await podDeploymentService.deleteQuotaConfig(
+          config.name,
+          config.version
+        );
+
+        // 更新配置
+        onChange({
+          ...config,
+          enableResourceQuota: false,
+          resourceQuota: null
+        });
+      }
+
+      // 通知父組件關於步驟可見性的變化
+      if (onStepVisibilityChange) {
+        onStepVisibilityChange('namespaceQuota', isChecked);
+      }
+    } catch (error) {
+      console.error('Failed to handle quota change:', error);
+      setLocalErrors(prev => ({
+        ...prev,
+        quota: t('podDeployment:podDeployment.errors.quotaChangeFailed')
+      }));
     }
   };
 
@@ -232,14 +281,26 @@ spec:
       const isNewNamespace = !existingNamespaces.includes(newValue);
       
       if (isNewNamespace && config.name) {
-        // 如果是新的 namespace 且已有部署名稱，則創建 YAML
         await podDeploymentService.handleNamespaceChange(config.name, newValue);
       }
       
-      onChange({
+      // 更新配置
+      const updatedConfig = {
         ...config,
         namespace: newValue
-      });
+      };
+      
+      // 如果啟用了資源配額，更新配額文件
+      if (config.enableResourceQuota && config.resourceQuota) {
+        await podDeploymentService.saveQuotaConfig(
+          config.name,
+          config.version,
+          config.resourceQuota,
+          newValue
+        );
+      }
+      
+      onChange(updatedConfig);
     } catch (error) {
       console.error('Failed to handle namespace change:', error);
       setLocalErrors(prev => ({

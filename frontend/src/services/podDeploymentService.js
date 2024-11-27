@@ -511,6 +511,64 @@ export const podDeploymentService = {
   //   const response = await axios.post('/api/pod-deployment/create-directory', directoryData);
   //   return response.data;
   // }
+
+  // 在 podDeploymentService 中添加新方法
+  async saveQuotaConfig(name, version, quotaConfig, namespace) {
+    try {
+      logger.info('💾 Saving quota config:', { name, version, quotaConfig, namespace });
+      
+      // 保存到 config.json
+      const configResponse = await this.saveDeploymentConfig(name, version, {
+        resourceQuota: quotaConfig,
+        enableResourceQuota: true,
+        namespace: namespace
+      });
+
+      // 生成並保存 quota YAML
+      const yamlResponse = await axios.post(
+        `${API_URL}/api/pod-deployments/${name}/versions/${version}/quota`,
+        { 
+          quotaConfig,
+          namespace: namespace || 'default'
+        },
+        getAuthHeaders()
+      );
+
+      logger.info('✅ Quota configuration saved successfully');
+      return {
+        config: configResponse,
+        yaml: yamlResponse.data
+      };
+    } catch (error) {
+      logger.error('❌ Failed to save quota config:', error);
+      throw error;
+    }
+  },
+
+  // 修改刪除配額文件的方法
+  async deleteQuotaConfig(name, version) {
+    try {
+      logger.info('🗑️ Deleting quota config:', { name, version });
+      
+      // 從 deploy-scripts 目錄刪除文件
+      const response = await axios.delete(
+        `${API_URL}/api/pod-deployments/${name}/versions/${version}/quota`,
+        getAuthHeaders()
+      );
+      
+      // 更新 config.json 中的配置
+      await this.saveDeploymentConfig(name, version, {
+        resourceQuota: null,
+        enableResourceQuota: false
+      });
+      
+      logger.info('✅ Quota configuration deleted successfully');
+      return response.data;
+    } catch (error) {
+      logger.error('❌ Failed to delete quota config:', error);
+      throw error;
+    }
+  }
 };
 
 export default podDeploymentService;
