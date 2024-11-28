@@ -7,22 +7,22 @@ echo "部署單一映像..."
 kubectl create namespace dataisec || echo "命名空間已存在"
 
 # 部署 RBAC
-kubectl apply -f ./single-image-rbac.yaml -n dataisec
+kubectl apply -f ./rbac.yaml -n dataisec
 
 # 部署 ConfigMap
-kubectl apply -f ./single-image-configmap.yaml -n dataisec
+kubectl apply -f ./configmap.yaml -n dataisec
 
 # 部署單一pv
-kubectl apply -f ./single-image-persistent.yaml -n dataisec
+kubectl apply -f ./persistent.yaml -n dataisec
 
 # 部署秘密
-kubectl apply -f ./single-image-secrets.yaml -n dataisec
+kubectl apply -f ./secrets.yaml -n dataisec
 
 # 部署單一映像
-kubectl apply -f ./single-image-deployment.yaml -n dataisec
+kubectl apply -f ./deployment.yaml -n dataisec
 
 # 部署服務
-kubectl apply -f ./single-image-service.yaml -n dataisec
+kubectl apply -f ./service.yaml -n dataisec
 
 
 

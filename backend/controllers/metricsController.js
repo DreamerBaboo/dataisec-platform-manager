@@ -62,12 +62,12 @@ const getClusterMetrics = async (req, res) => {
               },
               network_in: {
                 sum: {
-                  field: 'kubernetes.node.network.rx.bytes'
+                  field: 'kubernetes.pod.network.rx.bytes'
                 }
               },
               network_out: {
                 sum: {
-                  field: 'kubernetes.node.network.tx.bytes'
+                  field: 'kubernetes.pod.network.tx.bytes'
                 }
               },
               fs_total: {
@@ -162,9 +162,40 @@ const getNodeMetrics = async (req, res) => {
     }
 
     console.log(`[getNodeMetrics] Starting metrics retrieval for node: ${nodeName}, timeRange: ${timeRange}`);
-    console.log(`[getNodeMetrics] OpenSearch index: ${process.env.OPENSEARCH_SYSTEM_METRICS_INDEX}`);
+    
+    // 首先查詢該節點的 host.name
+    const hostNameResponse = await client.search({
+      index: process.env.OPENSEARCH_SYSTEM_METRICS_INDEX,
+      body: {
+        size: 1,
+        query: {
+          bool: {
+            must: [
+              {
+                term: {
+                  'kubernetes.node.name': nodeName
+                }
+              }
+            ]
+          }
+        },
+        _source: ['host.name']
+      }
+    });
 
-    // 構建查詢體，使用與 cluster metrics 相似的結構
+    // 檢查是否找到對應的 host.name
+    const hostName = hostNameResponse.body.hits.hits[0]?._source?.host?.name;
+    if (!hostName) {
+      console.error(`[getNodeMetrics] No host.name found for node: ${nodeName}`);
+      return res.status(404).json({ 
+        message: 'Node host not found',
+        details: `No host.name found for node: ${nodeName}`
+      });
+    }
+
+    console.log(`[getNodeMetrics] Found host.name: ${hostName} for node: ${nodeName}`);
+
+    // 使用找到的 host.name 查詢指標
     const searchBody = {
       size: 0,
       query: {
@@ -180,7 +211,7 @@ const getNodeMetrics = async (req, res) => {
             },
             {
               term: {
-                'kubernetes.node.name': nodeName
+                'host.name.keyword': hostName
               }
             }
           ]
@@ -194,7 +225,7 @@ const getNodeMetrics = async (req, res) => {
             time_zone: 'Asia/Taipei'
           },
           aggs: {
-            // CPU 指標 - 使用與 cluster metrics 相同的字段
+            // CPU 指標
             total_cpu_usage: {
               avg: {
                 field: 'kubernetes.node.cpu.usage.nanocores'
@@ -219,12 +250,12 @@ const getNodeMetrics = async (req, res) => {
             // 網絡指標
             network_in: {
               avg: {
-                field: 'kubernetes.node.network.rx.bytes'
+                field: 'host.network.in.bytes'
               }
             },
             network_out: {
               avg: {
-                field: 'kubernetes.node.network.tx.bytes'
+                field: 'host.network.out.bytes'
               }
             },
             // 存儲指標
@@ -268,11 +299,11 @@ const getNodeMetrics = async (req, res) => {
     const buckets = searchResponse.body.aggregations.time_buckets.buckets;
     console.log(`[getNodeMetrics] Found ${buckets.length} time buckets`);
 
-    // 使用與 cluster metrics 相同的數據處理邏輯
+    // 處理指標數據的邏輯保持不變
     const metrics = {
       [nodeName]: {
         cpu: buckets.map(bucket => {
-          const usedCores = (bucket.total_cpu_usage.value || 0) / 1000000000; // 將 nanocores 轉換為 cores
+          const usedCores = (bucket.total_cpu_usage.value || 0) / 1000000000;
           const totalCores = bucket.total_cpu_cores.value || 1;
           return {
             timestamp: bucket.key_as_string,

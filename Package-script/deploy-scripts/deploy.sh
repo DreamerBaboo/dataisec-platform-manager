@@ -84,39 +84,39 @@ fi
 
 # Update ConfigMap
 echo -e "\n${GREEN}Updating ConfigMap...${NC}"
-update_yaml "single-image-configmap.yaml" "  NODE_NAME" "$NODE_NAME"
-update_yaml "single-image-configmap.yaml" "  OPENSEARCH_URL" "$OPENSEARCH_URL"
-update_yaml "single-image-configmap.yaml" "  VITE_API_BASE_URL" "$VITE_API_BASE_URL"
-update_yaml "single-image-configmap.yaml" "  API_BASE_URL" "$VITE_API_BASE_URL"
+update_yaml "configmap.yaml" "  NODE_NAME" "$NODE_NAME"
+update_yaml "configmap.yaml" "  OPENSEARCH_URL" "$OPENSEARCH_URL"
+update_yaml "configmap.yaml" "  VITE_API_BASE_URL" "$VITE_API_BASE_URL"
+update_yaml "configmap.yaml" "  API_BASE_URL" "$VITE_API_BASE_URL"
 
 # Update node affinity in persistent volume
 echo -e "\n${GREEN}Updating persistent volume node affinity...${NC}"
-sed -i '' "s|          - \".*\"|          - \"$NODE_NAME\"|g" "single-image-persistent.yaml"
+sed -i '' "s|          - \".*\"|          - \"$NODE_NAME\"|g" "persistent.yaml"
 
 # Update deployment node selector
 echo -e "\n${GREEN}Updating deployment node selector...${NC}"
-sed -i '' "s|        kubernetes.io/hostname: \".*\"|        kubernetes.io/hostname: \"$NODE_NAME\"|g" "single-image-deployment.yaml"
+sed -i '' "s|        kubernetes.io/hostname: \".*\"|        kubernetes.io/hostname: \"$NODE_NAME\"|g" "deployment.yaml"
 
 # Apply Kubernetes configurations
 echo -e "\n${GREEN}Applying Kubernetes configurations...${NC}"
 
 echo -e "${YELLOW}Creating persistent volume and claim...${NC}"
-kubectl apply -f single-image-persistent.yaml -n dataisec
+kubectl apply -f persistent.yaml -n dataisec
 
 echo -e "${YELLOW}Creating ConfigMap...${NC}"
-kubectl apply -f single-image-configmap.yaml -n dataisec
+kubectl apply -f configmap.yaml -n dataisec
 
 echo -e "${YELLOW}Creating RBAC...${NC}"
-kubectl apply -f single-image-rbac.yaml -n dataisec
+kubectl apply -f rbac.yaml -n dataisec
 
 echo -e "${YELLOW}Creating secrets...${NC}"
-kubectl apply -f single-image-secrets.yaml -n dataisec
+kubectl apply -f secrets.yaml -n dataisec
 
 echo -e "${YELLOW}Creating deployment...${NC}"
-kubectl apply -f single-image-deployment.yaml -n dataisec
+kubectl apply -f deployment.yaml -n dataisec
 
 echo -e "${YELLOW}Creating service...${NC}"
-kubectl apply -f single-image-service.yaml -n dataisec
+kubectl apply -f service.yaml -n dataisec
 
 # Wait for deployment
 echo -e "\n${GREEN}Waiting for deployment to be ready...${NC}"

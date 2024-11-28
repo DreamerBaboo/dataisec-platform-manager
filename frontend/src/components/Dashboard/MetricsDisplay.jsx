@@ -406,12 +406,71 @@ const MetricsDisplay = ({ metrics, selectedNode, refreshing }) => {
             <Typography variant="h6">{t('dashboard:dashboard.network')}</Typography>
           </Box>
           <ReactECharts
-            option={getChartOption(
-              processedMetrics.network?.tx,
-              t('dashboard:dashboard.network'),
-              'line',
-              { valueType: 'bytesPerSecond', seriesName: t('dashboard:dashboard.networkTx') }
-            )}
+            option={{
+              tooltip: {
+                trigger: 'axis',
+                formatter: (params) => {
+                  const time = new Date(params[0].axisValue).toLocaleTimeString();
+                  return `${time}<br/>${params.map(param => 
+                    `${param.seriesName}: ${(param.value / (1024 * 1024)).toFixed(2)} MB/s`
+                  ).join('<br/>')}`;
+                }
+              },
+              legend: {
+                data: [t('dashboard:dashboard.networkTx'), t('dashboard:dashboard.networkRx')],
+                bottom: 0
+              },
+              grid: {
+                top: 60,
+                left: '10%',
+                right: '10%',
+                bottom: 60,
+                containLabel: true
+              },
+              xAxis: {
+                type: 'category',
+                data: processedMetrics.network?.tx.map(item => item.timestamp),
+                axisLabel: {
+                  formatter: (value) => new Date(value).toLocaleTimeString(),
+                  rotate: 45,
+                  margin: 15,
+                  align: 'right',
+                  fontSize: 11
+                }
+              },
+              yAxis: {
+                type: 'value',
+                axisLabel: {
+                  formatter: (value) => `${(value / (1024 * 1024)).toFixed(0)} MB/s`
+                }
+              },
+              series: [
+                {
+                  name: t('dashboard:dashboard.networkTx'),
+                  data: processedMetrics.network?.tx.map(item => item.value),
+                  type: 'line',
+                  smooth: true,
+                  areaStyle: {
+                    opacity: 0.3
+                  },
+                  itemStyle: {
+                    color: '#ff6b6b'
+                  }
+                },
+                {
+                  name: t('dashboard:dashboard.networkRx'),
+                  data: processedMetrics.network?.rx.map(item => item.value),
+                  type: 'line',
+                  smooth: true,
+                  areaStyle: {
+                    opacity: 0.3
+                  },
+                  itemStyle: {
+                    color: '#4ecdc4'
+                  }
+                }
+              ]
+            }}
             style={{ height: '90%', width: '100%' }}
             opts={{ renderer: 'svg' }}
           />
