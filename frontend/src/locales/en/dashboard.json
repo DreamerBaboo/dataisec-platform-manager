@@ -3,10 +3,17 @@
     "cluster": "Cluster",
     "node": "Node",
     "service": "Service",
-    "lastUpdate": "Last Update"
+    "lastUpdate": "Last Update",
+    "maximum": "Maximum",
+    "minimum": "Minimum",
+    "average": "Average"
   },
   "messages": {
-    "noMetricsAvailable": "No metrics available"
+    "noMetricsAvailable": "No metrics available",
+    "loadingMetrics": "Loading metrics data...",
+    "refreshingMetrics": "Refreshing metrics data...",
+    "selectedNode": "Selected node: {{node}}",
+    "invalidMetricsFormat": "Invalid metrics format"
   },
   "dashboard": {
     "title": "System Dashboard",
@@ -85,6 +92,12 @@
     "restarts": "Restarts",
     "podName": "Pod Name",
     "status": "Status",
-    "age": "Age"
+    "age": "Age",
+    "networkTx": "Transmit",
+    "networkRx": "Receive",
+    "networkTxTooltip": "Transmit Rate",
+    "networkRxTooltip": "Receive Rate",
+    "bytesPerSecond": "MB/s",
+    "networkTraffic": "Network Traffic"
   }
 } 

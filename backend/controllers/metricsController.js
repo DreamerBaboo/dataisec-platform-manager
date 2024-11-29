@@ -9,86 +9,101 @@ const getClusterMetrics = async (req, res) => {
     const response = await client.search({
       index: process.env.OPENSEARCH_SYSTEM_METRICS_INDEX,
       body: {
-        size: 0,
-        query: {
-          bool: {
-            must: [
+        "size": 0,
+        "query": {
+          "bool": {
+            "must": [
               {
-                range: {
-                  '@timestamp': {
-                    gte: `now-${timeRange}`,
-                    lte: 'now'
+                "range": {
+                  "@timestamp": {
+                    "gte": "now-15m",
+                    "lte": "now"
                   }
                 }
               }
             ]
           }
         },
-        aggs: {
-          time_buckets: {
-            date_histogram: {
-              field: '@timestamp',
-              fixed_interval: '30s',
-              time_zone: 'Asia/Taipei'
+        "aggs": {
+          "time_buckets": {
+            "date_histogram": {
+              "field": "@timestamp",
+              "fixed_interval": "30s",
+              "time_zone": "Asia/Taipei"
             },
-            aggs: {
-              // CPU 指標 - 計算所有節點的 CPU 使用量總和
-              total_cpu_usage: {
-                sum: {
-                  field: 'kubernetes.node.cpu.usage.nanocores'
+            "aggs": {
+              "total_cpu_usage": {
+                "sum": {
+                  "field": "kubernetes.node.cpu.usage.nanocores"
                 }
               },
-              // 計算總核心數 (所有節點的核心數總和)
-              total_cpu_cores: {
-                sum: {
-                  field: 'kubernetes.node.cpu.capacity.cores'
+              "total_cpu_cores": {
+                "sum": {
+                  "field": "kubernetes.node.cpu.capacity.cores"
                 }
               },
-              // 其他指標保持不變
-              memory_total: {
-                sum: {
-                  field: 'kubernetes.node.memory.capacity.bytes'
+              "memory_total": {
+                "sum": {
+                  "field": "kubernetes.node.memory.capacity.bytes"
                 }
               },
-              memory_used: {
-                avg: {
-                  field: 'kubernetes.node.memory.usage.bytes'
+              "memory_used": {
+                "avg": {
+                  "field": "kubernetes.node.memory.usage.bytes"
                 }
               },
-              memory_free: {
-                avg: {
-                  field: 'system.memory.free'
+              "memory_free": {
+                "avg": {
+                  "field": "system.memory.free"
                 }
               },
-              network_in: {
-                sum: {
-                  field: 'kubernetes.pod.network.rx.bytes'
+              "network_in_sum": {
+                "sum_bucket": {
+                  "buckets_path": "hosts>network_in"
                 }
               },
-              network_out: {
-                sum: {
-                  field: 'kubernetes.pod.network.tx.bytes'
+              "network_out_sum": {
+                "sum_bucket": {
+                  "buckets_path": "hosts>network_out"
                 }
               },
-              fs_total: {
-                sum: {
-                  field: 'kubernetes.node.fs.capacity.bytes'
+              "hosts": {
+                "terms": {
+                  "field": "host.name.keyword",
+                  "size": 1000
+                },
+                "aggs": {
+                  "network_in": {
+                    "sum": {
+                      "field": "host.network.in.bytes"
+                    }
+                  },
+                  "network_out": {
+                    "sum": {
+                      "field": "host.network.out.bytes"
+                    }
+                  }
                 }
               },
-              fs_used: {
-                sum: {
-                  field: 'kubernetes.node.fs.used.bytes'
+              "fs_total": {
+                "sum": {
+                  "field": "kubernetes.node.fs.capacity.bytes"
                 }
               },
-              fs_free: {
-                avg: {
-                  field: 'system.filesystem.free'
+              "fs_used": {
+                "sum": {
+                  "field": "kubernetes.node.fs.used.bytes"
+                }
+              },
+              "fs_free": {
+                "avg": {
+                  "field": "system.filesystem.free"
                 }
               }
             }
           }
-        }
-      }
+            }
+          }
     });
 
     const buckets = response.body.aggregations.time_buckets.buckets;

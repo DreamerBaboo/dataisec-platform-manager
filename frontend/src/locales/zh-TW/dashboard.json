@@ -3,10 +3,17 @@
     "cluster": "集群",
     "node": "節點",
     "service": "服務",
-    "lastUpdate": "最後更新"
+    "lastUpdate": "最後更新",
+    "maximum": "最大值",
+    "minimum": "最小值",
+    "average": "平均值"
   },
   "messages": {
-    "noMetricsAvailable": "無可用指標"
+    "noMetricsAvailable": "無可用指標",
+    "loadingMetrics": "正在載入指標數據...",
+    "refreshingMetrics": "正在更新指標數據...",
+    "selectedNode": "已選擇節點: {{node}}",
+    "invalidMetricsFormat": "指標數據格式無效"
   },
   "dashboard": {
     "title": "系統儀表板",
@@ -85,6 +92,12 @@
     "restarts": "重啟次數",
     "podName": "容器組名稱",
     "status": "狀態",
-    "age": "容器組年齡"
+    "age": "容器組年齡",
+    "networkTx": "發送流量",
+    "networkRx": "接收流量",
+    "networkTxTooltip": "發送速率",
+    "networkRxTooltip": "接收速率",
+    "bytesPerSecond": "MB/秒",
+    "networkTraffic": "網路流量"
   }
 } 

@@ -17,11 +17,11 @@ const RETRY_DELAY = 1000;
 
 const SystemDashboard = () => {
   const [metrics, setMetrics] = useState({
-    cluster: null,
+    // cluster: null,  // Comment out cluster
     nodes: {}
   });
   const [nodes, setNodes] = useState([]);
-  const [selectedNode, setSelectedNode] = useState('cluster');
+  const [selectedNode, setSelectedNode] = useState('');  // Empty string instead of 'cluster'
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(null);
@@ -84,22 +84,28 @@ const SystemDashboard = () => {
       const nodeNames = data.map(node => node.name).filter(Boolean);
       logger.info('Processed node names:', nodeNames);
       
-      const allNodes = ['cluster', ...nodeNames];
-      logger.info('Final node list (including cluster):', allNodes);
+      // const allNodes = ['cluster', ...nodeNames];  // Comment out cluster
+      const allNodes = [...nodeNames];  // Only include actual nodes
+      logger.info('Final node list:', allNodes);
       setNodes(allNodes);
       
-      // 如果當前選擇的節點不在新的節點列表中，切換到 cluster
-      if (selectedNode !== 'cluster' && !nodeNames.includes(selectedNode)) {
-        logger.warn(`Selected node ${selectedNode} no longer exists, switching to cluster view`);
-        setSelectedNode('cluster');
+      // If no nodes available, show error instead of defaulting to cluster
+      if (nodeNames.length === 0) {
+        setError('No nodes available');
+        return;
+      }
+      
+      // If current node is cluster or not in list, switch to first available node
+      if (selectedNode === 'cluster' || !nodeNames.includes(selectedNode)) {
+        logger.warn(`Selected node ${selectedNode} not available, switching to first node`);
+        setSelectedNode(nodeNames[0]);
       }
     } catch (error) {
       const errorMessage = error.response?.data?.message || error.message;
       logger.error('Node list retrieval failed:', errorMessage);
       console.error('獲取節點列表失敗:', error);
       setError(`獲取節點列表失敗: ${errorMessage}`);
-      setNodes(['cluster']);
-      setSelectedNode('cluster');
+      setNodes([]);  // Empty array instead of ['cluster']
     }
   }, [selectedNode]);
 
@@ -111,10 +117,8 @@ const SystemDashboard = () => {
       setRefreshing(true);
       setError(null);
       
-      const endpoint = selectedNode === 'cluster' 
-        ? 'api/metrics/system'
-        : `api/metrics/system/node/${selectedNode}`;
-
+      // Remove cluster condition
+      const endpoint = `api/metrics/system/node/${selectedNode}`;
       logger.info(`Fetching metrics from endpoint: ${endpoint}`);
       
       const metricsData = await retryOperation(async () => {
@@ -127,23 +131,14 @@ const SystemDashboard = () => {
         return response;
       });
 
-      // 更新處理邏輯以確保數據結構一致
+      // Update metrics without cluster handling
       setMetrics(prev => {
         const newMetrics = { ...prev };
-        
-        if (selectedNode === 'cluster') {
-          // 保留原有的節點數據，只更新集群數據
-          newMetrics.cluster = metricsData.cluster;
-        } else {
-          // 保留集群數據，更新特定節點的數據
-          newMetrics[selectedNode] = metricsData[selectedNode];
-        }
-
+        newMetrics[selectedNode] = metricsData[selectedNode];
         logger.info('Updated metrics state:', {
           selectedNode,
           newMetrics: newMetrics
         });
-
         return newMetrics;
       });
 
@@ -206,11 +201,7 @@ const SystemDashboard = () => {
   const getCurrentMetrics = useCallback(() => {
     logger.info('Getting current metrics for node:', selectedNode);
     logger.info('Current metrics state:', metrics);
-    
-    if (selectedNode === 'cluster') {
-      return { cluster: metrics.cluster };  // 返回與原始數據結構一致的格式
-    }
-    return { [selectedNode]: metrics[selectedNode] };  // 返回與原始數據結構一致的格式
+    return { [selectedNode]: metrics[selectedNode] };
   }, [selectedNode, metrics]);
 
   // 添加 tabsRef 用於滾動控制
