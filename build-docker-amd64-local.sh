@@ -7,7 +7,7 @@ if ! docker buildx version &> /dev/null; then
 fi
 
 # 設置默認映像名稱和標籤
-IMAGE_NAME="dataisec-platform"
+IMAGE_NAME="dataisec-platform-131"
 IMAGE_TAG="0.2.2"
 
 # 構建多平台映像

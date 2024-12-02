@@ -21,9 +21,10 @@ interface ApiConfig {
 // 獲取 API 配置
 function getApiConfig(): ApiConfig {
   console.info('getApiConfig', import.meta.env.VITE_API_BASE_URL);
+    
   // 從不同來源獲取 API URL，如無則使用預設值
   const apiUrl = import.meta.env.VITE_API_BASE_URL || 
-                 window.__RUNTIME_CONFIG__?.VITE_API_BASE_URL || 
+                 (window as any).__RUNTIME_CONFIG__?.VITE_API_BASE_URL || 
                  'http://localhost:3001';
   
   console.info('API URL:', apiUrl); // 調試日誌
