@@ -11,7 +11,7 @@ interface RuntimeConfig {
 // 擴展 Window 接口
 declare global {
   interface Window {
-    RUNTIME_CONFIG?: RuntimeConfig;
+    __RUNTIME_CONFIG__?: RuntimeConfig;
   }
 }
 
@@ -46,7 +46,14 @@ const validateConfig = (config: unknown): config is RuntimeConfig => {
 // 從運行時配置中獲取環境變量
 export const getRuntimeConfig = (): RuntimeConfig => {
   try {
-    // 如果在開發環境中，使用 Vite 的環境變量
+    // 優先使用運行時注入的配置
+    const win = getWindow();
+    if (win?.__RUNTIME_CONFIG__ && validateConfig(win.__RUNTIME_CONFIG__)) {
+      logger.debug('使用運行時注入配置', win.__RUNTIME_CONFIG__);
+      return win.__RUNTIME_CONFIG__;
+    }
+
+    // 如果在開發環境中，使用 Vite 的環境變量作為後備
     if (import.meta.env.DEV) {
       const config: RuntimeConfig = {
         API_BASE_URL: import.meta.env.VITE_API_BASE_URL || '',
@@ -58,19 +65,12 @@ export const getRuntimeConfig = (): RuntimeConfig => {
       return config;
     }
 
-    // 在生產環境中，使用運行時注入的配置
-    const win = getWindow();
-    if (win?.RUNTIME_CONFIG && validateConfig(win.RUNTIME_CONFIG)) {
-      logger.debug('使用運行時注入配置', win.RUNTIME_CONFIG);
-      return win.RUNTIME_CONFIG;
-    }
-
-    // 使用默認配置
+    // 使用默認配置作為最後的後備
     logger.debug('使用默認配置', defaultConfig);
     return { ...defaultConfig };
   } catch (error) {
-    logger.info('獲取運行時配置時發生錯誤', error);
-    throw error;
+    logger.error('獲取運行時配置時發生錯誤', error);
+    return { ...defaultConfig };
   }
 };
 
@@ -79,13 +79,13 @@ export const saveRuntimeConfig = (config: RuntimeConfig): void => {
   try {
     const win = getWindow();
     if (win) {
-      win.RUNTIME_CONFIG = { ...config };
+      win.__RUNTIME_CONFIG__ = { ...config };
       logger.info('成功保存運行時配置', config);
     } else {
       logger.warn('無法保存配置：不在瀏覽器環境中');
     }
   } catch (error) {
-    logger.info('保存運行時配置時發生錯誤', error);
+    logger.error('保存運行時配置時發生錯誤', error);
     throw error;
   }
 };

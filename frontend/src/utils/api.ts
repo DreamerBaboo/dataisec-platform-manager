@@ -1,3 +1,15 @@
+// 定義運行時配置類型
+declare global {
+  interface Window {
+    RUNTIME_CONFIG?: {
+      API_BASE_URL: string;
+      WS_PORT: string;
+      NODE_ENV: string;
+      LOG_LEVEL: string;
+    };
+  }
+}
+
 // 定義 API 錯誤類型
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -20,11 +32,11 @@ interface ApiConfig {
 
 // 獲取 API 配置
 function getApiConfig(): ApiConfig {
-  console.info('getApiConfig', import.meta.env.VITE_API_BASE_URL);
+  console.info('getApiConfig', window.RUNTIME_CONFIG?.API_BASE_URL);
     
-  // 從不同來源獲取 API URL，如無則使用預設值
-  const apiUrl = import.meta.env.VITE_API_BASE_URL || 
-                 (window as any).__RUNTIME_CONFIG__?.VITE_API_BASE_URL || 
+  // 優先使用 RUNTIME_CONFIG 中的配置
+  const apiUrl = window.RUNTIME_CONFIG?.API_BASE_URL || 
+                 import.meta.env.VITE_API_BASE_URL || 
                  'http://localhost:3001';
   
   console.info('API URL:', apiUrl); // 調試日誌
